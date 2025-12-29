@@ -79,7 +79,7 @@ const App: React.FC = () => {
           </div>
           
           <div className="relative z-10">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-2 tracking-tight drop-shadow-sm">VinaChange</h1>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-2 tracking-tight drop-shadow-sm">Chuyển Đổi Tiền Tệ</h1>
             <p className="text-blue-100 text-sm font-medium bg-white/20 inline-block px-4 py-1 rounded-full backdrop-blur-sm">
                 Tỷ giá cập nhật liên tục
             </p>
@@ -95,7 +95,7 @@ const App: React.FC = () => {
             {/* Source Currency Row */}
             <div className={`relative transition-all duration-200 ${activeDropdown === 'FROM' ? 'z-30' : 'z-20'}`}> 
                 <CurrencyRow
-                    label="Bạn gửi đi"
+                    label="Số tiền cần đổi"
                     amount={amount}
                     currency={fromCurrency}
                     onAmountChange={setAmount}
@@ -127,7 +127,7 @@ const App: React.FC = () => {
             {/* Target Currency Row */}
             <div className={`relative transition-all duration-200 ${activeDropdown === 'TO' ? 'z-30' : 'z-10'}`}>
                 <CurrencyRow
-                    label="Bạn nhận được"
+                    label="Số tiền nhận được"
                     amount={result ? result.convertedAmount : ''}
                     currency={toCurrency}
                     onCurrencyChange={setToCurrency}
