@@ -246,7 +246,6 @@ const readNumberChinese = (number: number, code: string): string => {
         units: ['十', '百', '千'],
         groups: ['万', '亿', '兆']
     };
-    // Update: Removed Pinyin "(Yuan)"
     const name = code === 'CNY' ? '元' : '圓';
     return readCJK(number, name, chars, 'CN');
 };
@@ -316,23 +315,32 @@ export const convertCurrencyApi = async (
   toCurrency: string
 ): Promise<ConversionResult> => {
   try {
-    // 1. Fetch
-    const response = await fetch(`https://open.er-api.com/v6/latest/${fromCurrency}?t=${Date.now()}`);
-    if (!response.ok) throw new Error('Network response was not ok');
-    const data = await response.json();
-    const rate = data.rates[toCurrency];
+    let rate: number;
 
-    if (!rate) throw new Error(`Exchange rate not found for ${toCurrency}`);
+    // CUSTOM RULE: Fixed Rate for CNY/VND
+    // 1 CNY = 3450 VND
+    if (fromCurrency === 'CNY' && toCurrency === 'VND') {
+        rate = 3450;
+    } else if (fromCurrency === 'VND' && toCurrency === 'CNY') {
+        rate = 1 / 3450;
+    } else {
+        // 1. Fetch for other currencies
+        const response = await fetch(`https://open.er-api.com/v6/latest/${fromCurrency}?t=${Date.now()}`);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        rate = data.rates[toCurrency];
+
+        if (!rate) throw new Error(`Exchange rate not found for ${toCurrency}`);
+    }
 
     // 2. Calc
     const rawConverted = amount * rate;
     
-    // Rounding
+    // Rounding - Cập nhật: Làm tròn lên (Ceil) để bỏ phần thập phân
+    const roundedConverted = Math.ceil(rawConverted);
+
     const sourceDecimals = getDecimals(fromCurrency);
     const roundedInput = parseFloat(amount.toFixed(sourceDecimals));
-    
-    const targetDecimals = getDecimals(toCurrency);
-    const roundedConverted = parseFloat(rawConverted.toFixed(targetDecimals));
 
     // 3. Generate Text Native to Country
     const textSource = getReadFunction(fromCurrency, roundedInput);
