@@ -1,3 +1,4 @@
+
 export interface Currency {
   code: string;
   name: string;
@@ -12,9 +13,20 @@ export interface ConversionResult {
   textTarget: string; // Text representation in target language
 }
 
+export interface ConversionHistoryItem {
+  id: string;
+  timestamp: number;
+  inputAmount: number;
+  fromCurrency: Currency;
+  toCurrency: Currency;
+  convertedAmount: number;
+}
+
 export enum LoadingState {
   IDLE = 'IDLE',
   LOADING = 'LOADING',
   SUCCESS = 'SUCCESS',
   ERROR = 'ERROR'
 }
+
+export type ThemeColor = string;
