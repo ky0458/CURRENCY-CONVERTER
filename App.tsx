@@ -240,8 +240,8 @@ const App: React.FC = () => {
       {/* Simple Dark Footer */}
       <footer className="w-full bg-slate-900 text-slate-400 py-6 mt-auto">
         <div className="container mx-auto px-4 text-center">
-            <p className="font-semibold text-slate-300 mb-1 tracking-wide text-sm">Powered by VinaChange</p>
-            <p className="text-xs opacity-60">Cập nhật: {new Date().toLocaleDateString('vi-VN')} </p>
+            <p className="font-semibold text-slate-300 mb-1 tracking-wide text-sm">Powered by ZiQi</p>
+            <p className="text-xs opacity-60">Lasted update: {new Date().toLocaleDateString('vi-VN')} </p>
         </div>
       </footer>
 
