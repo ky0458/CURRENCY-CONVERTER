@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CurrencyRow } from './components/CurrencyRow';
 import { Header } from './components/Header';
 import { SwapButton } from './components/SwapButton';
@@ -6,11 +6,14 @@ import { ResultSection } from './components/ResultSection';
 import { DenominationSelector } from './components/DenominationSelector';
 import { HistorySection } from './components/HistorySection';
 import { ThemeSelector } from './components/ThemeSelector';
+import { TabSelector } from './components/TabSelector';
 import { useCurrencyConverter } from './hooks/useCurrencyConverter';
 import { LoadingState, ThemeColor, Currency } from './types';
 import { Tooltip } from './components/Tooltip';
 import { THEME_COLORS } from './constants';
 import { generatePalette } from './utils/themeUtils';
+import { getReadFunction } from './utils/currencyTextFormatter';
+import { CopyButton } from './components/CopyButton';
 
 const App: React.FC = () => {
   const {
@@ -22,21 +25,21 @@ const App: React.FC = () => {
   const [activeDropdown, setActiveDropdown] = useState<'FROM' | 'TO' | null>(null);
   const [theme, setTheme] = useState<ThemeColor>('blue');
   const [showHistory, setShowHistory] = useState(false);
+  
+  // New States for Calculation Mode
+  const [activeTab, setActiveTab] = useState<'convert' | 'calculate'>('convert');
+  const [salaryAmount, setSalaryAmount] = useState<string>('');
+  const [calcType, setCalcType] = useState<'probation' | 'official'>('official');
 
   // Apply theme palette to CSS variables
   useEffect(() => {
     const applyTheme = (colorIdOrHex: string) => {
       let hex = colorIdOrHex;
-      // If it's a preset ID (e.g. 'blue'), find the hex
       const preset = THEME_COLORS.find(t => t.id === colorIdOrHex);
-      if (preset) {
-        hex = preset.hex;
-      }
+      if (preset) hex = preset.hex;
       
-      // Generate shades
       const palette = generatePalette(hex);
       const root = document.documentElement;
-      
       Object.entries(palette).forEach(([shade, value]) => {
         root.style.setProperty(`--color-primary-${shade}`, value);
       });
@@ -55,7 +58,6 @@ const App: React.FC = () => {
     setTheme(newTheme);
     localStorage.setItem('app_theme', newTheme);
     
-    // Apply immediately
     let hex = newTheme;
     const preset = THEME_COLORS.find(t => t.id === newTheme);
     if (preset) hex = preset.hex;
@@ -66,13 +68,15 @@ const App: React.FC = () => {
     });
   };
 
-  // Wrapper to reset result when amount changes manually
   const handleAmountChange = (val: string) => {
-    setAmount(val);
-    resetResult(); // Hide result on input change
+    if (activeTab === 'calculate') {
+        setSalaryAmount(val);
+    } else {
+        setAmount(val);
+    }
+    resetResult();
   };
 
-  // Wrapper to reset result when currency changes
   const handleFromChange = (currency: Currency) => {
     setFromCurrency(currency);
     resetResult();
@@ -83,7 +87,6 @@ const App: React.FC = () => {
     resetResult();
   };
 
-  // Just set amount, do NOT convert immediately
   const handleDenominationSelect = (newAmount: string) => {
     handleAmountChange(newAmount);
   };
@@ -107,11 +110,29 @@ const App: React.FC = () => {
   };
 
   const handleHistorySelect = (item: any) => {
+    setActiveTab('convert'); // Force switch to convert tab when selecting history
     selectHistoryItem(item);
     setShowHistory(false);
   };
 
-  // Render the history icon button to be placed in the CurrencyRow
+  // Wrapper for calculation logic
+  const onCalculateAndConvert = () => {
+    if (activeTab === 'calculate') {
+        const salary = parseFloat(salaryAmount.replace(/,/g, ''));
+        if (isNaN(salary) || salary <= 0) {
+            // Let the hook handle the error display or set manual error
+            handleConvert('0'); 
+            return;
+        }
+        const multiplier = calcType === 'probation' ? 0.75 : 0.60;
+        const fee = Math.floor(salary * multiplier);
+        setAmount(fee.toString()); // Sync state
+        handleConvert(fee.toString()); // Trigger conversion with calculated fee
+    } else {
+        handleConvert();
+    }
+  };
+
   const renderHistoryButton = (
     <Tooltip content="Xem lịch sử chuyển đổi" position="bottom">
       <button 
@@ -126,10 +147,33 @@ const App: React.FC = () => {
     </Tooltip>
   );
 
+  // Calculate Stage Fee Values (only available when result is present)
+  const stageFeeData = useMemo(() => {
+    if (activeTab !== 'calculate' || !result || !amount) return null;
+    
+    const totalFeeSource = parseFloat(amount);
+    if (isNaN(totalFeeSource)) return null;
+
+    const stageSource = Math.floor(totalFeeSource / 2);
+    // Calculate target using the same rate logic
+    const stageTarget = Math.ceil(stageSource * result.exchangeRate);
+
+    const formattedSource = formatCurrency(stageSource, fromCurrency.locale, fromCurrency.code);
+    const formattedTarget = formatCurrency(stageTarget, toCurrency.locale, toCurrency.code);
+
+    return {
+        source: stageSource,
+        target: stageTarget,
+        formattedSource,
+        formattedTarget,
+        textSource: getReadFunction(fromCurrency.code, stageSource),
+        textTarget: getReadFunction(toCurrency.code, stageTarget)
+    };
+  }, [activeTab, result, amount, fromCurrency, toCurrency]);
+
   return (
     <div className={`min-h-screen bg-slate-100 font-sans text-slate-800 selection:bg-primary-200 flex flex-col relative`}>
       
-      {/* Floating Theme Selector - Fixed Top Right */}
       <div className="fixed top-3 right-3 sm:top-5 sm:right-5 z-[100] animate-fade-in-up">
         <ThemeSelector currentTheme={theme} onThemeChange={handleThemeChange} />
       </div>
@@ -142,19 +186,25 @@ const App: React.FC = () => {
           <div className="p-4 sm:p-8 space-y-6 relative flex-1">
             
             <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-              <DenominationSelector 
-                currency={fromCurrency} 
-                onSelect={handleDenominationSelect} 
-                currentAmount={amount}
-                theme={theme}
-              />
+                <TabSelector activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); resetResult(); setAmount(''); setSalaryAmount(''); }} theme={theme} />
             </div>
+            
+            {activeTab === 'convert' && (
+                <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+                <DenominationSelector 
+                    currency={fromCurrency} 
+                    onSelect={handleDenominationSelect} 
+                    currentAmount={amount}
+                    theme={theme}
+                />
+                </div>
+            )}
 
             <div className="flex flex-col md:flex-row items-center md:items-start relative z-20 gap-3 md:gap-4">
               <div className={`w-full md:flex-1 transition-all ${activeDropdown === 'FROM' ? 'z-50' : 'z-20'}`}> 
                   <CurrencyRow
-                      label="Nhập số tiền cần đổi"
-                      amount={amount}
+                      label={activeTab === 'calculate' ? "Nhập mức lương" : "Nhập số tiền cần đổi"}
+                      amount={activeTab === 'calculate' ? salaryAmount : amount}
                       currency={fromCurrency}
                       onAmountChange={handleAmountChange}
                       onCurrencyChange={handleFromChange}
@@ -167,15 +217,40 @@ const App: React.FC = () => {
                       headerAction={renderHistoryButton}
                       error={errorMsg}
                   />
+
+                  {/* Calculation Options */}
+                  {activeTab === 'calculate' && (
+                      <div className="mt-3 flex gap-3 animate-fade-in-up">
+                          {/* Official Salary (Default) on Left */}
+                          <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${calcType === 'official' ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                              <input type="radio" name="calcType" value="official" checked={calcType === 'official'} onChange={() => setCalcType('official')} className="hidden" />
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${calcType === 'official' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                  {calcType === 'official' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
+                              </div>
+                              <span>Chính thức (60%)</span>
+                          </label>
+
+                           {/* Probation Salary on Right */}
+                          <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${calcType === 'probation' ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                              <input type="radio" name="calcType" value="probation" checked={calcType === 'probation'} onChange={() => setCalcType('probation')} className="hidden" />
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${calcType === 'probation' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                  {calcType === 'probation' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
+                              </div>
+                              <span>Thử việc (75%)</span>
+                          </label>
+                      </div>
+                  )}
               </div>
 
-              <div className="md:mt-12 z-30 shrink-0">
-                 <SwapButton onClick={handleSwap} isSwapping={isSwapping} theme={theme} />
-              </div>
+              {activeTab === 'convert' && (
+                <div className="md:mt-12 z-30 shrink-0">
+                    <SwapButton onClick={handleSwap} isSwapping={isSwapping} theme={theme} />
+                </div>
+              )}
 
               <div className={`w-full md:flex-1 transition-all ${activeDropdown === 'TO' ? 'z-50' : 'z-20'}`}>
                   <CurrencyRow
-                      label="Quy đổi sang"
+                      label={activeTab === 'calculate' ? "Quy đổi phí sang" : "Quy đổi sang"}
                       amount=""
                       currency={toCurrency}
                       onCurrencyChange={handleToChange}
@@ -190,7 +265,7 @@ const App: React.FC = () => {
 
             <Tooltip content="Cập nhật tỷ giá mới nhất và tính toán" position="bottom">
                 <button
-                  onClick={() => handleConvert()}
+                  onClick={onCalculateAndConvert}
                   disabled={loadingState === LoadingState.LOADING}
                   className={`w-full py-3.5 sm:py-4 rounded-2xl text-white font-bold text-base sm:text-lg shadow-xl transition-all transform mt-4
                     ${loadingState === LoadingState.LOADING 
@@ -207,7 +282,7 @@ const App: React.FC = () => {
                           </svg>
                           Đang xử lý...
                         </>
-                      ) : 'Chuyển đổi ngay'}
+                      ) : (activeTab === 'calculate' ? 'Tính toán & Quy đổi' : 'Chuyển đổi ngay')}
                   </span>
                 </button>
             </Tooltip>
@@ -221,17 +296,79 @@ const App: React.FC = () => {
                 </div>
              )}
 
-            {/* Error message removed from here as it is now inside CurrencyRow */}
-
+            {/* Total Fee Section */}
             {result && loadingState === LoadingState.SUCCESS && (
-               <ResultSection 
-                  result={result} 
-                  fromCurrency={fromCurrency} 
-                  toCurrency={toCurrency} 
-                  inputAmount={amount}
-                  formatCurrency={formatCurrency}
-                  theme={theme}
-               />
+                <>
+                   {activeTab === 'calculate' && (
+                        <div className="flex items-center gap-2 animate-fade-in-up mt-2">
+                             <div className="h-px bg-slate-200 flex-1"></div>
+                             <span className="text-sm font-extrabold text-slate-400 uppercase tracking-widest">Phí dịch vụ tổng</span>
+                             <div className="h-px bg-slate-200 flex-1"></div>
+                        </div>
+                   )}
+                   <ResultSection 
+                      result={result} 
+                      fromCurrency={fromCurrency} 
+                      toCurrency={toCurrency} 
+                      inputAmount={amount}
+                      formatCurrency={formatCurrency}
+                      theme={theme}
+                   />
+                </>
+            )}
+
+            {/* Detailed Stage Fee Breakdown */}
+            {activeTab === 'calculate' && stageFeeData && loadingState === LoadingState.SUCCESS && (
+                <div className="animate-fade-in-up pt-2">
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="h-px bg-slate-200 flex-1"></div>
+                        <span className="text-sm font-extrabold text-slate-400 uppercase tracking-widest">Phí mỗi giai đoạn (50%)</span>
+                        <div className="h-px bg-slate-200 flex-1"></div>
+                    </div>
+                    
+                    <div className="grid md:grid-cols-2 gap-4">
+                        {/* Stage Fee - Source */}
+                        <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2 opacity-70">
+                                    <img src={fromCurrency.flag} alt={fromCurrency.code} className="w-6 h-4 rounded shadow-sm object-cover" />
+                                    <span className="text-xs font-bold uppercase text-slate-500">{fromCurrency.code}</span>
+                                </div>
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="text-xl sm:text-2xl font-bold text-slate-700">
+                                        {stageFeeData.formattedSource}
+                                    </div>
+                                    <CopyButton text={stageFeeData.formattedSource} />
+                                </div>
+                            </div>
+                            <div className="mt-3 pt-3 border-t border-slate-200">
+                                <p className="text-sm italic font-medium text-slate-600 leading-relaxed">{stageFeeData.textSource}</p>
+                            </div>
+                        </div>
+
+                        {/* Stage Fee - Target */}
+                        <div className="p-4 rounded-2xl border border-primary-100 bg-primary-50/30 flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <img src={toCurrency.flag} alt={toCurrency.code} className="w-6 h-4 rounded shadow-sm object-cover" />
+                                    <span className="text-xs font-bold uppercase text-primary-500">{toCurrency.code}</span>
+                                </div>
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="text-xl sm:text-2xl font-bold text-primary-700">
+                                        {stageFeeData.formattedTarget}
+                                    </div>
+                                    <CopyButton 
+                                        text={stageFeeData.formattedTarget} 
+                                        className="bg-white border-primary-200 text-primary-500 hover:text-primary-700 hover:border-primary-300"
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-3 pt-3 border-t border-primary-200/50">
+                                <p className="text-sm italic font-medium text-primary-800 leading-relaxed">{stageFeeData.textTarget}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
           </div>
         </div>
