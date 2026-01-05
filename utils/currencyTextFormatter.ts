@@ -144,7 +144,12 @@ const readNumberEnglish = (number: number, currencyCode: string): string => {
 };
 
 const readCJK = (number: number, currencyName: string, chars: { digits: string[], units: string[], groups: string[] }, lang: 'JP' | 'CN' | 'KR'): string => {
-    if (number === 0) return `${chars.digits[0]}${currencyName}`;
+    // If integer and CN lang, append '整'
+    const isInteger = Math.abs(number % 1) < 0.001;
+    const suffix = (lang === 'CN' && isInteger) ? "整" : "";
+
+    if (number === 0) return `${chars.digits[0]}${currencyName}${suffix}`;
+    
     let num = Math.floor(number); 
     let result = "";
     let groupIndex = 0;
@@ -168,16 +173,26 @@ const readCJK = (number: number, currencyName: string, chars: { digits: string[]
         num = Math.floor(num / 10000);
         groupIndex++;
     }
-    return result + currencyName;
+    return result + currencyName + suffix;
 };
 
 export const getReadFunction = (currencyCode: string, amount: number): string => {
     switch (currencyCode) {
-        case 'VND': return readNumberVietnamese(amount, 'Đồng');
+        case 'VND': return readNumberVietnamese(amount, 'Việt Nam Đồng');
         case 'JPY': return readCJK(amount, '円 (Yen)', { digits: ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'], units: ['十', '百', '千'], groups: ['万', '億', '兆'] }, 'JP');
         case 'KRW': return readCJK(amount, '원 (Won)', { digits: ['영', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'], units: ['십', '백', '천'], groups: ['만', '억', '조'] }, 'KR');
-        case 'CNY': return readCJK(amount, '元', { digits: ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'], units: ['十', '百', '千'], groups: ['万', '亿', '兆'] }, 'CN');
-        case 'TWD': return readCJK(amount, '圓', { digits: ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'], units: ['十', '百', '千'], groups: ['万', '亿', '兆'] }, 'CN');
+        case 'CNY': return readCJK(amount, '圆', { 
+            // Simplified Chinese Financial Numerals (Daxie)
+            digits: ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'], 
+            units: ['拾', '佰', '仟'], 
+            groups: ['万', '亿', '兆'] 
+        }, 'CN');
+        case 'TWD': return readCJK(amount, '圓', { 
+            // Traditional Chinese Financial Numerals
+            digits: ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'], 
+            units: ['拾', '佰', '仟'], 
+            groups: ['萬', '億', '兆'] 
+        }, 'CN');
         case 'USD': case 'EUR': case 'GBP': case 'AUD': case 'CAD': case 'SGD':
         default: return readNumberEnglish(amount, currencyCode);
     }
