@@ -17,12 +17,13 @@ interface CurrencyRowProps {
   theme: ThemeColor;
   headerAction?: ReactNode;
   error?: string; // Prop for error message
+  onEnter?: () => void; // New prop for handling Enter key
 }
 
 export const CurrencyRow: React.FC<CurrencyRowProps> = ({
   label, amount, currency, onAmountChange, onCurrencyChange,
   readOnly = false, isActive = false, onToggleDropdown, onCloseDropdown,
-  inputPlacement = 'left', autoFocus = false, headerAction, error
+  inputPlacement = 'left', autoFocus = false, headerAction, error, onEnter
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -129,6 +130,12 @@ export const CurrencyRow: React.FC<CurrencyRowProps> = ({
         value={displayValue}
         onChange={handleInputChange}
         onFocus={(e) => e.target.select()}
+        onKeyDown={(e) => {
+            if (e.key === 'Enter' && onEnter) {
+                e.currentTarget.blur(); // Blur to hide keyboard on mobile
+                onEnter();
+            }
+        }}
         readOnly={readOnly}
         className={`w-full h-full px-2 bg-transparent border-none outline-none text-xl sm:text-2xl font-bold placeholder-slate-300 ${error ? 'text-red-600' : 'text-slate-800'}`}
         placeholder="0"

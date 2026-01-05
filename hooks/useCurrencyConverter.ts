@@ -18,7 +18,13 @@ export const useCurrencyConverter = () => {
     try {
       const savedHistory = localStorage.getItem('conversion_history');
       if (savedHistory) {
-        setHistory(JSON.parse(savedHistory));
+        const parsed = JSON.parse(savedHistory);
+        // Migration support for old data without 'type'
+        const migrated = parsed.map((item: any) => ({
+            ...item,
+            type: item.type || 'convert'
+        }));
+        setHistory(migrated);
       }
     } catch (e) {
       console.error("Failed to load history", e);
@@ -30,27 +36,40 @@ export const useCurrencyConverter = () => {
     localStorage.setItem('conversion_history', JSON.stringify(newHistory));
   };
 
-  const addToHistory = (currentAmount: number, source: Currency, target: Currency, converted: number) => {
+  const addToHistory = (currentAmount: number, source: Currency, target: Currency, converted: number, type: 'convert' | 'calculate', originalSalary?: number) => {
     const newItem: ConversionHistoryItem = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       timestamp: Date.now(),
       inputAmount: currentAmount,
       fromCurrency: source,
       toCurrency: target,
-      convertedAmount: converted
+      convertedAmount: converted,
+      type: type,
+      originalSalary: originalSalary
     };
     
-    // Avoid duplicates: if the latest item is identical, don't add
-    if (history.length > 0) {
-        const latest = history[0];
-        if (latest.inputAmount === newItem.inputAmount && 
-            latest.fromCurrency.code === newItem.fromCurrency.code && 
-            latest.toCurrency.code === newItem.toCurrency.code) {
-            return;
-        }
+    // Check if an identical conversion exists (Same Input, Source, Target, Type AND Original Salary)
+    const existingIndex = history.findIndex(item => 
+        item.inputAmount === newItem.inputAmount && 
+        item.fromCurrency.code === newItem.fromCurrency.code && 
+        item.toCurrency.code === newItem.toCurrency.code &&
+        item.type === newItem.type &&
+        item.originalSalary === newItem.originalSalary
+    );
+
+    let updatedHistory = [...history];
+
+    if (existingIndex > -1) {
+        // Remove the existing item so the new one can go to the top
+        updatedHistory.splice(existingIndex, 1);
     }
 
-    const updatedHistory = [newItem, ...history].slice(0, 20); // Limit to 20 items
+    // Add new item to the beginning
+    updatedHistory.unshift(newItem);
+    
+    // Limit to 50 items total (can be filtered later)
+    updatedHistory = updatedHistory.slice(0, 50); 
+    
     saveHistory(updatedHistory);
   };
 
@@ -58,11 +77,17 @@ export const useCurrencyConverter = () => {
     saveHistory([]);
   };
 
+  const deleteHistoryItems = (ids: string[]) => {
+    const updatedHistory = history.filter(item => !ids.includes(item.id));
+    saveHistory(updatedHistory);
+  };
+
   const selectHistoryItem = (item: ConversionHistoryItem) => {
     setAmount(item.inputAmount.toString());
     setFromCurrency(item.fromCurrency);
     setToCurrency(item.toCurrency);
-    executeConversion(item.inputAmount, item.fromCurrency, item.toCurrency);
+    // Note: We don't auto-execute here because the App component might need to switch tabs first. 
+    // The App component handles the logic of calling executeConversion if needed.
   };
 
   const resetResult = useCallback(() => {
@@ -71,7 +96,7 @@ export const useCurrencyConverter = () => {
     setLoadingState(LoadingState.IDLE);
   }, []);
 
-  const executeConversion = async (currentAmount: number, source: Currency, target: Currency) => {
+  const executeConversion = async (currentAmount: number, source: Currency, target: Currency, type: 'convert' | 'calculate', originalSalary?: number) => {
     setLoadingState(LoadingState.LOADING);
     setErrorMsg('');
     
@@ -81,7 +106,7 @@ export const useCurrencyConverter = () => {
       setLoadingState(LoadingState.SUCCESS);
       
       // Add to history on success
-      addToHistory(currentAmount, source, target, data.convertedAmount);
+      addToHistory(currentAmount, source, target, data.convertedAmount, type, originalSalary);
     } catch (err) {
       setErrorMsg("Có lỗi xảy ra khi lấy tỷ giá. Vui lòng thử lại.");
       setLoadingState(LoadingState.ERROR);
@@ -89,7 +114,7 @@ export const useCurrencyConverter = () => {
     }
   };
 
-  const handleConvert = useCallback((amountOverride?: string) => {
+  const handleConvert = useCallback((amountOverride?: string, type: 'convert' | 'calculate' = 'convert', originalSalary?: number) => {
     const valueToCheck = amountOverride !== undefined ? amountOverride : amount;
     const numAmount = parseFloat(valueToCheck);
 
@@ -97,10 +122,10 @@ export const useCurrencyConverter = () => {
       setErrorMsg("Vui lòng nhập số tiền hợp lệ");
       return;
     }
-    executeConversion(numAmount, fromCurrency, toCurrency);
+    executeConversion(numAmount, fromCurrency, toCurrency, type, originalSalary);
   }, [amount, fromCurrency, toCurrency]);
 
-  const handleSwap = () => {
+  const handleSwap = (currentType: 'convert' | 'calculate' = 'convert') => {
     setIsSwapping(true);
     setTimeout(() => setIsSwapping(false), 500); 
     
@@ -110,18 +135,14 @@ export const useCurrencyConverter = () => {
     setFromCurrency(newFrom);
     setToCurrency(newTo);
     
-    // If we have a result visible, we want to recalculate immediately to show the swapped result
-    // But if there is no result (user was typing), we just swap positions without calculating.
     if (result) {
         const numAmount = parseFloat(amount);
         if (!isNaN(numAmount) && numAmount > 0) {
-            executeConversion(numAmount, newFrom, newTo);
+            executeConversion(numAmount, newFrom, newTo, currentType);
         } else {
             setResult(null);
         }
     } else {
-        // Just swap, do not convert yet as per requirement "only convert when button is pressed"
-        // unless a result was already there.
         setResult(null); 
     }
   };
@@ -129,6 +150,6 @@ export const useCurrencyConverter = () => {
   return {
     amount, setAmount, fromCurrency, setFromCurrency, toCurrency, setToCurrency,
     loadingState, result, errorMsg, isSwapping, handleConvert, handleSwap,
-    history, clearHistory, selectHistoryItem, resetResult
+    history, clearHistory, deleteHistoryItems, selectHistoryItem, resetResult
   };
 };

@@ -16,10 +16,12 @@ export interface ConversionResult {
 export interface ConversionHistoryItem {
   id: string;
   timestamp: number;
-  inputAmount: number;
+  inputAmount: number; // This is the Fee when type is 'calculate'
   fromCurrency: Currency;
   toCurrency: Currency;
   convertedAmount: number;
+  type: 'convert' | 'calculate'; // Distinguish between tabs
+  originalSalary?: number; // Only for 'calculate' type
 }
 
 export enum LoadingState {

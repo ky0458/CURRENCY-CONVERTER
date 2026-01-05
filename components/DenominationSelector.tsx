@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { DENOMINATIONS } from '../constants';
 import { Currency, ThemeColor } from '../types';
@@ -30,7 +29,8 @@ export const DenominationSelector: React.FC<DenominationSelectorProps> = ({ curr
            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider cursor-help">Chọn nhanh mệnh giá</span>
         </Tooltip>
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-3 custom-scrollbar no-scrollbar-on-mobile">
+      {/* Added pt-9 to allow space for top tooltips within the overflow container and negative margin to balance layout */}
+      <div className="flex gap-2 overflow-x-auto pb-3 pt-9 -mt-8 custom-scrollbar no-scrollbar-on-mobile items-end">
         {options.map((val) => {
           const valStr = val.toString();
           const isSelected = currentAmount === valStr;

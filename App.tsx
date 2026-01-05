@@ -8,7 +8,7 @@ import { HistorySection } from './components/HistorySection';
 import { ThemeSelector } from './components/ThemeSelector';
 import { TabSelector } from './components/TabSelector';
 import { useCurrencyConverter } from './hooks/useCurrencyConverter';
-import { LoadingState, ThemeColor, Currency } from './types';
+import { LoadingState, ThemeColor, Currency, ConversionHistoryItem } from './types';
 import { Tooltip } from './components/Tooltip';
 import { THEME_COLORS } from './constants';
 import { generatePalette } from './utils/themeUtils';
@@ -19,7 +19,7 @@ const App: React.FC = () => {
   const {
     amount, setAmount, fromCurrency, setFromCurrency, toCurrency, setToCurrency,
     loadingState, result, errorMsg, isSwapping, handleConvert, handleSwap,
-    history, clearHistory, selectHistoryItem, resetResult
+    history, clearHistory, deleteHistoryItems, selectHistoryItem, resetResult
   } = useCurrencyConverter();
   
   const [activeDropdown, setActiveDropdown] = useState<'FROM' | 'TO' | null>(null);
@@ -30,6 +30,11 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'convert' | 'calculate'>('convert');
   const [salaryAmount, setSalaryAmount] = useState<string>('');
   const [calcType, setCalcType] = useState<'probation' | 'official'>('official');
+
+  // Filter history based on active tab
+  const filteredHistory = useMemo(() => {
+    return history.filter(item => item.type === activeTab);
+  }, [history, activeTab]);
 
   // Apply theme palette to CSS variables
   useEffect(() => {
@@ -109,10 +114,23 @@ const App: React.FC = () => {
      return `1 ${from} ≈ ${formattedRate} ${to}`;
   };
 
-  const handleHistorySelect = (item: any) => {
-    setActiveTab('convert'); // Force switch to convert tab when selecting history
+  const handleHistorySelect = (item: ConversionHistoryItem) => {
+    // Since we filter history, we know the item belongs to the active tab
     selectHistoryItem(item);
+    
+    if (item.type === 'calculate' && item.originalSalary) {
+        setSalaryAmount(item.originalSalary.toString());
+        // Trigger conversion with the fee (inputAmount) and pass salary
+        handleConvert(item.inputAmount.toString(), activeTab, item.originalSalary);
+    } else {
+        handleConvert(item.inputAmount.toString(), activeTab);
+    }
+    
     setShowHistory(false);
+  };
+
+  const handleSwapClick = () => {
+    handleSwap(activeTab);
   };
 
   // Wrapper for calculation logic
@@ -120,16 +138,15 @@ const App: React.FC = () => {
     if (activeTab === 'calculate') {
         const salary = parseFloat(salaryAmount.replace(/,/g, ''));
         if (isNaN(salary) || salary <= 0) {
-            // Let the hook handle the error display or set manual error
-            handleConvert('0'); 
+            handleConvert('0', activeTab); 
             return;
         }
         const multiplier = calcType === 'probation' ? 0.75 : 0.60;
         const fee = Math.floor(salary * multiplier);
         setAmount(fee.toString()); // Sync state
-        handleConvert(fee.toString()); // Trigger conversion with calculated fee
+        handleConvert(fee.toString(), activeTab, salary); // Trigger conversion with calculated fee and ORIGINAL SALARY
     } else {
-        handleConvert();
+        handleConvert(amount, activeTab);
     }
   };
 
@@ -203,6 +220,7 @@ const App: React.FC = () => {
             <div className="flex flex-col md:flex-row items-center md:items-start relative z-20 gap-3 md:gap-4">
               <div className={`w-full md:flex-1 transition-all ${activeDropdown === 'FROM' ? 'z-50' : 'z-20'}`}> 
                   <CurrencyRow
+                      key={activeTab} // Force remount and auto-focus when tab changes
                       label={activeTab === 'calculate' ? "Nhập mức lương" : "Nhập số tiền cần đổi"}
                       amount={activeTab === 'calculate' ? salaryAmount : amount}
                       currency={fromCurrency}
@@ -216,6 +234,7 @@ const App: React.FC = () => {
                       theme={theme}
                       headerAction={renderHistoryButton}
                       error={errorMsg}
+                      onEnter={onCalculateAndConvert}
                   />
 
                   {/* Calculation Options */}
@@ -244,7 +263,7 @@ const App: React.FC = () => {
 
               {activeTab === 'convert' && (
                 <div className="md:mt-12 z-30 shrink-0">
-                    <SwapButton onClick={handleSwap} isSwapping={isSwapping} theme={theme} />
+                    <SwapButton onClick={handleSwapClick} isSwapping={isSwapping} theme={theme} />
                 </div>
               )}
 
@@ -385,12 +404,13 @@ const App: React.FC = () => {
       {showHistory && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
              <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity animate-fade-in-up" onClick={() => setShowHistory(false)} style={{animationDuration: '0.2s'}} />
-             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md relative z-10 overflow-hidden animate-fade-in-up flex flex-col max-h-[80vh]">
-                <div className="p-4 flex-1 overflow-hidden flex flex-col">
+             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative z-10 overflow-hidden animate-fade-in-up flex flex-col max-h-[85vh]">
+                <div className="p-0 flex-1 overflow-hidden flex flex-col">
                    <HistorySection 
-                        history={history} 
+                        history={filteredHistory} 
                         onSelect={handleHistorySelect} 
                         onClear={clearHistory}
+                        onDeleteItems={deleteHistoryItems}
                         formatCurrency={formatCurrency}
                         onClose={() => setShowHistory(false)}
                    />
