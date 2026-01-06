@@ -320,7 +320,7 @@ const AppContent: React.FC = () => {
     >
       {/* GLOBAL FIXED CONTROLS */}
       <div className="fixed top-3 right-3 sm:top-5 sm:right-6 z-[100] flex items-center gap-3 animate-fade-in-up">
-        <UserMenu hasBackgroundImage={hasBackground} />
+        <UserMenu hasBackgroundImage={hasBackground} theme={theme} />
         <ThemeSelector 
             currentTheme={theme} 
             onThemeChange={handleThemeChange} 
