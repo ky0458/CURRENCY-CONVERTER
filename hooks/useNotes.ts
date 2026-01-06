@@ -14,12 +14,14 @@ const DEFAULT_TAGS: NoteTag[] = [
 export const useNotes = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [tags, setTags] = useState<NoteTag[]>(DEFAULT_TAGS);
+  const [isLoading, setIsLoading] = useState(true);
   
   const { user } = useAuth();
 
   // Load Data
   useEffect(() => {
     const loadData = async () => {
+      setIsLoading(true);
       if (user) {
         try {
           const docRef = doc(db, "users", user.uid);
@@ -33,9 +35,14 @@ export const useNotes = () => {
           }
         } catch (e) {
           console.error("Failed to load notes from Firestore", e);
+        } finally {
+          setIsLoading(false);
         }
       } else {
         try {
+          // Simulate a small delay for smoother UX or remove setTimeout for instant load
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
           const savedNotes = localStorage.getItem('app_notes');
           const savedTags = localStorage.getItem('app_note_tags');
           
@@ -44,6 +51,8 @@ export const useNotes = () => {
           else setTags(DEFAULT_TAGS);
         } catch (e) {
           console.error("Failed to load notes from LocalStorage", e);
+        } finally {
+          setIsLoading(false);
         }
       }
     };
@@ -131,6 +140,7 @@ export const useNotes = () => {
   return {
     notes,
     tags: sortedTags,
+    isLoading,
     addNote,
     updateNoteStatus,
     deleteNote,
