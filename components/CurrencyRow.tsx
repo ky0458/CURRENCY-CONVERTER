@@ -18,12 +18,13 @@ interface CurrencyRowProps {
   headerAction?: ReactNode;
   error?: string; // Prop for error message
   onEnter?: () => void; // New prop for handling Enter key
+  hasBackgroundImage?: boolean;
 }
 
 export const CurrencyRow: React.FC<CurrencyRowProps> = ({
   label, amount, currency, onAmountChange, onCurrencyChange,
   readOnly = false, isActive = false, onToggleDropdown, onCloseDropdown,
-  inputPlacement = 'left', autoFocus = false, headerAction, error, onEnter
+  inputPlacement = 'left', autoFocus = false, headerAction, error, onEnter, hasBackgroundImage
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);

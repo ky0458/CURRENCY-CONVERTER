@@ -214,7 +214,7 @@ const App: React.FC = () => {
   };
 
   const handleSwapClick = () => {
-    handleSwap(activeTab as 'convert' | 'calculate');
+    handleSwap(activeTab);
   };
 
   // Main Calculation Logic

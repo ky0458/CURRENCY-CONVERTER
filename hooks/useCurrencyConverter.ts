@@ -104,7 +104,7 @@ export const useCurrencyConverter = () => {
     setLoadingState(LoadingState.IDLE);
   }, []);
 
-  const executeConversion = async (currentAmount: number, source: Currency, target: Currency, type: 'convert' | 'calculate', originalSalary?: number) => {
+  const executeConversion = async (currentAmount: number, source: Currency, target: Currency, type: 'convert' | 'calculate' | 'revenue', originalSalary?: number) => {
     setLoadingState(LoadingState.LOADING);
     setErrorMsg('');
     
@@ -122,7 +122,7 @@ export const useCurrencyConverter = () => {
     }
   };
 
-  const handleConvert = useCallback((amountOverride?: string, type: 'convert' | 'calculate' = 'convert', originalSalary?: number) => {
+  const handleConvert = useCallback((amountOverride?: string, type: 'convert' | 'calculate' | 'revenue' = 'convert', originalSalary?: number) => {
     const valueToCheck = amountOverride !== undefined ? amountOverride : amount;
     const numAmount = parseFloat(valueToCheck);
 
@@ -133,7 +133,7 @@ export const useCurrencyConverter = () => {
     executeConversion(numAmount, fromCurrency, toCurrency, type, originalSalary);
   }, [amount, fromCurrency, toCurrency]);
 
-  const handleSwap = (currentType: 'convert' | 'calculate' = 'convert') => {
+  const handleSwap = (currentType: 'convert' | 'calculate' | 'revenue' = 'convert') => {
     setIsSwapping(true);
     setTimeout(() => setIsSwapping(false), 500); 
     

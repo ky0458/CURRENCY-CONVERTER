@@ -2,6 +2,21 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNotes } from '../hooks/useNotes';
 import { NoteStatus } from '../types';
 
+const PRESET_COLORS = [
+  '#ef4444', // Red
+  '#f97316', // Orange
+  '#f59e0b', // Amber
+  '#84cc16', // Lime
+  '#10b981', // Emerald
+  '#06b6d4', // Cyan
+  '#3b82f6', // Blue
+  '#6366f1', // Indigo
+  '#8b5cf6', // Violet
+  '#d946ef', // Fuchsia
+  '#f43f5e', // Rose
+  '#64748b', // Slate
+];
+
 export const NotesManager: React.FC = () => {
   const { notes, tags, addNote, updateNoteStatus, deleteNote, deleteNotes, addTag, deleteTag, toggleTagPin } = useNotes();
   const [isOpen, setIsOpen] = useState(false);
@@ -290,34 +305,30 @@ export const NotesManager: React.FC = () => {
       }
   };
 
-  const statusConfig: Record<NoteStatus, { label: string, badgeClass: string, borderClass: string, containerClass: string, icon: React.ReactNode }> = {
+  const statusConfig: Record<NoteStatus, { label: string, badgeClass: string, icon: React.ReactNode, color: string }> = {
     incomplete: { 
       label: 'Chưa xong', 
-      badgeClass: 'text-red-600 bg-red-100',
-      borderClass: 'border-red-500', 
-      containerClass: 'bg-red-50/30',
-      icon: <div className="w-2 h-2 rounded-full bg-red-500" />
+      badgeClass: 'text-red-600 bg-red-50',
+      icon: <div className="w-2 h-2 rounded-full bg-red-500" />,
+      color: '#ef4444' // red-500
     },
     attention: { 
       label: 'Chú ý', 
-      badgeClass: 'text-amber-600 bg-amber-100',
-      borderClass: 'border-amber-500', 
-      containerClass: 'bg-amber-50/30',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-amber-500"><path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" /></svg>
+      badgeClass: 'text-amber-600 bg-amber-50',
+      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-amber-500"><path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" /></svg>,
+      color: '#f59e0b' // amber-500
     },
     completed: { 
       label: 'Hoàn thành', 
-      badgeClass: 'text-emerald-600 bg-emerald-100',
-      borderClass: 'border-emerald-500', 
-      containerClass: 'bg-emerald-50/30',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-emerald-500"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" /></svg>
+      badgeClass: 'text-emerald-600 bg-emerald-50',
+      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-emerald-500"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" /></svg>,
+      color: '#10b981' // emerald-500
     },
     skipped: { 
       label: 'Bỏ qua', 
-      badgeClass: 'text-slate-500 bg-slate-200',
-      borderClass: 'border-slate-400', 
-      containerClass: 'bg-slate-100/50 opacity-75',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-slate-500"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+      badgeClass: 'text-slate-500 bg-slate-100',
+      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-slate-500"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>,
+      color: '#64748b' // slate-500
     },
   };
 
@@ -463,20 +474,56 @@ export const NotesManager: React.FC = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Màu nhận diện</label>
-                                        <div className="flex items-center gap-3">
-                                            <input 
-                                                type="color" 
-                                                className="w-14 h-14 rounded-xl cursor-pointer border-2 border-white shadow-sm"
-                                                value={newTagColor}
-                                                onChange={(e) => setNewTagColor(e.target.value)}
-                                            />
-                                            <button 
-                                                onClick={handleCreateTag}
-                                                className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-indigo-200"
-                                            >
-                                                Tạo ngay
-                                            </button>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-3">Màu nhận diện</label>
+                                        <div className="flex flex-col gap-4">
+                                            {/* Preset Colors Grid */}
+                                            <div className="grid grid-cols-6 sm:grid-cols-8 gap-3">
+                                                {PRESET_COLORS.map(color => (
+                                                    <button 
+                                                        key={color}
+                                                        onClick={() => setNewTagColor(color)}
+                                                        className={`w-10 h-10 rounded-full cursor-pointer transition-transform hover:scale-110 flex items-center justify-center shadow-sm ${newTagColor === color ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'border border-black/5'}`}
+                                                        style={{ backgroundColor: color }}
+                                                    >
+                                                        {newTagColor === color && (
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-4 h-4 text-white drop-shadow-md">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                ))}
+                                                
+                                                {/* Custom Color Picker Button */}
+                                                <div className="relative w-10 h-10 rounded-full cursor-pointer overflow-hidden border border-slate-200 shadow-sm transition-transform hover:scale-110 group">
+                                                    <div className="w-full h-full bg-gradient-to-br from-red-500 via-green-500 to-blue-500 opacity-80" />
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-white/20">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-white drop-shadow-md">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                                        </svg>
+                                                    </div>
+                                                    <input 
+                                                        type="color" 
+                                                        className="absolute inset-0 w-[200%] h-[200%] opacity-0 cursor-pointer -top-1/2 -left-1/2 p-0 m-0"
+                                                        value={newTagColor}
+                                                        onChange={(e) => setNewTagColor(e.target.value)}
+                                                        title="Chọn màu tùy ý"
+                                                    />
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Preview & Action */}
+                                            <div className="flex items-center gap-3 mt-1 pt-3 border-t border-slate-200/50">
+                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white">
+                                                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: newTagColor }}></div>
+                                                    <span className="text-xs font-mono text-slate-500 uppercase">{newTagColor}</span>
+                                                </div>
+                                                <button 
+                                                    onClick={handleCreateTag}
+                                                    className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-indigo-200"
+                                                >
+                                                    Tạo ngay
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -507,7 +554,7 @@ export const NotesManager: React.FC = () => {
                                                         title={tag.isPinned ? "Bỏ ghim" : "Ghim thẻ"}
                                                     >
                                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                                            <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Zm-5 5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                                                            <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Zm-5 5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1 1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
                                                             <path d="M14.75 12.25a.75.75 0 0 0 0 1.5H16v2.25h-2.25a.75.75 0 0 0 0 1.5H16v2.5a.75.75 0 0 0 1.5 0v-2.5h2.25a.75.75 0 0 0 0-1.5H17.5V13.75h2.25a.75.75 0 0 0 0-1.5H14.75Z" opacity="0" /> 
                                                             <path fillRule="evenodd" d="M9.702 3.86a.75.75 0 0 1 .493 1.018l-1.082 3.093 5.925 5.925 3.093-1.082a.75.75 0 0 1 .937.937l-1.383 4.84a.75.75 0 0 1-1.05.474l-3.37-1.444-2.298 2.298a.75.75 0 0 1-1.06 0l-1.061-1.061a.75.75 0 0 1 0-1.061l2.298-2.298-1.444-3.37a.75.75 0 0 1 .474-1.05l4.84-1.383a.75.75 0 0 1 .494-1.018Z" clipRule="evenodd" />
                                                         </svg>
@@ -614,11 +661,11 @@ export const NotesManager: React.FC = () => {
                     {/* --- VIEW: LIST --- */}
                     {viewMode === 'list' && (
                         <div className="flex flex-col h-full overflow-hidden animate-fade-in-up">
-                            {/* Filter Tabs */}
-                            <div className="px-5 py-3 flex gap-2 overflow-x-auto custom-scrollbar no-scrollbar-on-mobile border-b border-slate-100/50 bg-slate-50/50 shrink-0">
+                            {/* Filter Tabs - Optimized for Mobile Horizontal Scroll */}
+                            <div className="px-5 py-3 flex gap-3 overflow-x-auto custom-scrollbar no-scrollbar-on-mobile border-b border-slate-100/50 bg-slate-50/50 shrink-0 snap-x snap-mandatory">
                                 <button
                                     onClick={() => setActiveTab('all')}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-sm
+                                    className={`snap-center px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-sm shrink-0
                                         ${activeTab === 'all' 
                                             ? 'bg-slate-800 text-white shadow-md transform scale-105' 
                                             : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-100'}
@@ -630,7 +677,7 @@ export const NotesManager: React.FC = () => {
                                     <div 
                                         key={tag.id} 
                                         className={`
-                                            flex items-center rounded-xl border shadow-sm transition-all overflow-hidden relative
+                                            snap-center shrink-0 flex items-center rounded-xl border shadow-sm transition-all overflow-hidden relative
                                             ${activeTab === tag.id ? 'border-transparent shadow-md transform scale-105' : 'bg-white border-slate-100 hover:border-slate-200'}
                                         `}
                                         style={{ 
@@ -644,6 +691,14 @@ export const NotesManager: React.FC = () => {
                                         >
                                             <span className={`w-1.5 h-1.5 rounded-full ${activeTab === tag.id ? 'bg-white' : ''}`} style={{ backgroundColor: activeTab === tag.id ? undefined : tag.color }} />
                                             {tag.name}
+                                            {/* Show small pin indicator if pinned but not active */}
+                                            {tag.isPinned && activeTab !== tag.id && (
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-2.5 h-2.5 text-slate-400 ml-0.5">
+                                                    <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Zm-5 5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1 1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                                                    <path d="M14.75 12.25a.75.75 0 0 0 0 1.5H16v2.25h-2.25a.75.75 0 0 0 0 1.5H16v2.5a.75.75 0 0 0 1.5 0v-2.5h2.25a.75.75 0 0 0 0-1.5H17.5V13.75h2.25a.75.75 0 0 0 0-1.5H14.75Z" opacity="0" /> 
+                                                    <path fillRule="evenodd" d="M9.702 3.86a.75.75 0 0 1 .493 1.018l-1.082 3.093 5.925 5.925 3.093-1.082a.75.75 0 0 1 .937.937l-1.383 4.84a.75.75 0 0 1-1.05.474l-3.37-1.444-2.298 2.298a.75.75 0 0 1-1.06 0l-1.061-1.061a.75.75 0 0 1 0-1.061l2.298-2.298-1.444-3.37a.75.75 0 0 1 .474-1.05l4.84-1.383a.75.75 0 0 1 .494-1.018Z" clipRule="evenodd" />
+                                                </svg>
+                                            )}
                                         </button>
                                         
                                         {/* Actions - Only visible when active */}
@@ -652,12 +707,12 @@ export const NotesManager: React.FC = () => {
                                                 <div className="h-4 w-px bg-white/30"></div>
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); toggleTagPin(tag.id); }}
-                                                    className="px-2 py-2 h-full flex items-center justify-center transition-colors hover:bg-black/10"
+                                                    className="px-3 py-2 h-full flex items-center justify-center transition-colors hover:bg-black/10"
                                                     title={tag.isPinned ? "Bỏ ghim" : "Ghim thẻ"}
                                                 >
                                                     {tag.isPinned ? (
                                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
-                                                            <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Zm-5 5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                                                            <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Zm-5 5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1 1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
                                                             <path d="M14.75 12.25a.75.75 0 0 0 0 1.5H16v2.25h-2.25a.75.75 0 0 0 0 1.5H16v2.5a.75.75 0 0 0 1.5 0v-2.5h2.25a.75.75 0 0 0 0-1.5H17.5V13.75h2.25a.75.75 0 0 0 0-1.5H14.75Z" opacity="0" /> 
                                                             <path fillRule="evenodd" d="M9.702 3.86a.75.75 0 0 1 .493 1.018l-1.082 3.093 5.925 5.925 3.093-1.082a.75.75 0 0 1 .937.937l-1.383 4.84a.75.75 0 0 1-1.05.474l-3.37-1.444-2.298 2.298a.75.75 0 0 1-1.06 0l-1.061-1.061a.75.75 0 0 1 0-1.061l2.298-2.298-1.444-3.37a.75.75 0 0 1 .474-1.05l4.84-1.383a.75.75 0 0 1 .494-1.018Z" clipRule="evenodd" />
                                                         </svg>
@@ -667,15 +722,6 @@ export const NotesManager: React.FC = () => {
                                                             <path strokeLinecap="round" strokeLinejoin="round" d="m15 11.25-3-3m0 0-3 3m3-3v7.5" />
                                                         </svg>
                                                     )}
-                                                </button>
-                                                
-                                                <div className="h-4 w-px bg-white/30"></div>
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); handleRequestDeleteTag(tag.id); }}
-                                                    className="px-2 py-2 h-full flex items-center justify-center hover:bg-black/10 transition-colors"
-                                                    title="Xóa thẻ"
-                                                >
-                                                    <span className="text-white font-bold leading-none text-sm">&times;</span>
                                                 </button>
                                             </div>
                                         )}
@@ -701,6 +747,10 @@ export const NotesManager: React.FC = () => {
                                             const isSelected = selectedIds.has(note.id);
                                             const isAllTab = activeTab === 'all';
                                             
+                                            // Colors
+                                            const statusColor = status.color; // Left border color
+                                            const tagColor = tag ? tag.color : '#e2e8f0'; // Surrounding border color
+
                                             return (
                                                 <div 
                                                     key={note.id} 
@@ -712,14 +762,22 @@ export const NotesManager: React.FC = () => {
                                                         }
                                                     }}
                                                     className={`
-                                                        rounded-2xl shadow-sm border border-l-[6px] group transition-all relative overflow-hidden flex items-stretch touch-manipulation select-none h-full
+                                                        rounded-2xl border-l-[6px] border group transition-all relative overflow-hidden flex items-stretch touch-manipulation select-none h-full
                                                         ${isSelectionMode 
-                                                            ? 'cursor-pointer hover:shadow-md' 
-                                                            : 'hover:shadow-md'}
+                                                            ? 'cursor-pointer hover:shadow-lg' 
+                                                            : 'hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]'}
                                                         ${isSelectionMode && isSelected 
-                                                            ? 'bg-indigo-50 border-l-indigo-500 border-indigo-200' 
-                                                            : `${status.borderClass} ${status.containerClass} bg-white border-t-white/40 border-r-white/40 border-b-white/40`}
+                                                            ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500 shadow-md' 
+                                                            : 'bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)]'}
                                                     `}
+                                                    style={
+                                                        (isSelectionMode && isSelected) ? {} : {
+                                                            borderLeftColor: statusColor,
+                                                            borderTopColor: tagColor,
+                                                            borderRightColor: tagColor,
+                                                            borderBottomColor: tagColor
+                                                        }
+                                                    }
                                                 >
                                                     {/* Selection Checkbox Area */}
                                                     {isSelectionMode && (
@@ -734,17 +792,17 @@ export const NotesManager: React.FC = () => {
                                                         </div>
                                                     )}
                                                     
-                                                    {/* Category Badge for 'All' view */}
+                                                    {/* Category Badge for 'All' view - Optional visual flair */}
                                                     {!isSelectionMode && isAllTab && tag && (
                                                         <div 
-                                                            className="absolute top-0 right-0 px-3 py-1.5 rounded-bl-xl rounded-tr-2xl text-[9px] font-bold text-white shadow-sm z-[5] pointer-events-none"
+                                                            className="absolute top-0 right-0 px-3 py-1.5 rounded-bl-xl rounded-tr-2xl text-[9px] font-bold text-white shadow-sm z-[5] pointer-events-none opacity-90"
                                                             style={{ backgroundColor: tag.color }}
                                                         >
                                                             {tag.name}
                                                         </div>
                                                     )}
 
-                                                    <div className="flex-1 p-3 flex flex-col h-full">
+                                                    <div className="flex-1 p-4 flex flex-col h-full">
                                                         {/* Tag & Time */}
                                                         <div className="flex justify-between items-start mb-2 relative z-10">
                                                             <div className="flex items-center gap-2">
@@ -756,7 +814,7 @@ export const NotesManager: React.FC = () => {
                                                                         {tag.name}
                                                                     </span>
                                                                 )}
-                                                                <span className="text-[10px] text-slate-400 font-semibold bg-white/50 px-1.5 rounded">
+                                                                <span className="text-[10px] text-slate-400 font-semibold bg-slate-50 px-1.5 rounded">
                                                                     {new Date(note.timestamp).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit', day: '2-digit', month: '2-digit'})}
                                                                 </span>
                                                             </div>
@@ -784,10 +842,10 @@ export const NotesManager: React.FC = () => {
                                                                     key={s}
                                                                     onClick={(e) => { e.stopPropagation(); updateNoteStatus(note.id, s); }}
                                                                     className={`
-                                                                        flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border transition-all whitespace-nowrap
+                                                                        flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-bold border transition-all whitespace-nowrap
                                                                         ${note.status === s 
                                                                             ? `${statusConfig[s].badgeClass} border-transparent shadow-sm ring-1 ring-black/5` 
-                                                                            : 'bg-white/60 border-transparent text-slate-400 hover:bg-white hover:text-slate-600'}
+                                                                            : 'bg-slate-50 border-transparent text-slate-400 hover:bg-slate-100 hover:text-slate-600'}
                                                                     `}
                                                                 >
                                                                     {note.status === s ? statusConfig[s].icon : null}

@@ -9,9 +9,10 @@ interface ResultSectionProps {
   inputAmount: string;
   formatCurrency: (val: number, locale: string, currencyCode: string) => string;
   theme: ThemeColor;
+  hasBackgroundImage?: boolean;
 }
 
-export const ResultSection: React.FC<ResultSectionProps> = ({ result, fromCurrency, toCurrency, inputAmount, formatCurrency }) => {
+export const ResultSection: React.FC<ResultSectionProps> = ({ result, fromCurrency, toCurrency, inputAmount, formatCurrency, hasBackgroundImage }) => {
   // Safe parsing to avoid NaN display
   const safeInputAmount = React.useMemo(() => {
     const parsed = parseFloat(inputAmount);
