@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CurrencyRow } from './components/CurrencyRow';
 import { Header } from './components/Header';
@@ -8,6 +9,7 @@ import { HistorySection } from './components/HistorySection';
 import { ThemeSelector } from './components/ThemeSelector';
 import { TabSelector } from './components/TabSelector';
 import { NotesManager } from './components/NotesManager';
+import { UserMenu } from './components/UserMenu';
 import { useCurrencyConverter } from './hooks/useCurrencyConverter';
 import { LoadingState, ThemeColor, Currency, ConversionHistoryItem } from './types';
 import { THEME_COLORS, DEFAULT_SOURCE_CURRENCY } from './constants';
@@ -15,27 +17,24 @@ import { generatePalette, extractDominantColor, compressImage } from './utils/th
 import { getReadFunction } from './utils/currencyTextFormatter';
 import { CopyButton } from './components/CopyButton';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const {
     amount, setAmount, fromCurrency, setFromCurrency, toCurrency, setToCurrency,
-    loadingState, result, errorMsg, isSwapping, handleConvert, handleSwap,
+    loadingState, result, errorMsg, setErrorMsg, isSwapping, handleConvert, handleSwap,
     history, clearHistory, deleteHistoryItems, selectHistoryItem, resetResult, addToHistory
   } = useCurrencyConverter();
   
   const [activeDropdown, setActiveDropdown] = useState<'FROM' | 'TO' | null>(null);
   const [theme, setTheme] = useState<ThemeColor>('blue');
   const [showHistory, setShowHistory] = useState(false);
-  const [isClosingHistory, setIsClosingHistory] = useState(false); // New state for history closing animation
+  const [isClosingHistory, setIsClosingHistory] = useState(false);
   
-  // Background Image State
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
 
-  // States for Calculation & Revenue Mode
   const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'revenue'>('convert');
   const [salaryAmount, setSalaryAmount] = useState<string>('');
   const [calcType, setCalcType] = useState<'probation' | 'official'>('official');
   
-  // New State for Revenue Options
   const [revenueShare, setRevenueShare] = useState<'all' | 'cv' | 'job'>('all');
   const [isRevenueDropdownOpen, setIsRevenueDropdownOpen] = useState(false);
   const revenueDropdownRef = useRef<HTMLDivElement>(null);
@@ -52,7 +51,6 @@ const App: React.FC = () => {
     { value: 'job', label: 'Nắm Job (30%)' }
   ];
 
-  // Filter history based on active tab
   const filteredHistory = useMemo(() => {
     return history.filter(item => item.type === activeTab);
   }, [history, activeTab]);
@@ -69,7 +67,6 @@ const App: React.FC = () => {
     });
   };
 
-  // Initial load of theme and background
   useEffect(() => {
     const savedTheme = localStorage.getItem('app_theme');
     const savedBg = localStorage.getItem('app_bg');
@@ -96,7 +93,6 @@ const App: React.FC = () => {
       if (!file) return;
 
       try {
-          // Compress image to avoid LocalStorage quota limit
           const base64String = await compressImage(file);
           
           setBackgroundImage(base64String);
@@ -108,7 +104,6 @@ const App: React.FC = () => {
               alert("Ảnh nền quá lớn để lưu tự động. Ảnh sẽ chỉ hiển thị trong phiên làm việc hiện tại.");
           }
           
-          // Auto extract color and set theme
           try {
               const dominantColor = await extractDominantColor(base64String);
               setTheme(dominantColor);
@@ -128,7 +123,6 @@ const App: React.FC = () => {
     localStorage.removeItem('app_bg');
   };
 
-  // Handle click outside for Revenue Dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         if (revenueDropdownRef.current && !revenueDropdownRef.current.contains(event.target as Node)) {
@@ -146,7 +140,7 @@ const App: React.FC = () => {
         setAmount(val);
     }
     resetResult();
-    setRevenueResult(null); // Reset revenue result on input change
+    setRevenueResult(null); 
   };
 
   const handleFromChange = (currency: Currency) => {
@@ -186,7 +180,7 @@ const App: React.FC = () => {
       setTimeout(() => {
           setShowHistory(false);
           setIsClosingHistory(false);
-      }, 300); // 300ms matches standard CSS transition time
+      }, 300); 
   };
 
   const handleHistorySelect = (item: ConversionHistoryItem) => {
@@ -199,7 +193,6 @@ const App: React.FC = () => {
     else if (item.type === 'revenue' && item.revenueDetails) {
         setSalaryAmount(item.inputAmount.toString());
         setRevenueShare(item.revenueDetails.shareType);
-        // Recalculate directly to show result
         setRevenueResult({
             totalRevenue: item.revenueDetails.totalRevenue,
             stageRevenue: item.revenueDetails.stageRevenue,
@@ -217,28 +210,26 @@ const App: React.FC = () => {
     handleSwap(activeTab);
   };
 
-  // Main Calculation Logic
   const onCalculateAndConvert = () => {
     if (activeTab === 'revenue') {
-        // Revenue Logic
         const salary = parseFloat(salaryAmount.replace(/,/g, ''));
         if (isNaN(salary) || salary <= 0) {
              setRevenueResult(null);
+             setErrorMsg("Vui lòng nhập số tiền hợp lệ");
              return;
         }
+        
+        setErrorMsg(""); // Clear error if valid
 
-        // 1. Calculate Base Fee (Revenue) from Salary
         const feeMultiplier = calcType === 'probation' ? 0.75 : 0.60;
         const baseRevenue = Math.floor(salary * feeMultiplier);
 
-        // 2. Apply Revenue Share Option
         let shareMultiplier = 1;
         if (revenueShare === 'cv') shareMultiplier = 0.7;
         else if (revenueShare === 'job') shareMultiplier = 0.3;
 
         const totalRevenue = Math.floor(baseRevenue * shareMultiplier);
 
-        // 3. Calculate Derived Values
         const stageRevenue = Math.floor(totalRevenue / 2);
         const netIncome = Math.floor(totalRevenue * 0.49);
 
@@ -248,11 +239,10 @@ const App: React.FC = () => {
             netIncome
         });
 
-        // Add to history
         addToHistory(
             salary,
-            DEFAULT_SOURCE_CURRENCY, // Assume VND
-            DEFAULT_SOURCE_CURRENCY, // Assume VND
+            DEFAULT_SOURCE_CURRENCY, 
+            DEFAULT_SOURCE_CURRENCY, 
             netIncome,
             'revenue',
             undefined,
@@ -264,7 +254,6 @@ const App: React.FC = () => {
         );
 
     } else if (activeTab === 'calculate') {
-        // Calculate Fee Logic
         const salary = parseFloat(salaryAmount.replace(/,/g, ''));
         if (isNaN(salary) || salary <= 0) {
             handleConvert('0', activeTab); 
@@ -272,10 +261,9 @@ const App: React.FC = () => {
         }
         const multiplier = calcType === 'probation' ? 0.75 : 0.60;
         const fee = Math.floor(salary * multiplier);
-        setAmount(fee.toString()); // Sync state
-        handleConvert(fee.toString(), activeTab, salary); // Trigger conversion
+        setAmount(fee.toString()); 
+        handleConvert(fee.toString(), activeTab, salary); 
     } else {
-        // Standard Convert Logic
         handleConvert(amount, activeTab);
     }
   };
@@ -293,7 +281,6 @@ const App: React.FC = () => {
     </button>
   );
 
-  // Calculate Stage Fee Values (only available when result is present)
   const stageFeeData = useMemo(() => {
     if (activeTab !== 'calculate' || !result || !amount) return null;
     
@@ -301,7 +288,6 @@ const App: React.FC = () => {
     if (isNaN(totalFeeSource)) return null;
 
     const stageSource = Math.floor(totalFeeSource / 2);
-    // Calculate target using the same rate logic
     const stageTarget = Math.ceil(stageSource * result.exchangeRate);
 
     const formattedSource = formatCurrency(stageSource, fromCurrency.locale, fromCurrency.code);
@@ -332,8 +318,18 @@ const App: React.FC = () => {
             backgroundRepeat: 'no-repeat'
         }}
     >
-      
-      {/* 1. Global Blurred Background */}
+      {/* GLOBAL FIXED CONTROLS */}
+      <div className="fixed top-3 right-3 sm:top-5 sm:right-6 z-[100] flex items-center gap-3 animate-fade-in-up">
+        <UserMenu hasBackgroundImage={hasBackground} />
+        <ThemeSelector 
+            currentTheme={theme} 
+            onThemeChange={handleThemeChange} 
+            onBackgroundUpload={handleBackgroundUpload}
+            onRemoveBackground={handleRemoveBackground}
+            currentBackground={backgroundImage}
+        />
+      </div>
+
       <div 
         className="fixed inset-0 z-0 transition-all duration-500 bg-slate-100"
         style={{
@@ -346,18 +342,7 @@ const App: React.FC = () => {
         }}
       />
 
-      <div className="fixed top-3 right-3 sm:top-5 sm:right-5 z-[100] animate-fade-in-up">
-        <ThemeSelector 
-            currentTheme={theme} 
-            onThemeChange={handleThemeChange} 
-            onBackgroundUpload={handleBackgroundUpload}
-            onRemoveBackground={handleRemoveBackground}
-            currentBackground={backgroundImage}
-        />
-      </div>
-
-      <div className="flex-1 flex items-center justify-center p-3 sm:p-4 relative z-20">
-        {/* 2. Main Card with Optimized Border/Background */}
+      <div className="flex-1 flex items-center justify-center p-3 sm:p-4 pt-16 sm:pt-20 relative z-20">
         <div 
             className={`w-full max-w-5xl rounded-3xl relative flex flex-col my-2 mb-8 transition-all duration-300 shadow-2xl
             ${!hasBackground 
@@ -369,7 +354,6 @@ const App: React.FC = () => {
                 backgroundPosition: 'center',
             }}
         >
-          {/* Internal overlay */}
           {hasBackground && <div className="absolute inset-0 bg-black/5 z-0 pointer-events-none rounded-3xl"></div>}
           
           <div className="relative z-10">
@@ -397,11 +381,6 @@ const App: React.FC = () => {
                 )}
 
                 <div className="flex flex-col md:flex-row items-center md:items-start relative gap-3 md:gap-4">
-                {/* 
-                    Z-Index Logic Fixed: 
-                    If FROM is active OR Revenue Dropdown is open, it gets z-50 to stack above the button.
-                    Otherwise, it sits at z-20.
-                */}
                 <div className={`w-full md:flex-1 transition-all relative ${activeDropdown === 'FROM' || isRevenueDropdownOpen ? 'z-50' : 'z-20'}`}> 
                     <CurrencyRow
                         key={activeTab}
@@ -424,7 +403,6 @@ const App: React.FC = () => {
 
                     {(activeTab === 'calculate' || activeTab === 'revenue') && (
                         <div className="mt-3 flex gap-3 animate-fade-in-up">
-                            {/* Official Salary */}
                             <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
                                 ${calcType === 'official' 
                                     ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
@@ -439,7 +417,6 @@ const App: React.FC = () => {
                                 </div>
                             </label>
 
-                            {/* Probation Salary */}
                             <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
                                 ${calcType === 'probation' 
                                     ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
@@ -553,7 +530,6 @@ const App: React.FC = () => {
                     </span>
                 </button>
                 
-                {/* Exchange Rate Badge */}
                 {activeTab !== 'revenue' && result && loadingState === LoadingState.SUCCESS && (
                     <div className="flex justify-center -mt-2 animate-fade-in-up relative z-10">
                     <div className="text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full border border-white/60 bg-white/95 backdrop-blur-sm text-slate-500 shadow-sm flex items-center gap-2">
@@ -563,7 +539,6 @@ const App: React.FC = () => {
                     </div>
                 )}
 
-                {/* --- RESULTS SECTIONS --- */}
                 {activeTab !== 'revenue' && result && loadingState === LoadingState.SUCCESS && (
                     <>
                     {activeTab === 'calculate' && (
@@ -594,7 +569,6 @@ const App: React.FC = () => {
                         </div>
                         
                         <div className="grid md:grid-cols-2 gap-4">
-                            {/* Stage Fee Cards - Optimized Borders */}
                             <div className={`p-4 rounded-2xl flex flex-col justify-between shadow-lg backdrop-blur-md ${hasBackground ? 'bg-white/80 border border-white/40' : 'bg-white/95 border border-white/50'}`}>
                                 <div>
                                     <div className="flex items-center gap-2 mb-2 opacity-70">
@@ -721,10 +695,8 @@ const App: React.FC = () => {
         </div>
       </div>
       
-      {/* 3. Floating Notes Manager */}
       <NotesManager />
       
-      {/* Footer */}
       <footer className="w-full bg-slate-900/80 backdrop-blur text-slate-400 py-6 mt-auto relative z-10">
         <div className="container mx-auto px-4 text-center">
             <p className="font-semibold text-slate-300 mb-1 tracking-wide text-sm">Powered by ZiQi</p>
@@ -757,5 +729,16 @@ const App: React.FC = () => {
     </div>
   );
 };
+
+// Import AuthProvider
+import { AuthProvider } from './contexts/AuthContext';
+
+const App: React.FC = () => {
+    return (
+        <AuthProvider>
+            <AppContent />
+        </AuthProvider>
+    );
+}
 
 export default App;

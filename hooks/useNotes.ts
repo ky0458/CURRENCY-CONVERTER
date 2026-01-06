@@ -1,39 +1,78 @@
+
 import { useState, useEffect } from 'react';
 import { Note, NoteTag, NoteStatus } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { db } from '../firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const DEFAULT_TAGS: NoteTag[] = [
-  { id: 'personal', name: 'Cá nhân', color: '#3b82f6', isPinned: false }, // Blue
-  { id: 'work', name: 'Công việc', color: '#10b981', isPinned: true },   // Emerald (Pinned by default example)
-  { id: 'idea', name: 'Ý tưởng', color: '#f59e0b', isPinned: false },     // Amber
+  { id: 'personal', name: 'Cá nhân', color: '#3b82f6', isPinned: false },
+  { id: 'work', name: 'Công việc', color: '#10b981', isPinned: true },
+  { id: 'idea', name: 'Ý tưởng', color: '#f59e0b', isPinned: false },
 ];
 
 export const useNotes = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [tags, setTags] = useState<NoteTag[]>(DEFAULT_TAGS);
+  
+  const { user } = useAuth();
 
-  // Load data
+  // Load Data
   useEffect(() => {
-    try {
-      const savedNotes = localStorage.getItem('app_notes');
-      const savedTags = localStorage.getItem('app_note_tags');
-      
-      if (savedNotes) setNotes(JSON.parse(savedNotes));
-      if (savedTags) setTags(JSON.parse(savedTags));
-      else setTags(DEFAULT_TAGS);
-    } catch (e) {
-      console.error("Failed to load notes", e);
-    }
-  }, []);
+    const loadData = async () => {
+      if (user) {
+        try {
+          const docRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+             const data = docSnap.data();
+             if (data.notes) setNotes(data.notes);
+             if (data.tags) setTags(data.tags);
+          } else {
+              setTags(DEFAULT_TAGS);
+          }
+        } catch (e) {
+          console.error("Failed to load notes from Firestore", e);
+        }
+      } else {
+        try {
+          const savedNotes = localStorage.getItem('app_notes');
+          const savedTags = localStorage.getItem('app_note_tags');
+          
+          if (savedNotes) setNotes(JSON.parse(savedNotes));
+          if (savedTags) setTags(JSON.parse(savedTags));
+          else setTags(DEFAULT_TAGS);
+        } catch (e) {
+          console.error("Failed to load notes from LocalStorage", e);
+        }
+      }
+    };
+    loadData();
+  }, [user]);
 
-  // Save data helpers
+  // Helper to save everything to Firestore or LocalStorage
+  const persistData = async (newNotes: Note[], newTags: NoteTag[]) => {
+    if (user) {
+      try {
+        const docRef = doc(db, "users", user.uid);
+        await setDoc(docRef, { notes: newNotes, tags: newTags }, { merge: true });
+      } catch (e) {
+        console.error("Failed to save notes/tags to Firestore", e);
+      }
+    } else {
+      localStorage.setItem('app_notes', JSON.stringify(newNotes));
+      localStorage.setItem('app_note_tags', JSON.stringify(newTags));
+    }
+  };
+
   const saveNotes = (newNotes: Note[]) => {
     setNotes(newNotes);
-    localStorage.setItem('app_notes', JSON.stringify(newNotes));
+    persistData(newNotes, tags);
   };
 
   const saveTags = (newTags: NoteTag[]) => {
     setTags(newTags);
-    localStorage.setItem('app_note_tags', JSON.stringify(newTags));
+    persistData(notes, newTags);
   };
 
   // Note Actions
@@ -83,18 +122,15 @@ export const useNotes = () => {
     saveTags(updatedTags);
   };
 
-  // Sort tags: Pinned first
   const sortedTags = [...tags].sort((a, b) => {
-      // If one is pinned and other isn't, pinned comes first
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
-      // Otherwise keep original order (or sort by ID/Name if desired)
       return 0; 
   });
 
   return {
     notes,
-    tags: sortedTags, // Return sorted tags
+    tags: sortedTags,
     addNote,
     updateNoteStatus,
     deleteNote,

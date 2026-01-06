@@ -25,7 +25,10 @@ export const NotesManager: React.FC = () => {
   // View Mode: 'list' (default), 'add-note', 'add-tag' (now acts as Manage Tags)
   const [viewMode, setViewMode] = useState<'list' | 'add-note' | 'add-tag'>('list');
   const [isSubViewClosing, setIsSubViewClosing] = useState(false); // Sub-view closing state
+  
+  // Filters
   const [activeTab, setActiveTab] = useState<string>('all'); 
+  const [activeStatusFilter, setActiveStatusFilter] = useState<NoteStatus | 'all'>('all');
   
   // Selection & Delete State (Notes)
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -153,9 +156,11 @@ export const NotesManager: React.FC = () => {
       selectionSetRef.current = selectedIds;
   }, [selectedIds]);
 
-  const filteredNotes = activeTab === 'all' 
-    ? notes 
-    : notes.filter(n => n.tagId === activeTab);
+  const filteredNotes = notes.filter(n => {
+      const matchesTag = activeTab === 'all' || n.tagId === activeTab;
+      const matchesStatus = activeStatusFilter === 'all' || n.status === activeStatusFilter;
+      return matchesTag && matchesStatus;
+  });
 
   const getTag = (id: string | null) => tags.find(t => t.id === id);
 
@@ -309,25 +314,25 @@ export const NotesManager: React.FC = () => {
     incomplete: { 
       label: 'Chưa xong', 
       badgeClass: 'text-red-600 bg-red-50',
-      icon: <div className="w-2 h-2 rounded-full bg-red-500" />,
+      icon: <div className="w-2 h-2 rounded-full bg-current" />,
       color: '#ef4444' // red-500
     },
     attention: { 
       label: 'Chú ý', 
       badgeClass: 'text-amber-600 bg-amber-50',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-amber-500"><path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" /></svg>,
+      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"><path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" /></svg>,
       color: '#f59e0b' // amber-500
     },
     completed: { 
       label: 'Hoàn thành', 
       badgeClass: 'text-emerald-600 bg-emerald-50',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-emerald-500"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" /></svg>,
+      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" /></svg>,
       color: '#10b981' // emerald-500
     },
     skipped: { 
       label: 'Bỏ qua', 
       badgeClass: 'text-slate-500 bg-slate-100',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-slate-500"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>,
+      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>,
       color: '#64748b' // slate-500
     },
   };
@@ -660,73 +665,128 @@ export const NotesManager: React.FC = () => {
 
                     {/* --- VIEW: LIST --- */}
                     {viewMode === 'list' && (
-                        <div className="flex flex-col h-full overflow-hidden animate-fade-in-up">
-                            {/* Filter Tabs - Optimized for Mobile Horizontal Scroll */}
-                            <div className="px-5 py-3 flex gap-3 overflow-x-auto custom-scrollbar no-scrollbar-on-mobile border-b border-slate-100/50 bg-slate-50/50 shrink-0 snap-x snap-mandatory">
-                                <button
-                                    onClick={() => setActiveTab('all')}
-                                    className={`snap-center px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-sm shrink-0
-                                        ${activeTab === 'all' 
-                                            ? 'bg-slate-800 text-white shadow-md transform scale-105' 
-                                            : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-100'}
-                                    `}
-                                >
-                                    Tất cả
-                                </button>
-                                {tags.map(tag => (
-                                    <div 
-                                        key={tag.id} 
+                        <div className="flex flex-col h-full overflow-hidden animate-fade-in-up bg-slate-50/50">
+                            {/* Filter Container */}
+                            <div className="bg-white border-b border-slate-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] shrink-0 z-20 pt-2 pb-3">
+                                
+                                {/* 1. TAGS FILTER (Primary) */}
+                                <div className="px-4 pb-3 overflow-x-auto custom-scrollbar no-scrollbar-on-mobile flex items-center gap-2 snap-x snap-mandatory scroll-pl-4">
+                                    
+                                    {/* 'All' Tag */}
+                                    <button
+                                        onClick={() => setActiveTab('all')}
                                         className={`
-                                            snap-center shrink-0 flex items-center rounded-xl border shadow-sm transition-all overflow-hidden relative
-                                            ${activeTab === tag.id ? 'border-transparent shadow-md transform scale-105' : 'bg-white border-slate-100 hover:border-slate-200'}
+                                            snap-start shrink-0 px-5 py-2 rounded-full text-xs font-extrabold transition-all duration-300 shadow-sm border
+                                            ${activeTab === 'all' 
+                                                ? 'bg-slate-800 border-slate-800 text-white shadow-slate-200 scale-105' 
+                                                : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'}
                                         `}
-                                        style={{ 
-                                            backgroundColor: activeTab === tag.id ? tag.color : 'white',
-                                            color: activeTab === tag.id ? 'white' : undefined,
-                                        }}
                                     >
-                                        <button
-                                            onClick={() => setActiveTab(tag.id)}
-                                            className={`pl-3 pr-3 py-2 text-xs font-bold whitespace-nowrap flex items-center gap-1.5 h-full ${activeTab !== tag.id ? 'text-slate-600' : ''}`}
-                                        >
-                                            <span className={`w-1.5 h-1.5 rounded-full ${activeTab === tag.id ? 'bg-white' : ''}`} style={{ backgroundColor: activeTab === tag.id ? undefined : tag.color }} />
-                                            {tag.name}
-                                            {/* Show small pin indicator if pinned but not active */}
-                                            {tag.isPinned && activeTab !== tag.id && (
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-2.5 h-2.5 text-slate-400 ml-0.5">
-                                                    <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Zm-5 5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1 1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                                                    <path d="M14.75 12.25a.75.75 0 0 0 0 1.5H16v2.25h-2.25a.75.75 0 0 0 0 1.5H16v2.5a.75.75 0 0 0 1.5 0v-2.5h2.25a.75.75 0 0 0 0-1.5H17.5V13.75h2.25a.75.75 0 0 0 0-1.5H14.75Z" opacity="0" /> 
-                                                    <path fillRule="evenodd" d="M9.702 3.86a.75.75 0 0 1 .493 1.018l-1.082 3.093 5.925 5.925 3.093-1.082a.75.75 0 0 1 .937.937l-1.383 4.84a.75.75 0 0 1-1.05.474l-3.37-1.444-2.298 2.298a.75.75 0 0 1-1.06 0l-1.061-1.061a.75.75 0 0 1 0-1.061l2.298-2.298-1.444-3.37a.75.75 0 0 1 .474-1.05l4.84-1.383a.75.75 0 0 1 .494-1.018Z" clipRule="evenodd" />
-                                                </svg>
-                                            )}
-                                        </button>
-                                        
-                                        {/* Actions - Only visible when active */}
-                                        {activeTab === tag.id && (
-                                            <div className="flex items-center h-full">
-                                                <div className="h-4 w-px bg-white/30"></div>
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); toggleTagPin(tag.id); }}
-                                                    className="px-3 py-2 h-full flex items-center justify-center transition-colors hover:bg-black/10"
-                                                    title={tag.isPinned ? "Bỏ ghim" : "Ghim thẻ"}
+                                        Tất cả
+                                    </button>
+
+                                    {/* Vertical Divider */}
+                                    <div className="w-px h-6 bg-slate-200 shrink-0 mx-1"></div>
+
+                                    {/* Dynamic Tags */}
+                                    {tags.map(tag => {
+                                        const isActive = activeTab === tag.id;
+                                        return (
+                                            <div 
+                                                key={tag.id} 
+                                                className={`
+                                                    snap-start shrink-0 relative flex items-center rounded-full transition-all duration-300 group border
+                                                    ${isActive ? 'scale-105 shadow-md ring-1 ring-white' : 'hover:scale-102'}
+                                                `}
+                                                style={{
+                                                    backgroundColor: isActive ? tag.color : 'white',
+                                                    color: isActive ? 'white' : '#475569',
+                                                    borderColor: tag.color // Apply border color
+                                                }}
+                                            >
+                                                <button
+                                                    onClick={() => setActiveTab(tag.id)}
+                                                    className="pl-3.5 pr-3 py-2 text-xs font-bold flex items-center gap-2 h-full rounded-l-full"
                                                 >
-                                                    {tag.isPinned ? (
-                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+                                                    {!isActive && <span className="w-2 h-2 rounded-full ring-1 ring-black/5" style={{ backgroundColor: tag.color }}></span>}
+                                                    {tag.name}
+                                                    {/* Pinned Indicator (Inactive state) */}
+                                                    {tag.isPinned && !isActive && (
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-2.5 h-2.5 text-slate-400 -ml-0.5">
                                                             <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Zm-5 5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1 1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
                                                             <path d="M14.75 12.25a.75.75 0 0 0 0 1.5H16v2.25h-2.25a.75.75 0 0 0 0 1.5H16v2.5a.75.75 0 0 0 1.5 0v-2.5h2.25a.75.75 0 0 0 0-1.5H17.5V13.75h2.25a.75.75 0 0 0 0-1.5H14.75Z" opacity="0" /> 
                                                             <path fillRule="evenodd" d="M9.702 3.86a.75.75 0 0 1 .493 1.018l-1.082 3.093 5.925 5.925 3.093-1.082a.75.75 0 0 1 .937.937l-1.383 4.84a.75.75 0 0 1-1.05.474l-3.37-1.444-2.298 2.298a.75.75 0 0 1-1.06 0l-1.061-1.061a.75.75 0 0 1 0-1.061l2.298-2.298-1.444-3.37a.75.75 0 0 1 .474-1.05l4.84-1.383a.75.75 0 0 1 .494-1.018Z" clipRule="evenodd" />
                                                         </svg>
-                                                    ) : (
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 opacity-60">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /> 
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="m15 11.25-3-3m0 0-3 3m3-3v7.5" />
-                                                        </svg>
                                                     )}
                                                 </button>
+
+                                                {/* Active State Actions */}
+                                                {isActive && (
+                                                    <>
+                                                        <div className="h-3 w-px bg-white/30"></div>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); toggleTagPin(tag.id); }}
+                                                            className="pr-3 pl-2 h-full flex items-center justify-center rounded-r-full hover:bg-black/10 transition-colors"
+                                                        >
+                                                            {tag.isPinned ? (
+                                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+                                                                    <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Zm-5 5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1 1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                                                                    <path d="M14.75 12.25a.75.75 0 0 0 0 1.5H16v2.25h-2.25a.75.75 0 0 0 0 1.5H16v2.5a.75.75 0 0 0 1.5 0v-2.5h2.25a.75.75 0 0 0 0-1.5H17.5V13.75h2.25a.75.75 0 0 0 0-1.5H14.75Z" opacity="0" /> 
+                                                                    <path fillRule="evenodd" d="M9.702 3.86a.75.75 0 0 1 .493 1.018l-1.082 3.093 5.925 5.925 3.093-1.082a.75.75 0 0 1 .937.937l-1.383 4.84a.75.75 0 0 1-1.05.474l-3.37-1.444-2.298 2.298a.75.75 0 0 1-1.06 0l-1.061-1.061a.75.75 0 0 1 0-1.061l2.298-2.298-1.444-3.37a.75.75 0 0 1 .474-1.05l4.84-1.383a.75.75 0 0 1 .494-1.018Z" clipRule="evenodd" />
+                                                                </svg>
+                                                            ) : (
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5 opacity-70">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /> 
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m15 11.25-3-3m0 0-3 3m3-3v7.5" />
+                                                                </svg>
+                                                            )}
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                ))}
+                                        );
+                                    })}
+                                </div>
+
+                                {/* 2. STATUS FILTER (Secondary) */}
+                                <div className="px-4 overflow-x-auto custom-scrollbar no-scrollbar-on-mobile flex items-center gap-2 snap-x snap-mandatory scroll-pl-4">
+                                    <button
+                                        onClick={() => setActiveStatusFilter('all')}
+                                        className={`
+                                            snap-start shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border
+                                            ${activeStatusFilter === 'all' 
+                                                ? 'bg-slate-800 border-slate-800 text-white shadow-md scale-105' 
+                                                : 'bg-white border-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-600'}
+                                        `}
+                                    >
+                                        Tất cả trạng thái
+                                    </button>
+                                    
+                                    {(Object.entries(statusConfig) as [NoteStatus, typeof statusConfig[NoteStatus]][]).map(([status, config]) => {
+                                        const isActive = activeStatusFilter === status;
+                                        return (
+                                            <button
+                                                key={status}
+                                                onClick={() => setActiveStatusFilter(status)}
+                                                className={`snap-start shrink-0 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all border shrink-0 flex items-center gap-1.5
+                                                    ${isActive 
+                                                        ? 'shadow-md ring-1 ring-white scale-105' 
+                                                        : 'bg-white hover:bg-slate-50'}
+                                                `}
+                                                style={{ 
+                                                    backgroundColor: isActive ? config.color : 'white',
+                                                    borderColor: config.color, // Apply border color
+                                                    color: isActive ? 'white' : config.color
+                                                }}
+                                            >
+                                                <span className={isActive ? '' : 'opacity-100'}>
+                                                {config.icon}
+                                                </span>
+                                                {config.label}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
                             </div>
 
                             {/* Notes List with Grid Layout on Desktop */}

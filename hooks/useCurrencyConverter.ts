@@ -1,7 +1,11 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { Currency, ConversionResult, LoadingState, ConversionHistoryItem } from '../types';
 import { DEFAULT_SOURCE_CURRENCY, DEFAULT_TARGET_CURRENCY } from '../constants';
 import { convertCurrencyApi } from '../services/geminiService';
+import { useAuth } from '../contexts/AuthContext';
+import { db } from '../firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export const useCurrencyConverter = () => {
   const [amount, setAmount] = useState<string>('100000');
@@ -12,28 +16,62 @@ export const useCurrencyConverter = () => {
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [isSwapping, setIsSwapping] = useState(false);
   const [history, setHistory] = useState<ConversionHistoryItem[]>([]);
+  
+  const { user } = useAuth();
 
-  // Load history from local storage on mount
+  // Load history logic (Firestore vs LocalStorage)
   useEffect(() => {
-    try {
-      const savedHistory = localStorage.getItem('conversion_history');
-      if (savedHistory) {
-        const parsed = JSON.parse(savedHistory);
-        // Migration support for old data without 'type'
-        const migrated = parsed.map((item: any) => ({
-            ...item,
-            type: item.type || 'convert'
-        }));
-        setHistory(migrated);
+    const loadHistory = async () => {
+      if (user) {
+        // Load from Firestore
+        try {
+          const docRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists() && docSnap.data().history) {
+             setHistory(docSnap.data().history);
+          } else {
+             // Optional: If firestore empty, maybe migrate local storage? 
+             // For now, start empty or keep local as fallback
+          }
+        } catch (e) {
+          console.error("Failed to load history from Firestore", e);
+        }
+      } else {
+        // Load from LocalStorage
+        try {
+          const savedHistory = localStorage.getItem('conversion_history');
+          if (savedHistory) {
+            const parsed = JSON.parse(savedHistory);
+            const migrated = parsed.map((item: any) => ({
+                ...item,
+                type: item.type || 'convert'
+            }));
+            setHistory(migrated);
+          }
+        } catch (e) {
+          console.error("Failed to load history from LocalStorage", e);
+        }
       }
-    } catch (e) {
-      console.error("Failed to load history", e);
-    }
-  }, []);
+    };
+    loadHistory();
+  }, [user]);
 
-  const saveHistory = (newHistory: ConversionHistoryItem[]) => {
+  const saveHistory = async (newHistory: ConversionHistoryItem[]) => {
     setHistory(newHistory);
-    localStorage.setItem('conversion_history', JSON.stringify(newHistory));
+    
+    if (user) {
+      // Save to Firestore
+      try {
+        const docRef = doc(db, "users", user.uid);
+        // Use setDoc with merge to avoid overwriting Notes/Tags
+        await setDoc(docRef, { history: newHistory }, { merge: true });
+      } catch (e) {
+        console.error("Failed to save history to Firestore", e);
+      }
+    } else {
+      // Save to LocalStorage
+      localStorage.setItem('conversion_history', JSON.stringify(newHistory));
+    }
   };
 
   const addToHistory = (
@@ -57,7 +95,6 @@ export const useCurrencyConverter = () => {
       revenueDetails: revenueDetails
     };
     
-    // Check if an identical conversion exists
     const existingIndex = history.findIndex(item => 
         item.inputAmount === newItem.inputAmount && 
         item.fromCurrency.code === newItem.fromCurrency.code && 
@@ -70,14 +107,10 @@ export const useCurrencyConverter = () => {
     let updatedHistory = [...history];
 
     if (existingIndex > -1) {
-        // Remove the existing item so the new one can go to the top
         updatedHistory.splice(existingIndex, 1);
     }
 
-    // Add new item to the beginning
     updatedHistory.unshift(newItem);
-    
-    // Limit to 50 items total
     updatedHistory = updatedHistory.slice(0, 50); 
     
     saveHistory(updatedHistory);
@@ -112,8 +145,6 @@ export const useCurrencyConverter = () => {
       const data = await convertCurrencyApi(currentAmount, source.code, target.code);
       setResult(data);
       setLoadingState(LoadingState.SUCCESS);
-      
-      // Add to history on success
       addToHistory(currentAmount, source, target, data.convertedAmount, type, originalSalary);
     } catch (err) {
       setErrorMsg("Có lỗi xảy ra khi lấy tỷ giá. Vui lòng thử lại.");
@@ -157,7 +188,8 @@ export const useCurrencyConverter = () => {
 
   return {
     amount, setAmount, fromCurrency, setFromCurrency, toCurrency, setToCurrency,
-    loadingState, result, errorMsg, isSwapping, handleConvert, handleSwap,
+    loadingState, result, errorMsg, setErrorMsg,
+    isSwapping, handleConvert, handleSwap,
     history, clearHistory, deleteHistoryItems, selectHistoryItem, resetResult, addToHistory
   };
 };
