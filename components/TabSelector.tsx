@@ -18,9 +18,9 @@ export const TabSelector: React.FC<TabSelectorProps> = ({ activeTab, onTabChange
   };
 
   return (
-    <div className="flex p-1.5 bg-white/50 backdrop-blur-sm rounded-xl mb-6 relative">
+    <div className="flex p-1.5 bg-white/50 backdrop-blur-sm rounded-xl mb-6 relative shadow-sm border border-white/40">
       <div 
-        className="absolute top-1.5 bottom-1.5 rounded-lg bg-white shadow-sm ring-1 ring-black/5 transition-all duration-300 ease-in-out"
+        className="absolute top-1.5 bottom-1.5 rounded-lg bg-gradient-to-r from-primary-600 to-primary-500 shadow-md shadow-primary-200 transition-all duration-300 ease-in-out"
         style={{
             left: getLeftPosition(),
             width: 'calc(33.33% - 0.5rem)'
@@ -29,7 +29,7 @@ export const TabSelector: React.FC<TabSelectorProps> = ({ activeTab, onTabChange
       <button
         onClick={() => onTabChange('convert')}
         className={`flex-1 relative z-10 py-2.5 text-xs sm:text-sm md:text-base font-bold text-center rounded-lg transition-colors duration-300 ${
-            activeTab === 'convert' ? 'text-primary-700' : 'text-slate-500 hover:text-slate-700'
+            activeTab === 'convert' ? 'text-white' : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
         }`}
       >
         Chuyển đổi
@@ -37,7 +37,7 @@ export const TabSelector: React.FC<TabSelectorProps> = ({ activeTab, onTabChange
       <button
         onClick={() => onTabChange('calculate')}
         className={`flex-1 relative z-10 py-2.5 text-xs sm:text-sm md:text-base font-bold text-center rounded-lg transition-colors duration-300 ${
-            activeTab === 'calculate' ? 'text-primary-700' : 'text-slate-500 hover:text-slate-700'
+            activeTab === 'calculate' ? 'text-white' : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
         }`}
       >
         Tính phí
@@ -45,7 +45,7 @@ export const TabSelector: React.FC<TabSelectorProps> = ({ activeTab, onTabChange
        <button
         onClick={() => onTabChange('revenue')}
         className={`flex-1 relative z-10 py-2.5 text-xs sm:text-sm md:text-base font-bold text-center rounded-lg transition-colors duration-300 ${
-            activeTab === 'revenue' ? 'text-primary-700' : 'text-slate-500 hover:text-slate-700'
+            activeTab === 'revenue' ? 'text-white' : 'text-slate-500 hover:text-slate-800 hover:bg-white/40'
         }`}
       >
         Tính doanh thu

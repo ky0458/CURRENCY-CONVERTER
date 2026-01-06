@@ -399,11 +399,10 @@ const App: React.FC = () => {
                 <div className="flex flex-col md:flex-row items-center md:items-start relative gap-3 md:gap-4">
                 {/* 
                     Z-Index Logic Fixed: 
-                    If FROM is active, it gets z-50. 
-                    If TO is active, it gets z-50.
-                    Otherwise, they sit at z-20, while the button can sit in between.
+                    If FROM is active OR Revenue Dropdown is open, it gets z-50 to stack above the button.
+                    Otherwise, it sits at z-20.
                 */}
-                <div className={`w-full md:flex-1 transition-all relative ${activeDropdown === 'FROM' ? 'z-50' : 'z-20'}`}> 
+                <div className={`w-full md:flex-1 transition-all relative ${activeDropdown === 'FROM' || isRevenueDropdownOpen ? 'z-50' : 'z-20'}`}> 
                     <CurrencyRow
                         key={activeTab}
                         label={activeTab === 'convert' ? "Nhập số tiền cần đổi" : "Nhập mức lương"}
@@ -426,7 +425,7 @@ const App: React.FC = () => {
                     {(activeTab === 'calculate' || activeTab === 'revenue') && (
                         <div className="mt-3 flex gap-3 animate-fade-in-up">
                             {/* Official Salary */}
-                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all 
+                            <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
                                 ${calcType === 'official' 
                                     ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
                                     : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
@@ -438,7 +437,7 @@ const App: React.FC = () => {
                             </label>
 
                             {/* Probation Salary */}
-                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all 
+                            <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
                                 ${calcType === 'probation' 
                                     ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
                                     : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
@@ -736,7 +735,7 @@ const App: React.FC = () => {
              <div className={`bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative z-10 overflow-hidden flex flex-col max-h-[85vh] 
                 ${isClosingHistory ? 'animate-fade-out-down' : 'animate-fade-in-up'}`}
              >
-                <div className="p-0 flex-1 overflow-hidden flex flex-col">
+                <div className="p-0 flex-1 overflow-hidden flex flex-col min-h-0">
                    <HistorySection 
                         history={filteredHistory} 
                         onSelect={handleHistorySelect} 

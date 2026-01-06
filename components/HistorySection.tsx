@@ -172,9 +172,9 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
   };
 
   return (
-    <div className="w-full flex flex-col h-full relative bg-slate-50">
+    <div className="w-full flex flex-col h-full max-h-full relative bg-slate-50 min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-white sticky top-0 z-20 shadow-sm">
+      <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-white sticky top-0 z-20 shadow-sm shrink-0">
         {isSelectionMode ? (
             <div className="flex items-center gap-3">
                 <button onClick={toggleSelectionMode} className="text-slate-600 font-bold hover:text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">Hủy</button>
@@ -209,7 +209,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
       
       {/* List */}
       {history.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center py-20 text-slate-400 gap-4">
+          <div className="flex-1 flex flex-col items-center justify-center py-20 text-slate-400 gap-4 min-h-0">
               <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="w-10 h-10 text-slate-300">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -218,7 +218,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
               <span className="text-base font-medium text-slate-500">Chưa có lịch sử nào.</span>
           </div>
       ) : (
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 pb-24 sm:p-4">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 pb-24 sm:p-4 min-h-0 overscroll-contain touch-pan-y">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {history.map(item => {
                     const isCalculate = item.type === 'calculate';

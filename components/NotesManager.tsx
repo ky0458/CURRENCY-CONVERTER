@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNotes } from '../hooks/useNotes';
-import { NoteStatus, NoteTag } from '../types';
+import { NoteStatus } from '../types';
 
 export const NotesManager: React.FC = () => {
   const { notes, tags, addNote, updateNoteStatus, deleteNote, deleteNotes, addTag, deleteTag, toggleTagPin } = useNotes();
@@ -33,6 +33,78 @@ export const NotesManager: React.FC = () => {
   // Create Tag State
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState('#3b82f6');
+
+  // --- DRAGGABLE BUTTON STATE ---
+  const [btnPos, setBtnPos] = useState({ x: 20, y: typeof window !== 'undefined' ? window.innerHeight - 150 : 500 });
+  const isDraggingBtn = useRef(false);
+  const btnDragOffset = useRef({ x: 0, y: 0 });
+  const btnDragStartPos = useRef({ x: 0, y: 0 });
+  const hasMovedBtn = useRef(false);
+
+  useEffect(() => {
+      // Initial position adjustment to avoid server/client mismatch
+      setBtnPos({ x: 30, y: window.innerHeight - 120 });
+  }, []);
+
+  // Button Drag Handlers
+  const handleBtnPointerDown = (e: React.PointerEvent) => {
+    isDraggingBtn.current = true;
+    hasMovedBtn.current = false;
+    btnDragStartPos.current = { x: e.clientX, y: e.clientY };
+    btnDragOffset.current = {
+        x: e.clientX - btnPos.x,
+        y: e.clientY - btnPos.y
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handleBtnPointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingBtn.current) return;
+    
+    const newX = e.clientX - btnDragOffset.current.x;
+    const newY = e.clientY - btnDragOffset.current.y;
+    
+    // Check if moved significantly to consider it a drag
+    if (!hasMovedBtn.current) {
+        const dist = Math.hypot(e.clientX - btnDragStartPos.current.x, e.clientY - btnDragStartPos.current.y);
+        if (dist > 5) hasMovedBtn.current = true;
+    }
+
+    setBtnPos({ x: newX, y: newY });
+  };
+
+  const handleBtnPointerUp = (e: React.PointerEvent) => {
+    isDraggingBtn.current = false;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+
+    // If button hasn't moved significantly, treat it as a click
+    if (!hasMovedBtn.current) {
+        if(isOpen) handleClose();
+        else setIsOpen(true);
+        return;
+    }
+
+    // Snap to edge logic
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+    const buttonWidth = 56; // w-14
+    
+    // Clamp Y to stay on screen
+    let finalY = Math.max(20, Math.min(screenHeight - 80, btnPos.y));
+    
+    // Snap X to nearest side
+    let finalX = btnPos.x;
+    const midPoint = screenWidth / 2;
+    
+    if (btnPos.x + buttonWidth / 2 < midPoint) {
+        finalX = 20; // Snap Left
+    } else {
+        finalX = screenWidth - buttonWidth - 20; // Snap Right
+    }
+
+    setBtnPos({ x: finalX, y: finalY });
+  };
+
 
   // Handle outside click for Tag Dropdown
   useEffect(() => {
@@ -304,15 +376,21 @@ export const NotesManager: React.FC = () => {
 
   return (
     <>
-      {/* Floating Trigger Button */}
-      <div className="fixed bottom-6 left-6 z-[60]">
+      {/* Draggable Floating Trigger Button */}
+      <div 
+        className="fixed z-[60] touch-none select-none"
+        style={{ 
+            left: btnPos.x, 
+            top: btnPos.y,
+            transition: isDraggingBtn.current ? 'none' : 'all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28)'
+        }}
+        onPointerDown={handleBtnPointerDown}
+        onPointerMove={handleBtnPointerMove}
+        onPointerUp={handleBtnPointerUp}
+      >
         <button
-          onClick={() => {
-              if(isOpen) handleClose();
-              else setIsOpen(true);
-          }}
-          className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 border-2 border-white/50 backdrop-blur-md
-            ${isOpen ? 'bg-slate-800 text-white rotate-90 scale-90' : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white animate-bounce-slow'}
+          className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform duration-200 active:scale-95 border-2 border-white/50 backdrop-blur-md cursor-grab active:cursor-grabbing
+            ${isOpen ? 'bg-slate-800 text-white rotate-90 scale-90' : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'}
           `}
         >
           {isOpen ? (
@@ -336,13 +414,14 @@ export const NotesManager: React.FC = () => {
                 onClick={handleClose}
             />
              
-             {/* Modal Content */}
+             {/* Modal Content - Expanded Width for PC */}
              <div 
-                className={`bg-white/95 backdrop-blur-xl w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col relative z-10 origin-center border border-white/60
+                className={`bg-white/95 backdrop-blur-xl w-full max-w-lg md:max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col relative z-10 origin-center border border-white/60
                     ${isClosing ? 'animate-fade-out-down' : 'animate-fade-in-up'}
                 `}
                 style={{
-                    maxHeight: '85dvh', // Dynamic height for mobile keyboards
+                    maxHeight: '85dvh', // Dynamic height
+                    height: window.innerWidth >= 768 ? '85vh' : undefined, // Fixed height on PC for better view
                     animationDuration: '0.3s'
                 }}
              >
@@ -352,42 +431,44 @@ export const NotesManager: React.FC = () => {
                     {/* --- VIEW: ADD TAG --- */}
                     {viewMode === 'add-tag' && (
                         <div className={`p-5 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isSubViewClosing ? 'animate-fade-out-down' : 'animate-fade-in-up'}`}>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tên thẻ mới</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="Ví dụ: Mua sắm, Deadline..." 
-                                    className="w-full text-sm px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-slate-50 focus:bg-white transition-all"
-                                    value={newTagName}
-                                    onChange={(e) => setNewTagName(e.target.value)}
-                                    autoFocus
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Chọn màu nhận diện</label>
-                                <div className="flex items-center gap-3">
+                            <div className="max-w-3xl mx-auto w-full">
+                                <div className="mb-4">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tên thẻ mới</label>
                                     <input 
-                                        type="color" 
-                                        className="w-14 h-14 rounded-xl cursor-pointer border-2 border-white shadow-sm"
-                                        value={newTagColor}
-                                        onChange={(e) => setNewTagColor(e.target.value)}
+                                        type="text" 
+                                        placeholder="Ví dụ: Mua sắm, Deadline..." 
+                                        className="w-full text-sm px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-slate-50 focus:bg-white transition-all"
+                                        value={newTagName}
+                                        onChange={(e) => setNewTagName(e.target.value)}
+                                        autoFocus
                                     />
-                                    <span className="text-sm font-mono bg-slate-100 px-3 py-1 rounded text-slate-600">{newTagColor}</span>
                                 </div>
-                            </div>
-                            <div className="mt-4 flex gap-3 pb-2">
-                                <button 
-                                    onClick={handleBackToMain}
-                                    className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold rounded-xl transition-colors"
-                                >
-                                    Hủy
-                                </button>
-                                <button 
-                                    onClick={handleCreateTag}
-                                    className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-indigo-200"
-                                >
-                                    Tạo thẻ
-                                </button>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Chọn màu nhận diện</label>
+                                    <div className="flex items-center gap-3">
+                                        <input 
+                                            type="color" 
+                                            className="w-14 h-14 rounded-xl cursor-pointer border-2 border-white shadow-sm"
+                                            value={newTagColor}
+                                            onChange={(e) => setNewTagColor(e.target.value)}
+                                        />
+                                        <span className="text-sm font-mono bg-slate-100 px-3 py-1 rounded text-slate-600">{newTagColor}</span>
+                                    </div>
+                                </div>
+                                <div className="mt-6 flex gap-3 pb-2">
+                                    <button 
+                                        onClick={handleBackToMain}
+                                        className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold rounded-xl transition-colors"
+                                    >
+                                        Hủy
+                                    </button>
+                                    <button 
+                                        onClick={handleCreateTag}
+                                        className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-indigo-200"
+                                    >
+                                        Tạo thẻ
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -395,78 +476,80 @@ export const NotesManager: React.FC = () => {
                     {/* --- VIEW: ADD NOTE --- */}
                     {viewMode === 'add-note' && (
                         <div className={`p-5 flex flex-col gap-5 flex-1 h-full overflow-y-auto custom-scrollbar ${isSubViewClosing ? 'animate-fade-out-down' : 'animate-fade-in-up'}`}>
-                            {/* Flex-col with gap ensures label and textarea don't overlap */}
-                            <div className="flex-1 flex flex-col gap-2 min-h-[150px]">
-                                <label className="block text-xs font-bold text-slate-500 uppercase">Nội dung ghi chú</label>
-                                <textarea 
-                                    className="w-full flex-1 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all resize-none shadow-inner"
-                                    placeholder="Nhập nội dung ghi chú của bạn..."
-                                    value={newNoteContent}
-                                    onChange={(e) => setNewNoteContent(e.target.value)}
-                                    autoFocus
-                                />
-                            </div>
-                            
-                            {/* Custom Tag Dropdown */}
-                            <div className="relative shrink-0" ref={tagDropdownRef}>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Phân loại thẻ</label>
-                                <button
-                                    onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
-                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border bg-white transition-all ${isTagDropdownOpen ? 'border-indigo-500 ring-2 ring-indigo-50' : 'border-slate-200 hover:border-slate-300'}`}
-                                >
-                                    {selectedTagForNewNote ? (
-                                        <div className="flex items-center gap-2">
-                                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: getTag(selectedTagForNewNote)?.color }}></span>
-                                            <span className="text-sm font-semibold text-slate-700">{getTag(selectedTagForNewNote)?.name}</span>
-                                        </div>
-                                    ) : (
-                                        <span className="text-sm text-slate-400">Chọn thẻ...</span>
-                                    )}
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-slate-400">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                    </svg>
-                                </button>
+                            <div className="max-w-3xl mx-auto w-full h-full flex flex-col">
+                                {/* Flex-col with gap ensures label and textarea don't overlap */}
+                                <div className="flex-1 flex flex-col gap-2 min-h-[200px]">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase">Nội dung ghi chú</label>
+                                    <textarea 
+                                        className="w-full flex-1 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all resize-none shadow-inner"
+                                        placeholder="Nhập nội dung ghi chú của bạn..."
+                                        value={newNoteContent}
+                                        onChange={(e) => setNewNoteContent(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                                
+                                {/* Custom Tag Dropdown */}
+                                <div className="relative shrink-0 mt-4" ref={tagDropdownRef}>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Phân loại thẻ</label>
+                                    <button
+                                        onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
+                                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border bg-white transition-all ${isTagDropdownOpen ? 'border-indigo-500 ring-2 ring-indigo-50' : 'border-slate-200 hover:border-slate-300'}`}
+                                    >
+                                        {selectedTagForNewNote ? (
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: getTag(selectedTagForNewNote)?.color }}></span>
+                                                <span className="text-sm font-semibold text-slate-700">{getTag(selectedTagForNewNote)?.name}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-sm text-slate-400">Chọn thẻ...</span>
+                                        )}
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-slate-400">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                        </svg>
+                                    </button>
 
-                                {isTagDropdownOpen && (
-                                    <div className="absolute bottom-full left-0 w-full mb-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-20 animate-fade-in-up">
-                                        <div className="max-h-40 overflow-y-auto custom-scrollbar p-1">
-                                            <button
-                                                onClick={() => { setSelectedTagForNewNote(''); setIsTagDropdownOpen(false); }}
-                                                className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-lg font-medium"
-                                            >
-                                                Mặc định (Không thẻ)
-                                            </button>
-                                            {tags.map(tag => (
+                                    {isTagDropdownOpen && (
+                                        <div className="absolute bottom-full left-0 w-full mb-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-20 animate-fade-in-up">
+                                            <div className="max-h-40 overflow-y-auto custom-scrollbar p-1">
                                                 <button
-                                                    key={tag.id}
-                                                    onClick={() => { setSelectedTagForNewNote(tag.id); setIsTagDropdownOpen(false); }}
-                                                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 rounded-lg transition-colors"
+                                                    onClick={() => { setSelectedTagForNewNote(''); setIsTagDropdownOpen(false); }}
+                                                    className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-lg font-medium"
                                                 >
-                                                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: tag.color }}></span>
-                                                    <span className="text-sm font-semibold text-slate-700">{tag.name}</span>
+                                                    Mặc định (Không thẻ)
                                                 </button>
-                                            ))}
+                                                {tags.map(tag => (
+                                                    <button
+                                                        key={tag.id}
+                                                        onClick={() => { setSelectedTagForNewNote(tag.id); setIsTagDropdownOpen(false); }}
+                                                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 rounded-lg transition-colors"
+                                                    >
+                                                        <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: tag.color }}></span>
+                                                        <span className="text-sm font-semibold text-slate-700">{tag.name}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                            </div>
+                                    )}
+                                </div>
 
-                            <div className="flex gap-3 mt-2 shrink-0">
-                                <button 
-                                    onClick={handleBackToMain}
-                                    className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold rounded-xl transition-colors"
-                                >
-                                    Hủy
-                                </button>
-                                <button 
-                                    onClick={handleAddNote}
-                                    disabled={!newNoteContent.trim()}
-                                    className={`flex-1 py-3.5 text-white text-sm font-bold rounded-xl transition-colors shadow-lg
-                                        ${newNoteContent.trim() ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200' : 'bg-slate-300 cursor-not-allowed'}
-                                    `}
-                                >
-                                    Lưu ghi chú
-                                </button>
+                                <div className="flex gap-3 mt-4 shrink-0">
+                                    <button 
+                                        onClick={handleBackToMain}
+                                        className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold rounded-xl transition-colors"
+                                    >
+                                        Hủy
+                                    </button>
+                                    <button 
+                                        onClick={handleAddNote}
+                                        disabled={!newNoteContent.trim()}
+                                        className={`flex-1 py-3.5 text-white text-sm font-bold rounded-xl transition-colors shadow-lg
+                                            ${newNoteContent.trim() ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200' : 'bg-slate-300 cursor-not-allowed'}
+                                        `}
+                                    >
+                                        Lưu ghi chú
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -543,8 +626,8 @@ export const NotesManager: React.FC = () => {
                                 ))}
                             </div>
 
-                            {/* Notes List */}
-                            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-slate-50/30 pb-20">
+                            {/* Notes List with Grid Layout on Desktop */}
+                            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/30 pb-20">
                                 {filteredNotes.length === 0 ? (
                                     <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-60 min-h-[200px]">
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 mb-2">
@@ -554,110 +637,112 @@ export const NotesManager: React.FC = () => {
                                         <p className="text-xs text-slate-400 mt-2 text-center px-4">Giữ lì vào ghi chú để chọn nhiều</p>
                                     </div>
                                 ) : (
-                                    filteredNotes.map(note => {
-                                        const tag = getTag(note.tagId);
-                                        const status = statusConfig[note.status];
-                                        const isSelected = selectedIds.has(note.id);
-                                        const isAllTab = activeTab === 'all';
-                                        
-                                        return (
-                                            <div 
-                                                key={note.id} 
-                                                data-note-id={note.id}
-                                                onPointerDown={(e) => handlePointerDown(e, note.id)}
-                                                onClick={() => {
-                                                    if (isSelectionMode) {
-                                                        handleCheckboxChange(note.id);
-                                                    }
-                                                }}
-                                                className={`
-                                                    rounded-2xl shadow-sm border border-l-[6px] group transition-all relative overflow-hidden flex items-stretch touch-manipulation select-none
-                                                    ${isSelectionMode 
-                                                        ? 'cursor-pointer hover:shadow-md' 
-                                                        : 'hover:shadow-md'}
-                                                    ${isSelectionMode && isSelected 
-                                                        ? 'bg-indigo-50 border-l-indigo-500 border-indigo-200' 
-                                                        : `${status.borderClass} ${status.containerClass} bg-white border-t-white/40 border-r-white/40 border-b-white/40`}
-                                                `}
-                                            >
-                                                {/* Selection Checkbox Area */}
-                                                {isSelectionMode && (
-                                                    <div className="w-12 flex items-center justify-center border-r border-slate-100/50 bg-white/40">
-                                                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300'}`}>
-                                                            {isSelected && (
-                                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-white">
-                                                                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
-                                                                </svg>
-                                                            )}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-min">
+                                        {filteredNotes.map(note => {
+                                            const tag = getTag(note.tagId);
+                                            const status = statusConfig[note.status];
+                                            const isSelected = selectedIds.has(note.id);
+                                            const isAllTab = activeTab === 'all';
+                                            
+                                            return (
+                                                <div 
+                                                    key={note.id} 
+                                                    data-note-id={note.id}
+                                                    onPointerDown={(e) => handlePointerDown(e, note.id)}
+                                                    onClick={() => {
+                                                        if (isSelectionMode) {
+                                                            handleCheckboxChange(note.id);
+                                                        }
+                                                    }}
+                                                    className={`
+                                                        rounded-2xl shadow-sm border border-l-[6px] group transition-all relative overflow-hidden flex items-stretch touch-manipulation select-none h-full
+                                                        ${isSelectionMode 
+                                                            ? 'cursor-pointer hover:shadow-md' 
+                                                            : 'hover:shadow-md'}
+                                                        ${isSelectionMode && isSelected 
+                                                            ? 'bg-indigo-50 border-l-indigo-500 border-indigo-200' 
+                                                            : `${status.borderClass} ${status.containerClass} bg-white border-t-white/40 border-r-white/40 border-b-white/40`}
+                                                    `}
+                                                >
+                                                    {/* Selection Checkbox Area */}
+                                                    {isSelectionMode && (
+                                                        <div className="w-12 flex items-center justify-center border-r border-slate-100/50 bg-white/40 shrink-0">
+                                                            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300'}`}>
+                                                                {isSelected && (
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-white">
+                                                                        <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                                                                    </svg>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
-                                                
-                                                {/* Category Badge for 'All' view */}
-                                                {!isSelectionMode && isAllTab && tag && (
-                                                    <div 
-                                                        className="absolute top-0 right-0 px-3 py-1.5 rounded-bl-xl rounded-tr-2xl text-[9px] font-bold text-white shadow-sm z-[5] pointer-events-none"
-                                                        style={{ backgroundColor: tag.color }}
-                                                    >
-                                                        {tag.name}
-                                                    </div>
-                                                )}
+                                                    )}
+                                                    
+                                                    {/* Category Badge for 'All' view */}
+                                                    {!isSelectionMode && isAllTab && tag && (
+                                                        <div 
+                                                            className="absolute top-0 right-0 px-3 py-1.5 rounded-bl-xl rounded-tr-2xl text-[9px] font-bold text-white shadow-sm z-[5] pointer-events-none"
+                                                            style={{ backgroundColor: tag.color }}
+                                                        >
+                                                            {tag.name}
+                                                        </div>
+                                                    )}
 
-                                                <div className="flex-1 p-3">
-                                                    {/* Tag & Time */}
-                                                    <div className="flex justify-between items-start mb-2 relative z-10">
-                                                        <div className="flex items-center gap-2">
-                                                            {tag && !isAllTab && (
-                                                                <span 
-                                                                    className="text-[10px] px-2 py-0.5 rounded-md font-bold text-white shadow-sm" 
-                                                                    style={{ backgroundColor: tag.color }}
-                                                                >
-                                                                    {tag.name}
+                                                    <div className="flex-1 p-3 flex flex-col h-full">
+                                                        {/* Tag & Time */}
+                                                        <div className="flex justify-between items-start mb-2 relative z-10">
+                                                            <div className="flex items-center gap-2">
+                                                                {tag && !isAllTab && (
+                                                                    <span 
+                                                                        className="text-[10px] px-2 py-0.5 rounded-md font-bold text-white shadow-sm" 
+                                                                        style={{ backgroundColor: tag.color }}
+                                                                    >
+                                                                        {tag.name}
+                                                                    </span>
+                                                                )}
+                                                                <span className="text-[10px] text-slate-400 font-semibold bg-white/50 px-1.5 rounded">
+                                                                    {new Date(note.timestamp).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit', day: '2-digit', month: '2-digit'})}
                                                                 </span>
+                                                            </div>
+                                                            
+                                                            {/* Single Delete Button (Only when not in selection mode) */}
+                                                            {!isSelectionMode && (
+                                                                <button 
+                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteClick([note.id]); }}
+                                                                    className={`text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded-full hover:bg-red-50 ${isAllTab ? 'mt-5 mr-1' : ''}`}
+                                                                    title="Xóa ghi chú"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+                                                                </button>
                                                             )}
-                                                            <span className="text-[10px] text-slate-400 font-semibold bg-white/50 px-1.5 rounded">
-                                                                {new Date(note.timestamp).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit', day: '2-digit', month: '2-digit'})}
-                                                            </span>
                                                         </div>
                                                         
-                                                        {/* Single Delete Button (Only when not in selection mode) */}
-                                                        {!isSelectionMode && (
-                                                            <button 
-                                                                onClick={(e) => { e.stopPropagation(); handleDeleteClick([note.id]); }}
-                                                                className={`text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded-full hover:bg-red-50 ${isAllTab ? 'mt-5 mr-1' : ''}`}
-                                                                title="Xóa ghi chú"
-                                                            >
-                                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    
-                                                    <p className="text-sm text-slate-800 font-medium mb-3 whitespace-pre-wrap leading-relaxed relative z-10">
-                                                        {note.content}
-                                                    </p>
+                                                        <p className="text-sm text-slate-800 font-medium mb-3 whitespace-pre-wrap leading-relaxed relative z-10 flex-1">
+                                                            {note.content}
+                                                        </p>
 
-                                                    {/* Status Actions (Disabled in selection mode) */}
-                                                    <div className={`flex gap-1 overflow-x-auto no-scrollbar-on-mobile pb-1 relative z-10 ${isSelectionMode ? 'pointer-events-none opacity-60' : ''}`}>
-                                                        {(Object.keys(statusConfig) as NoteStatus[]).map((s) => (
-                                                            <button
-                                                                key={s}
-                                                                onClick={(e) => { e.stopPropagation(); updateNoteStatus(note.id, s); }}
-                                                                className={`
-                                                                    flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border transition-all whitespace-nowrap
-                                                                    ${note.status === s 
-                                                                        ? `${statusConfig[s].badgeClass} border-transparent shadow-sm ring-1 ring-black/5` 
-                                                                        : 'bg-white/60 border-transparent text-slate-400 hover:bg-white hover:text-slate-600'}
-                                                                `}
-                                                            >
-                                                                {note.status === s ? statusConfig[s].icon : null}
-                                                                {statusConfig[s].label}
-                                                            </button>
-                                                        ))}
+                                                        {/* Status Actions (Disabled in selection mode) */}
+                                                        <div className={`flex gap-1 overflow-x-auto no-scrollbar-on-mobile pb-1 relative z-10 mt-auto ${isSelectionMode ? 'pointer-events-none opacity-60' : ''}`}>
+                                                            {(Object.keys(statusConfig) as NoteStatus[]).map((s) => (
+                                                                <button
+                                                                    key={s}
+                                                                    onClick={(e) => { e.stopPropagation(); updateNoteStatus(note.id, s); }}
+                                                                    className={`
+                                                                        flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border transition-all whitespace-nowrap
+                                                                        ${note.status === s 
+                                                                            ? `${statusConfig[s].badgeClass} border-transparent shadow-sm ring-1 ring-black/5` 
+                                                                            : 'bg-white/60 border-transparent text-slate-400 hover:bg-white hover:text-slate-600'}
+                                                                    `}
+                                                                >
+                                                                    {note.status === s ? statusConfig[s].icon : null}
+                                                                    {statusConfig[s].label}
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })
+                                            );
+                                        })}
+                                    </div>
                                 )}
                             </div>
                             
