@@ -430,10 +430,13 @@ const App: React.FC = () => {
                                     ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
                                     : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
                                 <input type="radio" name="calcType" value="official" checked={calcType === 'official'} onChange={() => setCalcType('official')} className="hidden" />
-                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${calcType === 'official' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${calcType === 'official' ? 'border-primary-500' : 'border-slate-300'}`}>
                                     {calcType === 'official' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
                                 </div>
-                                <span>Chính thức (60%)</span>
+                                <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
+                                    <span className="text-sm">Chính thức</span>
+                                    <span className="text-[10px] sm:text-xs opacity-70 font-normal">(60%)</span>
+                                </div>
                             </label>
 
                             {/* Probation Salary */}
@@ -442,10 +445,13 @@ const App: React.FC = () => {
                                     ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
                                     : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
                                 <input type="radio" name="calcType" value="probation" checked={calcType === 'probation'} onChange={() => setCalcType('probation')} className="hidden" />
-                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${calcType === 'probation' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${calcType === 'probation' ? 'border-primary-500' : 'border-slate-300'}`}>
                                     {calcType === 'probation' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
                                 </div>
-                                <span>Thử việc (75%)</span>
+                                <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
+                                    <span className="text-sm">Thử việc</span>
+                                    <span className="text-[10px] sm:text-xs opacity-70 font-normal">(75%)</span>
+                                </div>
                             </label>
                         </div>
                     )}

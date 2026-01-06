@@ -7,15 +7,18 @@ export const NotesManager: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false); // Modal closing state
   
-  // View Mode: 'list' (default), 'add-note', 'add-tag'
+  // View Mode: 'list' (default), 'add-note', 'add-tag' (now acts as Manage Tags)
   const [viewMode, setViewMode] = useState<'list' | 'add-note' | 'add-tag'>('list');
   const [isSubViewClosing, setIsSubViewClosing] = useState(false); // Sub-view closing state
   const [activeTab, setActiveTab] = useState<string>('all'); 
   
-  // Selection & Delete State
+  // Selection & Delete State (Notes)
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, ids: string[] }>({ isOpen: false, ids: [] });
+
+  // Delete State (Tags)
+  const [tagToDelete, setTagToDelete] = useState<string | null>(null);
   
   // Gesture Selection Refs
   const longPressTimerRef = useRef<number | null>(null);
@@ -48,6 +51,7 @@ export const NotesManager: React.FC = () => {
 
   // Button Drag Handlers
   const handleBtnPointerDown = (e: React.PointerEvent) => {
+    // IMPORTANT: Do NOT preventDefault() here, otherwise onClick will not fire on some touch devices.
     isDraggingBtn.current = true;
     hasMovedBtn.current = false;
     btnDragStartPos.current = { x: e.clientX, y: e.clientY };
@@ -61,50 +65,62 @@ export const NotesManager: React.FC = () => {
   const handleBtnPointerMove = (e: React.PointerEvent) => {
     if (!isDraggingBtn.current) return;
     
+    // Prevent default to avoid scrolling while dragging the button
+    e.preventDefault();
+    
     const newX = e.clientX - btnDragOffset.current.x;
     const newY = e.clientY - btnDragOffset.current.y;
     
-    // Check if moved significantly to consider it a drag
+    // Check if moved significantly (> 6px) to consider it a drag
     if (!hasMovedBtn.current) {
         const dist = Math.hypot(e.clientX - btnDragStartPos.current.x, e.clientY - btnDragStartPos.current.y);
-        if (dist > 5) hasMovedBtn.current = true;
+        if (dist > 6) hasMovedBtn.current = true;
     }
 
-    setBtnPos({ x: newX, y: newY });
+    // Only update position if we are officially dragging
+    if (hasMovedBtn.current) {
+        setBtnPos({ x: newX, y: newY });
+    }
   };
 
   const handleBtnPointerUp = (e: React.PointerEvent) => {
+    if (!isDraggingBtn.current) return;
+    
     isDraggingBtn.current = false;
     e.currentTarget.releasePointerCapture(e.pointerId);
 
-    // If button hasn't moved significantly, treat it as a click
-    if (!hasMovedBtn.current) {
-        if(isOpen) handleClose();
-        else setIsOpen(true);
-        return;
-    }
+    // --- SNAP LOGIC (Only if dragged) ---
+    if (hasMovedBtn.current) {
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        const buttonWidth = 56; // w-14
+        
+        // Clamp Y to stay on screen
+        let finalY = Math.max(20, Math.min(screenHeight - 80, btnPos.y));
+        
+        // Snap X to nearest side
+        let finalX = btnPos.x;
+        const midPoint = screenWidth / 2;
+        
+        if (btnPos.x + buttonWidth / 2 < midPoint) {
+            finalX = 20; // Snap Left
+        } else {
+            finalX = screenWidth - buttonWidth - 20; // Snap Right
+        }
 
-    // Snap to edge logic
-    const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
-    const buttonWidth = 56; // w-14
-    
-    // Clamp Y to stay on screen
-    let finalY = Math.max(20, Math.min(screenHeight - 80, btnPos.y));
-    
-    // Snap X to nearest side
-    let finalX = btnPos.x;
-    const midPoint = screenWidth / 2;
-    
-    if (btnPos.x + buttonWidth / 2 < midPoint) {
-        finalX = 20; // Snap Left
-    } else {
-        finalX = screenWidth - buttonWidth - 20; // Snap Right
+        setBtnPos({ x: finalX, y: finalY });
     }
-
-    setBtnPos({ x: finalX, y: finalY });
   };
 
+  // Standard Click Handler - Fires after PointerUp if not dragged
+  const handleBtnClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      // If we dragged, ignore the click
+      if (hasMovedBtn.current) return;
+      
+      if (isOpen) handleClose();
+      else setIsOpen(true);
+  };
 
   // Handle outside click for Tag Dropdown
   useEffect(() => {
@@ -134,8 +150,6 @@ export const NotesManager: React.FC = () => {
         setIsOpen(false);
         setIsClosing(false);
         setIsSelectionMode(false);
-        // Reset view mode on close if desired, or keep state. 
-        // Resetting to list ensures fresh start next open.
         setViewMode('list'); 
     }, 300); // Match animation duration
   };
@@ -161,7 +175,19 @@ export const NotesManager: React.FC = () => {
     addTag(newTagName, newTagColor);
     setNewTagName('');
     setNewTagColor('#3b82f6');
-    handleBackToMain();
+    // Don't close, let user see new tag in list
+  };
+
+  const handleRequestDeleteTag = (id: string) => {
+      setTagToDelete(id);
+  };
+
+  const confirmTagDeletion = () => {
+      if (tagToDelete) {
+          deleteTag(tagToDelete);
+          if (activeTab === tagToDelete) setActiveTab('all');
+          setTagToDelete(null);
+      }
   };
 
   // Selection Logic
@@ -185,7 +211,6 @@ export const NotesManager: React.FC = () => {
       if (viewMode !== 'list' || confirmDelete.isOpen) return;
       
       // If already in selection mode, let the click handler deal with toggling
-      // But we still track pointer for potential drag-select extension (optional, keeping simple for now)
       if (isSelectionMode) return;
 
       startPosRef.current = { x: e.clientX, y: e.clientY };
@@ -196,7 +221,6 @@ export const NotesManager: React.FC = () => {
           setSelectedIds(new Set([id]));
           isDragSelectingRef.current = true;
           
-          // Haptic feedback if available
           if (navigator.vibrate) navigator.vibrate(50);
       }, 500); // 500ms long press
   };
@@ -207,7 +231,6 @@ export const NotesManager: React.FC = () => {
         if (longPressTimerRef.current && startPosRef.current && !isDragSelectingRef.current) {
             const moveX = Math.abs(e.clientX - startPosRef.current.x);
             const moveY = Math.abs(e.clientY - startPosRef.current.y);
-            // If moved more than 10px, it's a scroll or random move, cancel long press
             if (moveX > 10 || moveY > 10) {
                 clearTimeout(longPressTimerRef.current);
                 longPressTimerRef.current = null;
@@ -215,20 +238,17 @@ export const NotesManager: React.FC = () => {
             }
         }
 
-        // 2. Handle Drag Selection (Selecting items while dragging)
+        // 2. Handle Drag Selection
         if (isDragSelectingRef.current) {
-            e.preventDefault(); // Prevent scrolling while drag-selecting
-            
-            // Find element under pointer
+            e.preventDefault();
             const element = document.elementFromPoint(e.clientX, e.clientY);
             const noteItem = element?.closest('[data-note-id]');
             
             if (noteItem) {
                 const noteId = noteItem.getAttribute('data-note-id');
                 if (noteId && !selectionSetRef.current.has(noteId)) {
-                    // Add to selection
                     setSelectedIds(prev => new Set(prev).add(noteId));
-                    if (navigator.vibrate) navigator.vibrate(10); // Tiny feedback
+                    if (navigator.vibrate) navigator.vibrate(10);
                 }
             }
         }
@@ -262,8 +282,6 @@ export const NotesManager: React.FC = () => {
   const performDelete = () => {
       deleteNotes(confirmDelete.ids);
       setConfirmDelete({ isOpen: false, ids: [] });
-      
-      // If we were in selection mode, clear selection
       if (isSelectionMode) {
           setSelectedIds(new Set());
           if (filteredNotes.length === confirmDelete.ids.length) {
@@ -272,7 +290,6 @@ export const NotesManager: React.FC = () => {
       }
   };
 
-  // Config màu sắc
   const statusConfig: Record<NoteStatus, { label: string, badgeClass: string, borderClass: string, containerClass: string, icon: React.ReactNode }> = {
     incomplete: { 
       label: 'Chưa xong', 
@@ -305,68 +322,65 @@ export const NotesManager: React.FC = () => {
   };
 
   const renderHeader = () => (
-    <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-20 shrink-0 rounded-t-3xl">
-        {isSelectionMode ? (
-            <div className="flex items-center gap-3">
+    <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-white/50 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-3">
+            {viewMode !== 'list' && (
                 <button 
-                    onClick={toggleSelectionMode} 
-                    className="p-1 px-3 bg-slate-100 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-colors"
+                    onClick={handleBackToMain}
+                    className="p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
                 >
-                    Hủy
-                </button>
-                <h3 className="font-extrabold text-slate-800 text-lg">
-                    Đã chọn {selectedIds.size}
-                </h3>
-            </div>
-        ) : (
-            <div className="flex items-center gap-3">
-                {viewMode !== 'list' && (
-                    <button onClick={handleBackToMain} className="p-1 -ml-2 rounded-full hover:bg-slate-100 text-slate-500 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-                        </svg>
-                    </button>
-                )}
-                <h3 className="font-extrabold text-slate-800 text-lg flex items-center gap-2">
-                    {viewMode === 'list' && <>Ghi chú <span className="text-xs font-normal bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">{notes.length}</span></>}
-                    {viewMode === 'add-note' && 'Thêm ghi chú'}
-                    {viewMode === 'add-tag' && 'Thêm thẻ mới'}
-                </h3>
-            </div>
-        )}
-        
-        <div className="flex items-center gap-2">
-            {!isSelectionMode && viewMode === 'list' && (
-                <>
-                <button 
-                    onClick={() => setViewMode('add-tag')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-100 whitespace-nowrap"
-                    title="Quản lý phân loại"
-                >
-                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                        <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
-                        <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
-                   </svg>
-                   <span>Phân loại</span>
-                </button>
-                <button 
-                    onClick={() => setViewMode('add-note')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-md shadow-indigo-200 transition-colors text-xs font-bold whitespace-nowrap"
-                    title="Viết ghi chú mới"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                        <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
                     </svg>
-                    <span>Viết ghi chú</span>
                 </button>
+            )}
+            <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
+                {viewMode === 'list' ? 'Ghi chú của bạn' : 
+                 viewMode === 'add-note' ? 'Thêm ghi chú' : 'Quản lý thẻ phân loại'}
+            </h3>
+        </div>
+
+        <div className="flex items-center gap-2">
+            {viewMode === 'list' && !isSelectionMode && (
+                <>
+                    <button 
+                        onClick={() => setViewMode('add-tag')}
+                        className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors flex items-center gap-2 px-4"
+                        title="Quản lý thẻ"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
+                        </svg>
+                        <span className="hidden sm:inline text-sm font-bold">Quản lý thẻ</span>
+                    </button>
+                    <button 
+                        onClick={() => setViewMode('add-note')}
+                        className="py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        <span className="text-sm font-bold hidden sm:inline">Viết ghi chú</span>
+                    </button>
                 </>
             )}
+             {isSelectionMode && (
+                <button 
+                    onClick={toggleSelectionMode}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold transition-colors"
+                >
+                    Hủy chọn
+                </button>
+            )}
             
+            <div className="w-px h-6 bg-slate-200 mx-1"></div>
+
             <button 
                 onClick={handleClose}
-                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-red-500 transition-colors ml-1"
+                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
             >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                 </svg>
             </button>
@@ -378,20 +392,22 @@ export const NotesManager: React.FC = () => {
     <>
       {/* Draggable Floating Trigger Button */}
       <div 
-        className="fixed z-[60] touch-none select-none"
+        className="fixed z-[60] touch-none select-none cursor-pointer"
         style={{ 
             left: btnPos.x, 
             top: btnPos.y,
             transition: isDraggingBtn.current ? 'none' : 'all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28)'
         }}
+        onClick={handleBtnClick} // Use onClick for reliability
         onPointerDown={handleBtnPointerDown}
         onPointerMove={handleBtnPointerMove}
         onPointerUp={handleBtnPointerUp}
       >
         <button
-          className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform duration-200 active:scale-95 border-2 border-white/50 backdrop-blur-md cursor-grab active:cursor-grabbing
+          className={`w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform duration-200 active:scale-95 border-2 border-white/50 backdrop-blur-md pointer-events-none
             ${isOpen ? 'bg-slate-800 text-white rotate-90 scale-90' : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'}
           `}
+          type="button"
         >
           {isOpen ? (
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
@@ -428,46 +444,87 @@ export const NotesManager: React.FC = () => {
                 {renderHeader()}
 
                 <div className="flex-1 overflow-hidden flex flex-col min-h-0 relative" ref={scrollContainerRef}>
-                    {/* --- VIEW: ADD TAG --- */}
+                    {/* --- VIEW: ADD TAG (MANAGE TAGS) --- */}
                     {viewMode === 'add-tag' && (
-                        <div className={`p-5 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isSubViewClosing ? 'animate-fade-out-down' : 'animate-fade-in-up'}`}>
+                        <div className={`p-5 flex flex-col gap-6 overflow-y-auto custom-scrollbar ${isSubViewClosing ? 'animate-fade-out-down' : 'animate-fade-in-up'}`}>
+                            {/* Create Section */}
                             <div className="max-w-3xl mx-auto w-full">
-                                <div className="mb-4">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tên thẻ mới</label>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Ví dụ: Mua sắm, Deadline..." 
-                                        className="w-full text-sm px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-slate-50 focus:bg-white transition-all"
-                                        value={newTagName}
-                                        onChange={(e) => setNewTagName(e.target.value)}
-                                        autoFocus
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Chọn màu nhận diện</label>
-                                    <div className="flex items-center gap-3">
+                                <h4 className="text-sm font-extrabold text-slate-800 uppercase tracking-wide mb-4">Tạo thẻ mới</h4>
+                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                    <div className="mb-4">
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tên thẻ</label>
                                         <input 
-                                            type="color" 
-                                            className="w-14 h-14 rounded-xl cursor-pointer border-2 border-white shadow-sm"
-                                            value={newTagColor}
-                                            onChange={(e) => setNewTagColor(e.target.value)}
+                                            type="text" 
+                                            placeholder="Ví dụ: Mua sắm, Deadline..." 
+                                            className="w-full text-sm px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-white transition-all"
+                                            value={newTagName}
+                                            onChange={(e) => setNewTagName(e.target.value)}
+                                            autoFocus
                                         />
-                                        <span className="text-sm font-mono bg-slate-100 px-3 py-1 rounded text-slate-600">{newTagColor}</span>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Màu nhận diện</label>
+                                        <div className="flex items-center gap-3">
+                                            <input 
+                                                type="color" 
+                                                className="w-14 h-14 rounded-xl cursor-pointer border-2 border-white shadow-sm"
+                                                value={newTagColor}
+                                                onChange={(e) => setNewTagColor(e.target.value)}
+                                            />
+                                            <button 
+                                                onClick={handleCreateTag}
+                                                className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-indigo-200"
+                                            >
+                                                Tạo ngay
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="mt-6 flex gap-3 pb-2">
-                                    <button 
-                                        onClick={handleBackToMain}
-                                        className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold rounded-xl transition-colors"
-                                    >
-                                        Hủy
-                                    </button>
-                                    <button 
-                                        onClick={handleCreateTag}
-                                        className="flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-indigo-200"
-                                    >
-                                        Tạo thẻ
-                                    </button>
+                            </div>
+
+                            <div className="w-full h-px bg-slate-100"></div>
+
+                            {/* List Section */}
+                            <div className="max-w-3xl mx-auto w-full pb-6">
+                                <h4 className="text-sm font-extrabold text-slate-800 uppercase tracking-wide mb-4">Danh sách thẻ ({tags.length})</h4>
+                                <div className="flex flex-col gap-2">
+                                    {tags.length === 0 ? (
+                                        <div className="text-center py-8 text-slate-400 text-sm">Chưa có thẻ nào</div>
+                                    ) : (
+                                        tags.map(tag => (
+                                            <div key={tag.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-white hover:shadow-sm transition-all">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-6 h-6 rounded-full border border-slate-100 shadow-sm" style={{ backgroundColor: tag.color }}></div>
+                                                    <span className="font-bold text-slate-700">{tag.name}</span>
+                                                    {tag.isPinned && (
+                                                        <span className="bg-slate-100 text-slate-500 text-[10px] uppercase font-bold px-2 py-0.5 rounded">Đã ghim</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                     <button 
+                                                        onClick={() => toggleTagPin(tag.id)}
+                                                        className={`p-2 rounded-lg transition-colors ${tag.isPinned ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-slate-100'}`}
+                                                        title={tag.isPinned ? "Bỏ ghim" : "Ghim thẻ"}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                                            <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Zm-5 5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                                                            <path d="M14.75 12.25a.75.75 0 0 0 0 1.5H16v2.25h-2.25a.75.75 0 0 0 0 1.5H16v2.5a.75.75 0 0 0 1.5 0v-2.5h2.25a.75.75 0 0 0 0-1.5H17.5V13.75h2.25a.75.75 0 0 0 0-1.5H14.75Z" opacity="0" /> 
+                                                            <path fillRule="evenodd" d="M9.702 3.86a.75.75 0 0 1 .493 1.018l-1.082 3.093 5.925 5.925 3.093-1.082a.75.75 0 0 1 .937.937l-1.383 4.84a.75.75 0 0 1-1.05.474l-3.37-1.444-2.298 2.298a.75.75 0 0 1-1.06 0l-1.061-1.061a.75.75 0 0 1 0-1.061l2.298-2.298-1.444-3.37a.75.75 0 0 1 .474-1.05l4.84-1.383a.75.75 0 0 1 .494-1.018Z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleRequestDeleteTag(tag.id)}
+                                                        className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                                        title="Xóa thẻ"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                                            <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 0 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -614,7 +671,7 @@ export const NotesManager: React.FC = () => {
                                                 
                                                 <div className="h-4 w-px bg-white/30"></div>
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); deleteTag(tag.id); }}
+                                                    onClick={(e) => { e.stopPropagation(); handleRequestDeleteTag(tag.id); }}
                                                     className="px-2 py-2 h-full flex items-center justify-center hover:bg-black/10 transition-colors"
                                                     title="Xóa thẻ"
                                                 >
@@ -772,7 +829,7 @@ export const NotesManager: React.FC = () => {
         </div>
       )}
       
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal (NOTES) */}
       {confirmDelete.isOpen && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={() => setConfirmDelete({ ...confirmDelete, isOpen: false })}></div>
@@ -803,6 +860,41 @@ export const NotesManager: React.FC = () => {
                         className="flex-1 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-200"
                       >
                           Xóa ngay
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Delete Confirmation Modal (TAGS) */}
+      {tagToDelete && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={() => setTagToDelete(null)}></div>
+              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm relative z-10 animate-pulse-soft">
+                  <div className="text-center mb-6">
+                      <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500 ring-4 ring-amber-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-7 h-7">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /> 
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m15 11.25-3-3m0 0-3 3m3-3v7.5" />
+                        </svg>
+                      </div>
+                      <h4 className="text-xl font-bold text-slate-800 mb-2">Xóa thẻ phân loại?</h4>
+                      <p className="text-slate-500 text-sm">
+                          Thẻ <strong>"{getTag(tagToDelete)?.name}"</strong> sẽ bị xóa vĩnh viễn. Các ghi chú thuộc thẻ này sẽ không bị xóa nhưng sẽ mất phân loại.
+                      </p>
+                  </div>
+                  <div className="flex gap-3">
+                      <button 
+                        onClick={() => setTagToDelete(null)}
+                        className="flex-1 py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                      >
+                          Hủy bỏ
+                      </button>
+                      <button 
+                        onClick={confirmTagDeletion}
+                        className="flex-1 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-200"
+                      >
+                          Xóa thẻ
                       </button>
                   </div>
               </div>
