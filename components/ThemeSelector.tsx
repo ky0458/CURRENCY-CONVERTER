@@ -6,11 +6,21 @@ import { Tooltip } from './Tooltip';
 interface ThemeSelectorProps {
   currentTheme: ThemeColor;
   onThemeChange: (theme: ThemeColor) => void;
+  onBackgroundUpload?: (file: File) => void;
+  onRemoveBackground?: () => void;
+  currentBackground?: string | null;
 }
 
-export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ currentTheme, onThemeChange }) => {
+export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ 
+  currentTheme, 
+  onThemeChange, 
+  onBackgroundUpload,
+  onRemoveBackground,
+  currentBackground
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -26,64 +36,144 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({ currentTheme, onTh
     onThemeChange(e.target.value);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0] && onBackgroundUpload) {
+        onBackgroundUpload(e.target.files[0]);
+        // Don't close immediately so user can see the change
+    }
+  };
+
   const isPreset = THEME_COLORS.some(t => t.id === currentTheme);
 
   return (
     <div className="relative" ref={containerRef}>
-      <Tooltip content="Đổi màu chủ đề" position="left">
+      <Tooltip content="Giao diện & Hình nền" position="left">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-9 h-9 rounded-full bg-white text-slate-600 shadow-md hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center border border-slate-200 group"
+          className={`
+            w-10 h-10 rounded-full backdrop-blur-md shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center border group ring-1 ring-white/50
+            ${currentBackground ? 'bg-white/20 border-white/40 text-white' : 'bg-white/90 border-slate-100 text-slate-600'}
+          `}
         >
-          <div className="w-5 h-5 rounded-full" style={{ backgroundColor: isPreset ? 'transparent' : currentTheme, color: currentTheme }}>
+          <div className="w-6 h-6 rounded-full shadow-sm" style={{ backgroundColor: isPreset ? 'transparent' : currentTheme, color: isPreset ? 'currentColor' : '#fff' }}>
              {isPreset ? (
                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-full h-full p-0.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.38-3.81m-9 3.81c5.26 0 9.43-6.38 9.43-11.233 0-1.847-1.428-2.618-2.585-1.928-1.157.69-2.015 2.15-2.015 3.35 0 .237-.038.468-.11.685a16.036 16.036 0 0 1-3.722 3.882c-1.257 1.056-2.023 2.189-2.023 3.35 0 1.203.774 2.25 1.95 2.915Z" />
                </svg>
              ) : (
-                <div className="w-full h-full rounded-full ring-1 ring-slate-200" style={{ backgroundColor: currentTheme }} />
+                <div className="w-full h-full rounded-full ring-1 ring-black/10" style={{ backgroundColor: currentTheme }} />
              )}
           </div>
         </button>
       </Tooltip>
 
       {isOpen && (
-        <div className="absolute right-0 top-[calc(100%+8px)] bg-white rounded-xl shadow-xl border border-slate-100 p-3 min-w-[200px] z-[100] animate-fade-in-up origin-top-right">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">Màu giao diện</p>
-          <div className="grid grid-cols-4 gap-2 mb-3">
-            {THEME_COLORS.map((theme) => (
-              <button
-                key={theme.id}
-                onClick={() => {
-                  onThemeChange(theme.id);
-                  setIsOpen(false);
-                }}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 ring-2 ring-offset-1 ${
-                  currentTheme === theme.id ? 'ring-slate-400 scale-110' : 'ring-transparent'
-                }`}
-                style={{ backgroundColor: theme.hex }}
-                title={theme.name}
-              >
-                {currentTheme === theme.id && (
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-4 h-4 text-white">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                  </svg>
-                )}
-              </button>
-            ))}
+        <div className="absolute right-0 top-[calc(100%+8px)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/50 p-4 w-[280px] sm:w-[320px] z-[100] animate-fade-in-up origin-top-right">
+          
+          {/* Section 1: Colors */}
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-3 px-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Màu chủ đạo</p>
+                {!isPreset && <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono">{currentTheme}</span>}
+            </div>
+            
+            <div className="grid grid-cols-5 gap-3">
+                {THEME_COLORS.map((theme) => (
+                <button
+                    key={theme.id}
+                    onClick={() => onThemeChange(theme.id)}
+                    className={`aspect-square rounded-full flex items-center justify-center transition-transform hover:scale-110 shadow-sm relative ${
+                    currentTheme === theme.id ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : ''
+                    }`}
+                    style={{ backgroundColor: theme.hex }}
+                    title={theme.name}
+                >
+                    {currentTheme === theme.id && (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-3.5 h-3.5 text-white">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                    )}
+                </button>
+                ))}
+                
+                {/* Custom Color Picker Button */}
+                <div className={`relative aspect-square rounded-full flex items-center justify-center cursor-pointer transition-transform hover:scale-110 shadow-sm border border-slate-200 bg-white overflow-hidden ${!isPreset ? 'ring-2 ring-offset-2 ring-slate-400' : ''}`}>
+                    <div className="w-full h-full bg-gradient-to-br from-red-400 via-green-400 to-blue-400 opacity-80" />
+                    <input 
+                        type="color" 
+                        className="absolute inset-0 w-[200%] h-[200%] opacity-0 cursor-pointer top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-0 m-0"
+                        value={isPreset ? '#2563eb' : currentTheme}
+                        onChange={handleCustomColor}
+                        title="Chọn màu tùy ý"
+                    />
+                    {!isPreset && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/10">
+                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-3.5 h-3.5 text-white drop-shadow-md">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                            </svg>
+                        </div>
+                    )}
+                </div>
+            </div>
           </div>
           
-          <div className="pt-2 border-t border-slate-100">
-             <div className="relative w-full h-9 rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:border-primary-400 transition-colors shadow-sm group bg-slate-50 flex items-center px-2 gap-2">
-                <div className="w-5 h-5 rounded-full border border-slate-200 shadow-sm shrink-0" style={{ backgroundColor: isPreset ? '#2563eb' : currentTheme }}></div>
-                <span className="text-[10px] font-bold text-slate-500 group-hover:text-primary-600">Tự chọn màu...</span>
-                <input 
-                    type="color" 
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    value={isPreset ? '#2563eb' : currentTheme}
-                    onChange={handleCustomColor}
-                />
-             </div>
+          <div className="w-full h-px bg-slate-100 mb-4"></div>
+
+          {/* Section 2: Background Image */}
+          <div>
+             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">Hình nền ứng dụng</p>
+             
+             {currentBackground ? (
+                 <div className="relative w-full aspect-video rounded-xl overflow-hidden group border border-slate-200 shadow-sm">
+                     <img src={currentBackground} alt="Current background" className="w-full h-full object-cover" />
+                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button 
+                            onClick={() => fileInputRef.current?.click()}
+                            className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white hover:text-primary-600 transition-colors"
+                            title="Thay đổi ảnh"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                            </svg>
+                        </button>
+                        <button 
+                            onClick={onRemoveBackground}
+                            className="p-2 bg-red-500/80 backdrop-blur-md rounded-full text-white hover:bg-red-600 transition-colors"
+                            title="Xóa hình nền"
+                        >
+                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                            </svg>
+                        </button>
+                     </div>
+                 </div>
+             ) : (
+                <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-24 rounded-xl border-2 border-dashed border-slate-200 hover:border-primary-400 hover:bg-primary-50 transition-all flex flex-col items-center justify-center gap-2 group cursor-pointer"
+                >
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-primary-500 shadow-sm transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                        </svg>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-500 group-hover:text-primary-600">Tải ảnh lên</span>
+                </button>
+             )}
+             
+             {/* Hidden Input */}
+             <input 
+                type="file" 
+                ref={fileInputRef}
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+            />
+            {currentBackground && (
+                <p className="text-[10px] text-slate-400 italic mt-2 text-center">
+                    Màu sắc ứng dụng đã được trích xuất tự động từ hình nền của bạn.
+                </p>
+            )}
           </div>
         </div>
       )}

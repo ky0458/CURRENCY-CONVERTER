@@ -16,12 +16,17 @@ export interface ConversionResult {
 export interface ConversionHistoryItem {
   id: string;
   timestamp: number;
-  inputAmount: number; // This is the Fee when type is 'calculate'
+  inputAmount: number; // This is Fee/Salary depending on type
   fromCurrency: Currency;
   toCurrency: Currency;
-  convertedAmount: number;
-  type: 'convert' | 'calculate'; // Distinguish between tabs
+  convertedAmount: number; // This is Result/Net Income
+  type: 'convert' | 'calculate' | 'revenue'; 
   originalSalary?: number; // Only for 'calculate' type
+  revenueDetails?: {
+      shareType: 'all' | 'cv' | 'job';
+      stageRevenue: number;
+      totalRevenue: number;
+  };
 }
 
 export enum LoadingState {
@@ -32,3 +37,22 @@ export enum LoadingState {
 }
 
 export type ThemeColor = string;
+
+// --- NOTES SYSTEM TYPES ---
+
+export type NoteStatus = 'incomplete' | 'completed' | 'attention' | 'skipped';
+
+export interface NoteTag {
+  id: string;
+  name: string;
+  color: string; // hex string
+  isPinned?: boolean; // New property for pinning
+}
+
+export interface Note {
+  id: string;
+  content: string;
+  timestamp: number;
+  status: NoteStatus;
+  tagId: string | null; // One tag per note for simplicity in filtering
+}

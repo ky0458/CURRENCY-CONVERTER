@@ -39,3 +39,82 @@ export const generatePalette = (baseHex: string) => {
     900: rgbToHex(mix(rgb, black, 0.3)),
   };
 };
+
+export const extractDominantColor = (imageSrc: string): Promise<string> => {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                resolve('#2563eb'); // Default fallback
+                return;
+            }
+            
+            // Resize to 1x1 to get average color
+            canvas.width = 1;
+            canvas.height = 1;
+            ctx.drawImage(img, 0, 0, 1, 1);
+            
+            const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+            resolve(rgbToHex({ r, g, b }));
+        };
+
+        img.onerror = () => {
+            // Resolve with default blue instead of rejecting to avoid unhandled promise rejections
+            // or noisy console errors.
+            resolve('#2563eb');
+        };
+
+        // Set src after handlers are defined to avoid race conditions
+        img.src = imageSrc;
+    });
+};
+
+export const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+                const elem = document.createElement('canvas');
+                // Set max width/height to avoid huge local storage usage. 
+                const maxWidth = 1920; 
+                const maxHeight = 1080;
+                let width = img.width;
+                let height = img.height;
+
+                // Aspect Ratio Logic
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width *= maxHeight / height;
+                        height = maxHeight;
+                    }
+                }
+                
+                elem.width = width;
+                elem.height = height;
+                const ctx = elem.getContext('2d');
+                if (!ctx) {
+                    reject(new Error('Canvas context not available'));
+                    return;
+                }
+                
+                ctx.drawImage(img, 0, 0, width, height);
+                // Compress as JPEG with 0.8 quality
+                resolve(elem.toDataURL('image/jpeg', 0.8));
+            };
+            img.onerror = (error) => reject(error);
+        };
+        reader.onerror = (error) => reject(error);
+    });
+};

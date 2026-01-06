@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ConversionHistoryItem } from '../types';
 
 interface HistorySectionProps {
@@ -17,6 +17,17 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
     isOpen: false, idsToDelete: [], isAll: false 
   });
 
+  // Gesture Selection Refs
+  const longPressTimerRef = useRef<number | null>(null);
+  const isDragSelectingRef = useRef(false);
+  const startPosRef = useRef<{ x: number, y: number } | null>(null);
+  const selectionSetRef = useRef<Set<string>>(new Set());
+
+  // Sync ref with state
+  useEffect(() => {
+      selectionSetRef.current = selectedIds;
+  }, [selectedIds]);
+
   const toggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode);
     setSelectedIds(new Set());
@@ -31,6 +42,79 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
     }
     setSelectedIds(newSelected);
   };
+
+  // --- GESTURE LOGIC: Long Press & Drag ---
+  const handlePointerDown = (e: React.PointerEvent, id: string) => {
+      if (confirmDelete.isOpen) return;
+      
+      // If already in selection mode, let the click handler deal with toggling
+      if (isSelectionMode) return;
+
+      startPosRef.current = { x: e.clientX, y: e.clientY };
+      
+      longPressTimerRef.current = window.setTimeout(() => {
+          // Long press triggered!
+          setIsSelectionMode(true);
+          setSelectedIds(new Set([id]));
+          isDragSelectingRef.current = true;
+          
+          // Haptic feedback if available
+          if (navigator.vibrate) navigator.vibrate(50);
+      }, 500); // 500ms long press
+  };
+
+  useEffect(() => {
+    const handleGlobalPointerMove = (e: PointerEvent) => {
+        // 1. Check if we should cancel long press due to scrolling
+        if (longPressTimerRef.current && startPosRef.current && !isDragSelectingRef.current) {
+            const moveX = Math.abs(e.clientX - startPosRef.current.x);
+            const moveY = Math.abs(e.clientY - startPosRef.current.y);
+            // If moved more than 10px, it's a scroll or random move, cancel long press
+            if (moveX > 10 || moveY > 10) {
+                clearTimeout(longPressTimerRef.current);
+                longPressTimerRef.current = null;
+                startPosRef.current = null;
+            }
+        }
+
+        // 2. Handle Drag Selection (Selecting items while dragging)
+        if (isDragSelectingRef.current) {
+            e.preventDefault(); // Prevent scrolling while drag-selecting
+            
+            // Find element under pointer
+            const element = document.elementFromPoint(e.clientX, e.clientY);
+            const historyItem = element?.closest('[data-history-id]');
+            
+            if (historyItem) {
+                const id = historyItem.getAttribute('data-history-id');
+                if (id && !selectionSetRef.current.has(id)) {
+                     setSelectedIds(prev => new Set(prev).add(id));
+                     if (navigator.vibrate) navigator.vibrate(10);
+                }
+            }
+        }
+    };
+
+    const handleGlobalPointerUp = () => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+        startPosRef.current = null;
+        isDragSelectingRef.current = false;
+    };
+
+    window.addEventListener('pointermove', handleGlobalPointerMove, { passive: false });
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    window.addEventListener('pointercancel', handleGlobalPointerUp);
+
+    return () => {
+        window.removeEventListener('pointermove', handleGlobalPointerMove);
+        window.removeEventListener('pointerup', handleGlobalPointerUp);
+        window.removeEventListener('pointercancel', handleGlobalPointerUp);
+    };
+  }, []);
+  // ------------------------------------------
 
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
@@ -81,6 +165,12 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
       return new Date(timestamp).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
   };
 
+  const getShareLabel = (shareType?: 'all' | 'cv' | 'job') => {
+      if (shareType === 'cv') return 'Có CV (70%)';
+      if (shareType === 'job') return 'Nắm Job (30%)';
+      return 'Tất cả (100%)';
+  };
+
   return (
     <div className="w-full flex flex-col h-full relative bg-slate-50">
       {/* Header */}
@@ -98,23 +188,12 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
         )}
 
         <div className="flex items-center gap-2">
-            {!isSelectionMode && history.length > 0 && (
-                <button 
-                    onClick={toggleSelectionMode}
-                    className="text-primary-600 bg-primary-50 hover:bg-primary-100 p-2 sm:px-3 sm:py-2 rounded-lg transition-colors border border-primary-100 flex items-center gap-1.5"
-                    title="Chọn nhiều"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                    <span className="hidden sm:inline text-xs font-bold">Chọn nhiều</span>
-                </button>
-            )}
+            {/* Explicit Select button removed, gesture is now the way */}
+            
             {!isSelectionMode && history.length > 0 && (
                 <button 
                 onClick={handleClearAll} 
                 className="text-xs text-red-500 hover:text-red-600 font-bold hover:bg-red-50 px-3 py-2 rounded-lg transition-colors border border-transparent hover:border-red-100"
-                title="Xóa tất cả"
                 >
                     Xóa hết
                 </button>
@@ -143,12 +222,30 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {history.map(item => {
                     const isCalculate = item.type === 'calculate';
-                    // If calculation type and originalSalary exists, show it. Otherwise show inputAmount (fee or convert amount)
-                    const displayAmount = (isCalculate && item.originalSalary) ? item.originalSalary : item.inputAmount;
-                    const displayLabel = isCalculate ? "Mức lương" : "Số tiền gốc";
+                    const isRevenue = item.type === 'revenue';
+                    
+                    // Logic to display content based on type
+                    let displayLabel = "Số tiền gốc";
+                    let displayAmount = item.inputAmount;
+                    let typeLabel = "Chuyển đổi";
+                    let typeColor = "bg-blue-100 text-blue-600";
+
+                    if (isCalculate) {
+                        displayLabel = "Mức lương";
+                        displayAmount = item.originalSalary || item.inputAmount;
+                        typeLabel = "Tính phí";
+                        typeColor = "bg-purple-100 text-purple-600";
+                    } else if (isRevenue) {
+                        displayLabel = "Mức lương";
+                        displayAmount = item.inputAmount; // stored as salary for revenue
+                        typeLabel = "Doanh thu";
+                        typeColor = "bg-emerald-100 text-emerald-600";
+                    }
 
                     return (
                         <div key={item.id} 
+                            data-history-id={item.id}
+                            onPointerDown={(e) => handlePointerDown(e, item.id)}
                             onClick={() => {
                                 if (isSelectionMode) {
                                     handleCheckboxChange(item.id);
@@ -157,7 +254,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
                                 }
                             }} 
                             className={`
-                                relative overflow-hidden rounded-xl border transition-all cursor-pointer group flex items-stretch
+                                relative overflow-hidden rounded-xl border transition-all cursor-pointer group flex items-stretch touch-manipulation select-none
                                 ${isSelectionMode && selectedIds.has(item.id) 
                                     ? 'bg-primary-50 border-primary-500 ring-1 ring-primary-500' 
                                     : 'bg-white border-slate-200 hover:border-primary-300 hover:shadow-md'}
@@ -178,13 +275,13 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
                             <div className="flex-1 p-3 sm:p-4 flex flex-col gap-3">
                                 {/* Top Row: Type Badge and Date */}
                                 <div className="flex items-center justify-between">
-                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${isCalculate ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
-                                        {isCalculate ? 'Tính phí' : 'Chuyển đổi'}
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${typeColor}`}>
+                                        {typeLabel}
                                     </span>
                                     <span className="text-xs text-slate-400 font-medium">{formatDate(item.timestamp)}</span>
                                 </div>
 
-                                {/* Middle Row: Hero Input Amount (EMPHASIZED) */}
+                                {/* Middle Row: Hero Input Amount */}
                                 <div className="flex flex-col">
                                     <span className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">{displayLabel}</span>
                                     <div className="flex items-center gap-2">
@@ -193,11 +290,24 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
                                             {formatCurrency(displayAmount, item.fromCurrency.locale, item.fromCurrency.code)}
                                         </span>
                                     </div>
-                                    {/* For Calculation, show the calculated fee below the salary */}
+                                    
+                                    {/* Sub details based on type */}
                                     {isCalculate && (
                                         <div className="flex items-center gap-1 mt-1 text-slate-500">
                                             <span className="text-[10px] uppercase font-bold bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">Phí dịch vụ</span>
                                             <span className="text-xs font-bold">{formatCurrency(item.inputAmount, item.fromCurrency.locale, item.fromCurrency.code)}</span>
+                                        </div>
+                                    )}
+
+                                    {isRevenue && item.revenueDetails && (
+                                        <div className="flex flex-col gap-1 mt-2 p-2 bg-slate-50 rounded-lg border border-slate-100">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[10px] text-slate-500 font-bold uppercase">{getShareLabel(item.revenueDetails.shareType)}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                 <span className="text-[10px] uppercase font-bold text-slate-400">Thực nhận</span>
+                                                 <span className="text-sm font-bold text-primary-600">{formatCurrency(item.convertedAmount, 'vi-VN', 'VND')}</span>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -207,7 +317,6 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
                                 <button
                                     onClick={(e) => handleDeleteSingle(item.id, e)}
                                     className="w-12 flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all border-l border-slate-100 group-hover:border-slate-200"
-                                    title="Xóa"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -218,12 +327,14 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
                     );
                 })}
             </div>
+            
+            <p className="text-xs text-slate-400 mt-6 text-center italic opacity-60">Giữ lì vào lịch sử để chọn nhiều</p>
         </div>
       )}
 
       {/* Floating Action Button for Selection Mode */}
       {isSelectionMode && (
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-30">
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-30 animate-fade-in-up">
               <button
                 onClick={handleDeleteSelected}
                 disabled={selectedIds.size === 0}
