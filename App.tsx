@@ -16,6 +16,54 @@ import { THEME_COLORS, DEFAULT_SOURCE_CURRENCY } from './constants';
 import { generatePalette, extractDominantColor, compressImage } from './utils/themeUtils';
 import { getReadFunction } from './utils/currencyTextFormatter';
 import { CopyButton } from './components/CopyButton';
+// Import useAuth to access notification state
+import { useAuth, AuthProvider } from './contexts/AuthContext';
+
+const ToastNotification = () => {
+    const { notification, closeNotification } = useAuth();
+
+    if (!notification) return null;
+
+    const bgColors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        info: 'bg-slate-700'
+    };
+
+    const icons = {
+        success: (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+        ),
+        error: (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+            </svg>
+        ),
+        info: (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+        )
+    };
+
+    return (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[150] animate-fade-in-up w-[90%] max-w-sm">
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl text-white backdrop-blur-md ${bgColors[notification.type]} bg-opacity-90 border border-white/20`}>
+                <div className="shrink-0">
+                    {icons[notification.type]}
+                </div>
+                <p className="text-sm font-semibold flex-1">{notification.message}</p>
+                <button onClick={closeNotification} className="shrink-0 p-1 hover:bg-white/20 rounded-full transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    );
+};
 
 const AppContent: React.FC = () => {
   const {
@@ -101,6 +149,11 @@ const AppContent: React.FC = () => {
               localStorage.setItem('app_bg', base64String);
           } catch (e) {
               console.error("LocalStorage quota exceeded", e);
+              // Instead of alert, use system notification if possible, but here we keep simple alert for file system issues
+              // or rely on console since this is a rare edge case.
+              // To use Toast: 
+              // We'd need to extract Toast logic or pass showNotification down, 
+              // but for now keeping it simple as requested for "login errors".
               alert("Ảnh nền quá lớn để lưu tự động. Ảnh sẽ chỉ hiển thị trong phiên làm việc hiện tại.");
           }
           
@@ -318,6 +371,8 @@ const AppContent: React.FC = () => {
             backgroundRepeat: 'no-repeat'
         }}
     >
+      <ToastNotification />
+
       {/* GLOBAL FIXED CONTROLS */}
       <div className="fixed top-3 right-3 sm:top-5 sm:right-6 z-[100] flex items-center gap-3 animate-fade-in-up">
         <UserMenu hasBackgroundImage={hasBackground} theme={theme} />
@@ -729,9 +784,6 @@ const AppContent: React.FC = () => {
     </div>
   );
 };
-
-// Import AuthProvider
-import { AuthProvider } from './contexts/AuthContext';
 
 const App: React.FC = () => {
     return (

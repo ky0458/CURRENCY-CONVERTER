@@ -731,7 +731,7 @@ export const NotesManager: React.FC = () => {
                                                         ? 'bg-white shadow-md ring-2 ring-offset-2 ring-white scale-100' 
                                                         : 'bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50'}
                                                 `}
-                                                style={isActive ? { borderColor: tag.color, ringColor: tag.color } : {}}
+                                                style={isActive ? { borderColor: tag.color, '--tw-ring-color': tag.color } as React.CSSProperties : {}}
                                             >
                                                 <button
                                                     onClick={() => setActiveTab(tag.id)}
