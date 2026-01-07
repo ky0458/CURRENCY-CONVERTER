@@ -47,6 +47,12 @@ export const NotesManager: React.FC = () => {
 
   // Delete State (Tags)
   const [tagToDelete, setTagToDelete] = useState<string | null>(null);
+
+  // Reminder State
+  const [reminderModal, setReminderModal] = useState<{ isOpen: boolean, noteId: string | null, content: string }>({ 
+      isOpen: false, noteId: null, content: '' 
+  });
+  const [reminderTime, setReminderTime] = useState('');
   
   // Gesture Selection Refs
   const longPressTimerRef = useRef<number | null>(null);
@@ -230,6 +236,71 @@ export const NotesManager: React.FC = () => {
           setTagToDelete(null);
       }
   };
+
+  // Reminder Logic
+  const handleOpenReminder = (note: {id: string, content: string}, e: React.MouseEvent) => {
+      e.stopPropagation();
+      setReminderModal({
+          isOpen: true,
+          noteId: note.id,
+          content: note.content
+      });
+      // Default to 1 hour from now
+      const now = new Date();
+      now.setHours(now.getHours() + 1);
+      setReminderTime(now.toISOString().slice(0, 16));
+  };
+
+  const requestNotificationPermission = async () => {
+      if (!("Notification" in window)) {
+          alert("Trình duyệt này không hỗ trợ thông báo.");
+          return false;
+      }
+      
+      if (Notification.permission === "granted") return true;
+      
+      if (Notification.permission !== "denied") {
+          const permission = await Notification.requestPermission();
+          return permission === "granted";
+      }
+      return false;
+  };
+
+  const handleScheduleReminder = async () => {
+      if (!reminderTime || !reminderModal.content) return;
+
+      const targetTime = new Date(reminderTime).getTime();
+      const now = Date.now();
+      const delay = targetTime - now;
+
+      if (delay <= 0) {
+          alert("Vui lòng chọn thời gian trong tương lai.");
+          return;
+      }
+
+      const hasPermission = await requestNotificationPermission();
+      
+      if (hasPermission) {
+          // Schedule local notification
+          setTimeout(() => {
+              new Notification("Nhắc nhở từ Gia Hân Converter", {
+                  body: reminderModal.content,
+                  icon: '/vite.svg', // Fallback icon
+              });
+              // Try to play a sound if browser allows
+              try {
+                  const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3');
+                  audio.play();
+              } catch(e) {}
+          }, delay);
+
+          alert(`Đã đặt nhắc nhở! Bạn sẽ nhận được thông báo vào lúc ${new Date(reminderTime).toLocaleString('vi-VN')}. (Lưu ý: Giữ tab này mở để nhận thông báo)`);
+          setReminderModal({ ...reminderModal, isOpen: false });
+      } else {
+          alert("Bạn cần cấp quyền thông báo cho trình duyệt để sử dụng tính năng này.");
+      }
+  };
+
 
   // Selection Logic
   const toggleSelectionMode = () => {
@@ -919,25 +990,14 @@ export const NotesManager: React.FC = () => {
                                                                     {new Date(note.timestamp).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit', day: '2-digit', month: '2-digit'})}
                                                                 </span>
                                                             </div>
-                                                            
-                                                            {/* Single Delete Button (Only when not in selection mode) */}
-                                                            {!isSelectionMode && (
-                                                                <button 
-                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteClick([note.id]); }}
-                                                                    className={`text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 p-1 rounded-full hover:bg-red-50 ${isAllTab ? 'mt-5 mr-1' : ''}`}
-                                                                    title="Xóa ghi chú"
-                                                                >
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
-                                                                </button>
-                                                            )}
                                                         </div>
                                                         
                                                         <p className="text-sm text-slate-800 font-medium mb-3 whitespace-pre-wrap leading-relaxed relative z-10 flex-1">
                                                             {note.content}
                                                         </p>
 
-                                                        {/* Status Actions (Disabled in selection mode) */}
-                                                        <div className={`flex gap-1 overflow-x-auto no-scrollbar-on-mobile pb-1 relative z-10 mt-auto ${isSelectionMode ? 'pointer-events-none opacity-60' : ''}`}>
+                                                        {/* Status Actions */}
+                                                        <div className={`flex gap-1 overflow-x-auto no-scrollbar-on-mobile pb-1 relative z-10 mt-auto mb-2 ${isSelectionMode ? 'pointer-events-none opacity-60' : ''}`}>
                                                             {(Object.keys(statusConfig) as NoteStatus[]).map((s) => (
                                                                 <button
                                                                     key={s}
@@ -954,6 +1014,35 @@ export const NotesManager: React.FC = () => {
                                                                 </button>
                                                             ))}
                                                         </div>
+
+                                                        {/* NEW FOOTER: Reminder & Delete */}
+                                                        {!isSelectionMode && (
+                                                            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100/60 mt-auto">
+                                                                {/* Reminder Button */}
+                                                                <button
+                                                                    onClick={(e) => handleOpenReminder(note, e)}
+                                                                    className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1.5 rounded-lg transition-colors group/reminder"
+                                                                    title="Hẹn giờ nhắc nhở"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                                                                    </svg>
+                                                                    <span className="hidden group-hover/reminder:inline">Nhắc nhở</span>
+                                                                </button>
+
+                                                                {/* Trash Delete Button */}
+                                                                <button 
+                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteClick([note.id]); }}
+                                                                    className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-red-600 hover:bg-red-50 px-2 py-1.5 rounded-lg transition-colors group/delete"
+                                                                    title="Xóa ghi chú"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                                    </svg>
+                                                                    <span className="hidden group-hover/delete:inline">Xóa</span>
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             );
@@ -1058,6 +1147,64 @@ export const NotesManager: React.FC = () => {
                   </div>
               </div>
           </div>
+      )}
+
+      {/* Reminder Modal */}
+      {reminderModal.isOpen && (
+           <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+               <div 
+                  className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" 
+                  onClick={() => setReminderModal({ ...reminderModal, isOpen: false })}
+               ></div>
+               <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm relative z-10 animate-pulse-soft">
+                   <div className="flex items-center gap-3 mb-4">
+                       <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                               <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                           </svg>
+                       </div>
+                       <h4 className="text-lg font-bold text-slate-800">Đặt nhắc nhở</h4>
+                   </div>
+                   
+                   <div className="space-y-4">
+                       <div>
+                           <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Nội dung nhắc nhở</label>
+                           <textarea 
+                               className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-slate-50 text-sm focus:outline-none focus:border-indigo-500 resize-none h-20"
+                               value={reminderModal.content}
+                               onChange={(e) => setReminderModal({...reminderModal, content: e.target.value})}
+                           />
+                       </div>
+                       <div>
+                           <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Thời gian thông báo</label>
+                           <input 
+                               type="datetime-local" 
+                               className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-sm focus:outline-none focus:border-indigo-500"
+                               value={reminderTime}
+                               onChange={(e) => setReminderTime(e.target.value)}
+                           />
+                           <p className="text-[10px] text-slate-400 mt-1 italic">
+                               * Trình duyệt cần được cấp quyền và tab này phải mở để nhận thông báo.
+                           </p>
+                       </div>
+                   </div>
+
+                   <div className="flex gap-3 mt-6">
+                       <button 
+                           onClick={() => setReminderModal({ ...reminderModal, isOpen: false })}
+                           className="flex-1 py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                       >
+                           Hủy
+                       </button>
+                       <button 
+                           onClick={handleScheduleReminder}
+                           className="flex-1 py-3 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+                       >
+                           Đặt lịch
+                       </button>
+                   </div>
+               </div>
+           </div>
       )}
     </>
   );
