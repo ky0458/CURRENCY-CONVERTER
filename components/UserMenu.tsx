@@ -130,30 +130,30 @@ export const UserMenu: React.FC<UserMenuProps> = ({ hasBackgroundImage = false, 
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={() => setShowLogoutConfirm(false)}></div>
-              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm relative z-10 animate-pulse-soft">
-                  <div className="text-center mb-6">
-                      <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500 ring-4 ring-red-50">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-7 h-7">
+              <div className="bg-white rounded-3xl shadow-2xl p-6 w-[90%] max-w-sm relative z-10 animate-scale-in border border-white/50">
+                  <div className="text-center mb-8 mt-2">
+                      <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-5 text-red-500 ring-8 ring-red-50/50 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
                         </svg>
                       </div>
-                      <h4 className="text-xl font-bold text-slate-800 mb-2">Đăng xuất?</h4>
-                      <p className="text-slate-500">
+                      <h4 className="text-xl font-extrabold text-slate-800 mb-2">Đăng xuất?</h4>
+                      <p className="text-slate-500 font-medium text-sm px-4">
                           Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không?
                       </p>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                       <button 
                         onClick={() => setShowLogoutConfirm(false)}
-                        className="flex-1 py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                        className="flex-1 py-3.5 rounded-2xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors active:scale-95"
                       >
                           Hủy bỏ
                       </button>
                       <button 
                         onClick={confirmLogout}
-                        className="flex-1 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-200"
+                        className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-200 active:scale-95"
                       >
                           Đăng xuất
                       </button>

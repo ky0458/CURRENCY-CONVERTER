@@ -25,19 +25,19 @@ const ToastNotification = () => {
     if (!notification) return null;
 
     const bgColors = {
-        success: 'bg-green-500',
-        error: 'bg-red-500',
+        success: 'bg-emerald-500',
+        error: 'bg-rose-500',
         info: 'bg-slate-700'
     };
 
     const icons = {
         success: (
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
             </svg>
         ),
         error: (
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
             </svg>
         ),
@@ -49,13 +49,13 @@ const ToastNotification = () => {
     };
 
     return (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] animate-fade-in-up w-[90%] max-w-sm pointer-events-none">
-            <div className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl text-white backdrop-blur-md ${bgColors[notification.type]} bg-opacity-90 border border-white/20`}>
-                <div className="shrink-0">
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] animate-fade-in-up w-[90%] max-w-sm pointer-events-none">
+            <div className={`pointer-events-auto flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-2xl text-white backdrop-blur-md ${bgColors[notification.type]} bg-opacity-95 border border-white/20 ring-1 ring-black/5`}>
+                <div className="shrink-0 p-1 bg-white/20 rounded-full">
                     {icons[notification.type]}
                 </div>
-                <p className="text-sm font-semibold flex-1">{notification.message}</p>
-                <button onClick={closeNotification} className="shrink-0 p-1 hover:bg-white/20 rounded-full transition-colors">
+                <p className="text-sm font-bold flex-1 tracking-tight leading-tight">{notification.message}</p>
+                <button onClick={closeNotification} className="shrink-0 p-1.5 hover:bg-white/20 rounded-full transition-colors -mr-1">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                     </svg>
