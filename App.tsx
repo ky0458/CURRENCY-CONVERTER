@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { CurrencyRow } from './components/CurrencyRow';
 import { Header } from './components/Header';
 import { SwapButton } from './components/SwapButton';
@@ -48,7 +49,7 @@ const ToastNotification = () => {
         )
     };
 
-    return (
+    return createPortal(
         <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] animate-fade-in-up w-[90%] max-w-sm pointer-events-none">
             <div className={`pointer-events-auto flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-2xl text-white backdrop-blur-md ${bgColors[notification.type]} bg-opacity-95 border border-white/20 ring-1 ring-black/5`}>
                 <div className="shrink-0 p-1 bg-white/20 rounded-full">
@@ -61,7 +62,8 @@ const ToastNotification = () => {
                     </svg>
                 </button>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Tooltip } from './Tooltip';
 import { ThemeColor } from '../types';
@@ -128,8 +129,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({ hasBackgroundImage = false, 
         )}
       </div>
 
-      {/* Logout Confirmation Modal */}
-      {showLogoutConfirm && (
+      {/* Logout Confirmation Modal using Portal to avoid stacking context issues */}
+      {showLogoutConfirm && createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={() => setShowLogoutConfirm(false)}></div>
               <div className="bg-white rounded-3xl shadow-2xl p-6 w-[90%] max-w-sm relative z-10 animate-scale-in border border-white/50">
@@ -159,7 +160,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({ hasBackgroundImage = false, 
                       </button>
                   </div>
               </div>
-          </div>
+          </div>,
+          document.body
       )}
     </>
   );
