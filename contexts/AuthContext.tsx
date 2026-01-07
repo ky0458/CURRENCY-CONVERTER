@@ -7,7 +7,7 @@ import {
   User,
   AuthError
 } from 'firebase/auth';
-import { auth, googleProvider, facebookProvider } from '../firebase';
+import { auth, googleProvider } from '../firebase';
 
 interface NotificationState {
   message: string;
@@ -18,7 +18,6 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   loginGoogle: () => Promise<void>;
-  loginFacebook: () => Promise<void>;
   logout: () => Promise<void>;
   notification: NotificationState | null;
   closeNotification: () => void;
@@ -62,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         message = 'Yêu cầu đăng nhập bị hủy do có cửa sổ khác đang mở.';
         break;
       case 'auth/account-exists-with-different-credential':
-        message = 'Email này đã được liên kết với một phương thức đăng nhập khác (Google/Facebook).';
+        message = 'Email này đã được liên kết với một phương thức đăng nhập khác.';
         break;
       case 'auth/unauthorized-domain':
         message = 'Tên miền hiện tại chưa được ủy quyền trong Firebase Console. Vui lòng thêm tên miền này vào Authentication > Settings > Authorized Domains.';
@@ -77,10 +76,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         message = 'Lỗi kết nối mạng. Vui lòng kiểm tra lại đường truyền.';
         break;
       default:
-        // Giữ lại một phần lỗi gốc nếu không match case nào để dễ debug
-        if (error.message.includes("App Not Setup")) {
-             message = "Cấu hình Facebook App chưa đúng (App Not Setup). Hãy kiểm tra chế độ Live/Development trên Meta Developers.";
-        }
         break;
     }
 
@@ -96,15 +91,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginFacebook = async () => {
-    try {
-      await signInWithPopup(auth, facebookProvider);
-      showNotification('Đăng nhập Facebook thành công!', 'success');
-    } catch (error: any) {
-      handleAuthError(error, 'Facebook');
-    }
-  };
-
   const logout = async () => {
     try {
       await signOut(auth);
@@ -116,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginGoogle, loginFacebook, logout, notification, closeNotification }}>
+    <AuthContext.Provider value={{ user, loading, loginGoogle, logout, notification, closeNotification }}>
       {children}
     </AuthContext.Provider>
   );

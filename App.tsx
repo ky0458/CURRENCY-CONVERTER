@@ -49,8 +49,8 @@ const ToastNotification = () => {
     };
 
     return (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[150] animate-fade-in-up w-[90%] max-w-sm">
-            <div className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl text-white backdrop-blur-md ${bgColors[notification.type]} bg-opacity-90 border border-white/20`}>
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] animate-fade-in-up w-[90%] max-w-sm pointer-events-none">
+            <div className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl text-white backdrop-blur-md ${bgColors[notification.type]} bg-opacity-90 border border-white/20`}>
                 <div className="shrink-0">
                     {icons[notification.type]}
                 </div>
