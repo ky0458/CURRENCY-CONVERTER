@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CurrencyRow } from './components/CurrencyRow';
@@ -12,6 +13,8 @@ import { TabSelector } from './components/TabSelector';
 import { NotesManager } from './components/NotesManager';
 import { UserMenu } from './components/UserMenu';
 import { useCurrencyConverter } from './hooks/useCurrencyConverter';
+import { useRevenueTracker } from './hooks/useRevenueTracker';
+import { RevenueStatsSection } from './components/RevenueStatsSection';
 import { LoadingState, ThemeColor, Currency, ConversionHistoryItem } from './types';
 import { THEME_COLORS, DEFAULT_SOURCE_CURRENCY } from './constants';
 import { generatePalette, extractDominantColor, compressImage } from './utils/themeUtils';
@@ -100,6 +103,9 @@ const AppContent: React.FC = () => {
     loadingState, result, errorMsg, setErrorMsg, isSwapping, handleConvert, handleSwap,
     history, clearHistory, deleteHistoryItems, selectHistoryItem, resetResult, addToHistory
   } = useCurrencyConverter();
+
+  const { records, addRecord, updateRecord, deleteRecord } = useRevenueTracker();
+  const { showNotification } = useAuth();
   
   const [activeDropdown, setActiveDropdown] = useState<'FROM' | 'TO' | null>(null);
   const [theme, setTheme] = useState<ThemeColor>('blue');
@@ -108,7 +114,7 @@ const AppContent: React.FC = () => {
   
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'revenue'>('convert');
+  const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'revenue' | 'stats'>('convert');
   const [salaryAmount, setSalaryAmount] = useState<string>('');
   const [calcType, setCalcType] = useState<'probation' | 'official'>('official');
   
@@ -129,6 +135,8 @@ const AppContent: React.FC = () => {
   ];
 
   const filteredHistory = useMemo(() => {
+    // Only filter for tabs that are NOT 'stats'
+    if (activeTab === 'stats') return [];
     return history.filter(item => item.type === activeTab);
   }, [history, activeTab]);
 
@@ -178,11 +186,6 @@ const AppContent: React.FC = () => {
               localStorage.setItem('app_bg', base64String);
           } catch (e) {
               console.error("LocalStorage quota exceeded", e);
-              // Instead of alert, use system notification if possible, but here we keep simple alert for file system issues
-              // or rely on console since this is a rare edge case.
-              // To use Toast: 
-              // We'd need to extract Toast logic or pass showNotification down, 
-              // but for now keeping it simple as requested for "login errors".
               alert("Ảnh nền quá lớn để lưu tự động. Ảnh sẽ chỉ hiển thị trong phiên làm việc hiện tại.");
           }
           
@@ -268,9 +271,19 @@ const AppContent: React.FC = () => {
   const handleHistorySelect = (item: ConversionHistoryItem) => {
     selectHistoryItem(item);
     
+    // Switch active tab to match history item type
+    if (item.type === 'calculate') {
+        setActiveTab('calculate');
+    } else if (item.type === 'revenue') {
+        setActiveTab('revenue');
+    } else {
+        setActiveTab('convert');
+    }
+
     if (item.type === 'calculate' && item.originalSalary) {
         setSalaryAmount(item.originalSalary.toString());
-        handleConvert(item.inputAmount.toString(), activeTab, item.originalSalary);
+        // Use item.type explicitly instead of activeTab to ensure type safety
+        handleConvert(item.inputAmount.toString(), item.type, item.originalSalary);
     } 
     else if (item.type === 'revenue' && item.revenueDetails) {
         setSalaryAmount(item.inputAmount.toString());
@@ -282,14 +295,18 @@ const AppContent: React.FC = () => {
         });
     }
     else {
-        handleConvert(item.inputAmount.toString(), activeTab);
+        // Use item.type explicitly instead of activeTab to ensure type safety
+        handleConvert(item.inputAmount.toString(), item.type);
     }
     
     handleCloseHistory();
   };
 
   const handleSwapClick = () => {
-    handleSwap(activeTab);
+    // Only applicable for convert type
+    if (activeTab === 'convert') {
+        handleSwap(activeTab);
+    }
   };
 
   const onCalculateAndConvert = () => {
@@ -345,9 +362,16 @@ const AppContent: React.FC = () => {
         const fee = Math.floor(salary * multiplier);
         setAmount(fee.toString()); 
         handleConvert(fee.toString(), activeTab, salary); 
-    } else {
-        handleConvert(amount, activeTab);
+    } else if (activeTab === 'convert') {
+        handleConvert(amount, activeTab); 
     }
+  };
+
+  const handleSaveRevenue = () => {
+     if (!revenueResult) return;
+     const salary = parseFloat(salaryAmount.replace(/,/g, ''));
+     addRecord(salary, revenueShare, revenueResult.totalRevenue, revenueResult.netIncome);
+     showNotification('Đã lưu vào bảng thống kê!', 'success');
   };
 
   const renderHistoryButton = (
@@ -453,326 +477,348 @@ const AppContent: React.FC = () => {
                     />
                 </div>
                 
-                {activeTab === 'convert' && (
-                    <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
-                    <DenominationSelector 
-                        currency={fromCurrency} 
-                        onSelect={handleDenominationSelect} 
-                        currentAmount={amount}
-                        theme={theme}
-                    />
-                    </div>
-                )}
-
-                <div className="flex flex-col md:flex-row items-center md:items-start relative gap-3 md:gap-4">
-                <div className={`w-full md:flex-1 transition-all relative ${activeDropdown === 'FROM' || isRevenueDropdownOpen ? 'z-50' : 'z-20'}`}> 
-                    <CurrencyRow
-                        key={activeTab}
-                        label={activeTab === 'convert' ? "Nhập số tiền cần đổi" : "Nhập mức lương"}
-                        amount={activeTab === 'convert' ? amount : salaryAmount}
-                        currency={fromCurrency}
-                        onAmountChange={handleAmountChange}
-                        onCurrencyChange={handleFromChange}
-                        inputPlacement="left"
-                        autoFocus={true}
-                        isActive={activeDropdown === 'FROM'}
-                        onToggleDropdown={() => setActiveDropdown(activeDropdown === 'FROM' ? null : 'FROM')}
-                        onCloseDropdown={() => setActiveDropdown(null)}
-                        theme={theme}
-                        headerAction={renderHistoryButton}
-                        error={errorMsg}
-                        onEnter={onCalculateAndConvert}
-                        hasBackgroundImage={hasBackground}
-                    />
-
-                    {(activeTab === 'calculate' || activeTab === 'revenue') && (
-                        <div className="mt-3 flex gap-3 animate-fade-in-up">
-                            <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
-                                ${calcType === 'official' 
-                                    ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
-                                    : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
-                                <input type="radio" name="calcType" value="official" checked={calcType === 'official'} onChange={() => setCalcType('official')} className="hidden" />
-                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${calcType === 'official' ? 'border-primary-500' : 'border-slate-300'}`}>
-                                    {calcType === 'official' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
-                                </div>
-                                <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
-                                    <span className="text-sm">Chính thức</span>
-                                    <span className="text-[10px] sm:text-xs opacity-70 font-normal">(60%)</span>
-                                </div>
-                            </label>
-
-                            <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
-                                ${calcType === 'probation' 
-                                    ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
-                                    : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
-                                <input type="radio" name="calcType" value="probation" checked={calcType === 'probation'} onChange={() => setCalcType('probation')} className="hidden" />
-                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${calcType === 'probation' ? 'border-primary-500' : 'border-slate-300'}`}>
-                                    {calcType === 'probation' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
-                                </div>
-                                <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
-                                    <span className="text-sm">Thử việc</span>
-                                    <span className="text-[10px] sm:text-xs opacity-70 font-normal">(75%)</span>
-                                </div>
-                            </label>
-                        </div>
-                    )}
-
-                    {activeTab === 'revenue' && (
-                        <div className="mt-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-                            <div className="flex flex-col gap-1.5 w-full" ref={revenueDropdownRef}>
-                                <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide ml-1 transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
-                                    Tùy chọn tỷ lệ
-                                </label>
-                                <div className="relative group">
-                                    <button
-                                        onClick={() => setIsRevenueDropdownOpen(!isRevenueDropdownOpen)}
-                                        className={`relative w-full border text-slate-800 text-left text-base sm:text-lg font-bold py-4 px-4 pr-12 rounded-2xl transition-all h-[60px] sm:h-[66px] flex items-center backdrop-blur-md
-                                        ${isRevenueDropdownOpen 
-                                            ? 'border-primary-500 ring-2 ring-primary-100 z-50 bg-white' 
-                                            : hasBackground 
-                                                ? 'bg-white/80 border-white/40 hover:bg-white' 
-                                                : 'bg-white/90 border-slate-200 hover:border-primary-300 hover:bg-white'}`}
-                                    >
-                                        {revenueOptions.find(o => o.value === revenueShare)?.label}
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className={`w-4 h-4 transition-transform ${isRevenueDropdownOpen ? 'rotate-180 text-primary-500' : ''}`}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                            </svg>
-                                        </div>
-                                    </button>
-                                    
-                                    {isRevenueDropdownOpen && (
-                                        <div className="absolute top-[calc(100%+8px)] w-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden transition-all z-[100] animate-fade-in-up">
-                                            <div className="p-1">
-                                                {revenueOptions.map((option) => (
-                                                    <div 
-                                                        key={option.value}
-                                                        onClick={() => {
-                                                            setRevenueShare(option.value as any);
-                                                            setIsRevenueDropdownOpen(false);
-                                                        }}
-                                                        className={`flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-colors ${revenueShare === option.value ? 'bg-primary-50 text-primary-700' : 'hover:bg-slate-50 text-slate-700'}`}
-                                                    >
-                                                        <span className="font-bold">{option.label}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {activeTab === 'convert' && (
-                    <div className="md:mt-12 z-30 shrink-0 relative">
-                        <SwapButton onClick={handleSwapClick} isSwapping={isSwapping} theme={theme} />
-                    </div>
-                )}
-
-                {activeTab !== 'revenue' && (
-                    <div className={`w-full md:flex-1 transition-all relative ${activeDropdown === 'TO' ? 'z-50' : 'z-20'}`}>
-                        <CurrencyRow
-                            label={activeTab === 'calculate' ? "Quy đổi phí sang" : "Quy đổi sang"}
-                            amount=""
-                            currency={toCurrency}
-                            onCurrencyChange={handleToChange}
-                            inputPlacement="hidden"
-                            isActive={activeDropdown === 'TO'}
-                            onToggleDropdown={() => setActiveDropdown(activeDropdown === 'TO' ? null : 'TO')}
-                            onCloseDropdown={() => setActiveDropdown(null)}
-                            theme={theme}
-                            hasBackgroundImage={hasBackground}
-                        />
-                    </div>
-                )}
-                </div>
-
-                <button
-                    onClick={onCalculateAndConvert}
-                    disabled={loadingState === LoadingState.LOADING}
-                    className={`w-full py-3.5 sm:py-4 rounded-2xl text-white font-bold text-base sm:text-lg shadow-xl transition-all transform mt-4 relative z-20
-                    ${loadingState === LoadingState.LOADING 
-                        ? 'bg-slate-400 cursor-not-allowed opacity-80' 
-                        : `bg-gradient-to-r from-primary-600 to-primary-800 hover:-translate-y-1 active:scale-[0.98]`
-                    }`}
-                >
-                    <span className="flex items-center justify-center gap-2">
-                        {loadingState === LoadingState.LOADING ? (
-                        <>
-                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang xử lý...
-                        </>
-                        ) : (
-                            activeTab === 'revenue' ? 'Tính doanh thu' :
-                            activeTab === 'calculate' ? 'Tính toán & Quy đổi' : 'Chuyển đổi ngay'
-                        )}
-                    </span>
-                </button>
-                
-                {activeTab !== 'revenue' && result && loadingState === LoadingState.SUCCESS && (
-                    <div className="flex justify-center -mt-2 animate-fade-in-up relative z-10">
-                    <div className="text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full border border-white/60 bg-white/95 backdrop-blur-sm text-slate-500 shadow-sm flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                        {formatExchangeRate(result.exchangeRate, fromCurrency.code, toCurrency.code)}
-                    </div>
-                    </div>
-                )}
-
-                {activeTab !== 'revenue' && result && loadingState === LoadingState.SUCCESS && (
-                    <>
-                    {activeTab === 'calculate' && (
-                            <div className="flex items-center gap-2 animate-fade-in-up mt-2">
-                                <div className="h-px bg-slate-200/50 flex-1"></div>
-                                <span className={`text-sm font-extrabold uppercase tracking-widest drop-shadow-sm ${hasBackground ? 'text-white drop-shadow-sm' : 'text-slate-500'}`}>Phí dịch vụ tổng</span>
-                                <div className="h-px bg-slate-200/50 flex-1"></div>
-                            </div>
-                    )}
-                    <ResultSection 
-                        result={result} 
-                        fromCurrency={fromCurrency} 
-                        toCurrency={toCurrency} 
-                        inputAmount={amount}
+                {activeTab === 'stats' ? (
+                   <RevenueStatsSection 
+                        records={records}
+                        onDeleteRecord={deleteRecord}
+                        onUpdateRecord={updateRecord}
                         formatCurrency={formatCurrency}
                         theme={theme}
-                        hasBackgroundImage={hasBackground}
-                    />
-                    </>
-                )}
+                   />
+                ) : (
+                    <>
+                        {activeTab === 'convert' && (
+                            <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+                            <DenominationSelector 
+                                currency={fromCurrency} 
+                                onSelect={handleDenominationSelect} 
+                                currentAmount={amount}
+                                theme={theme}
+                            />
+                            </div>
+                        )}
 
-                {activeTab === 'calculate' && stageFeeData && loadingState === LoadingState.SUCCESS && (
-                    <div className="animate-fade-in-up pt-2">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="h-px bg-slate-200/50 flex-1"></div>
-                            <span className={`text-sm font-extrabold uppercase tracking-widest drop-shadow-sm ${hasBackground ? 'text-white drop-shadow-sm' : 'text-slate-500'}`}>Phí mỗi giai đoạn (50%)</span>
-                            <div className="h-px bg-slate-200/50 flex-1"></div>
+                        <div className="flex flex-col md:flex-row items-center md:items-start relative gap-3 md:gap-4">
+                        <div className={`w-full md:flex-1 transition-all relative ${activeDropdown === 'FROM' || isRevenueDropdownOpen ? 'z-50' : 'z-20'}`}> 
+                            <CurrencyRow
+                                key={activeTab}
+                                label={activeTab === 'convert' ? "Nhập số tiền cần đổi" : "Nhập mức lương"}
+                                amount={activeTab === 'convert' ? amount : salaryAmount}
+                                currency={fromCurrency}
+                                onAmountChange={handleAmountChange}
+                                onCurrencyChange={handleFromChange}
+                                inputPlacement="left"
+                                autoFocus={true}
+                                isActive={activeDropdown === 'FROM'}
+                                onToggleDropdown={() => setActiveDropdown(activeDropdown === 'FROM' ? null : 'FROM')}
+                                onCloseDropdown={() => setActiveDropdown(null)}
+                                theme={theme}
+                                headerAction={renderHistoryButton}
+                                error={errorMsg}
+                                onEnter={onCalculateAndConvert}
+                                hasBackgroundImage={hasBackground}
+                            />
+
+                            {(activeTab === 'calculate' || activeTab === 'revenue') && (
+                                <div className="mt-3 flex gap-3 animate-fade-in-up">
+                                    <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
+                                        ${calcType === 'official' 
+                                            ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
+                                            : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
+                                        <input type="radio" name="calcType" value="official" checked={calcType === 'official'} onChange={() => setCalcType('official')} className="hidden" />
+                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${calcType === 'official' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                            {calcType === 'official' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
+                                            <span className="text-sm">Chính thức</span>
+                                            <span className="text-[10px] sm:text-xs opacity-70 font-normal">(60%)</span>
+                                        </div>
+                                    </label>
+
+                                    <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
+                                        ${calcType === 'probation' 
+                                            ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
+                                            : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
+                                        <input type="radio" name="calcType" value="probation" checked={calcType === 'probation'} onChange={() => setCalcType('probation')} className="hidden" />
+                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${calcType === 'probation' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                            {calcType === 'probation' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
+                                        </div>
+                                        <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
+                                            <span className="text-sm">Thử việc</span>
+                                            <span className="text-[10px] sm:text-xs opacity-70 font-normal">(75%)</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            )}
+
+                            {activeTab === 'revenue' && (
+                                <div className="mt-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                                    <div className="flex flex-col gap-1.5 w-full" ref={revenueDropdownRef}>
+                                        <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide ml-1 transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                            Tùy chọn tỷ lệ
+                                        </label>
+                                        <div className="relative group">
+                                            <button
+                                                onClick={() => setIsRevenueDropdownOpen(!isRevenueDropdownOpen)}
+                                                className={`relative w-full border text-slate-800 text-left text-base sm:text-lg font-bold py-4 px-4 pr-12 rounded-2xl transition-all h-[60px] sm:h-[66px] flex items-center backdrop-blur-md
+                                                ${isRevenueDropdownOpen 
+                                                    ? 'border-primary-500 ring-2 ring-primary-100 z-50 bg-white' 
+                                                    : hasBackground 
+                                                        ? 'bg-white/80 border-white/40 hover:bg-white' 
+                                                        : 'bg-white/90 border-slate-200 hover:border-primary-300 hover:bg-white'}`}
+                                            >
+                                                {revenueOptions.find(o => o.value === revenueShare)?.label}
+                                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className={`w-4 h-4 transition-transform ${isRevenueDropdownOpen ? 'rotate-180 text-primary-500' : ''}`}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                                    </svg>
+                                                </div>
+                                            </button>
+                                            
+                                            {isRevenueDropdownOpen && (
+                                                <div className="absolute top-[calc(100%+8px)] w-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden transition-all z-[100] animate-fade-in-up">
+                                                    <div className="p-1">
+                                                        {revenueOptions.map((option) => (
+                                                            <div 
+                                                                key={option.value}
+                                                                onClick={() => {
+                                                                    setRevenueShare(option.value as any);
+                                                                    setIsRevenueDropdownOpen(false);
+                                                                }}
+                                                                className={`flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-colors ${revenueShare === option.value ? 'bg-primary-50 text-primary-700' : 'hover:bg-slate-50 text-slate-700'}`}
+                                                            >
+                                                                <span className="font-bold">{option.label}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
+
+                        {activeTab === 'convert' && (
+                            <div className="md:mt-12 z-30 shrink-0 relative">
+                                <SwapButton onClick={handleSwapClick} isSwapping={isSwapping} theme={theme} />
+                            </div>
+                        )}
+
+                        {activeTab !== 'revenue' && (
+                            <div className={`w-full md:flex-1 transition-all relative ${activeDropdown === 'TO' ? 'z-50' : 'z-20'}`}>
+                                <CurrencyRow
+                                    label={activeTab === 'calculate' ? "Quy đổi phí sang" : "Quy đổi sang"}
+                                    amount=""
+                                    currency={toCurrency}
+                                    onCurrencyChange={handleToChange}
+                                    inputPlacement="hidden"
+                                    isActive={activeDropdown === 'TO'}
+                                    onToggleDropdown={() => setActiveDropdown(activeDropdown === 'TO' ? null : 'TO')}
+                                    onCloseDropdown={() => setActiveDropdown(null)}
+                                    theme={theme}
+                                    hasBackgroundImage={hasBackground}
+                                />
+                            </div>
+                        )}
+                        </div>
+
+                        <button
+                            onClick={onCalculateAndConvert}
+                            disabled={loadingState === LoadingState.LOADING}
+                            className={`w-full py-3.5 sm:py-4 rounded-2xl text-white font-bold text-base sm:text-lg shadow-xl transition-all transform mt-4 relative z-20
+                            ${loadingState === LoadingState.LOADING 
+                                ? 'bg-slate-400 cursor-not-allowed opacity-80' 
+                                : `bg-gradient-to-r from-primary-600 to-primary-800 hover:-translate-y-1 active:scale-[0.98]`
+                            }`}
+                        >
+                            <span className="flex items-center justify-center gap-2">
+                                {loadingState === LoadingState.LOADING ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Đang xử lý...
+                                </>
+                                ) : (
+                                    activeTab === 'revenue' ? 'Tính doanh thu' :
+                                    activeTab === 'calculate' ? 'Tính toán & Quy đổi' : 'Chuyển đổi ngay'
+                                )}
+                            </span>
+                        </button>
                         
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <div className={`p-4 rounded-2xl flex flex-col justify-between shadow-lg backdrop-blur-md ${hasBackground ? 'bg-white/80 border border-white/40' : 'bg-white/95 border border-white/50'}`}>
-                                <div>
-                                    <div className="flex items-center gap-2 mb-2 opacity-70">
-                                        <img src={fromCurrency.flag} alt={fromCurrency.code} className="w-6 h-4 rounded shadow-sm object-cover" />
-                                        <span className="text-xs font-bold uppercase text-slate-500">{fromCurrency.code}</span>
-                                    </div>
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="text-xl sm:text-2xl font-bold text-slate-700">
-                                            {stageFeeData.formattedSource}
-                                        </div>
-                                        <CopyButton text={stageFeeData.formattedSource} />
-                                    </div>
-                                </div>
-                                <div className="mt-3 pt-3 border-t border-slate-200/50">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-[10px] font-bold uppercase text-slate-400">Bằng chữ</span>
-                                        <CopyButton text={stageFeeData.textSource} className="bg-white/80 border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300"/>
-                                    </div>
-                                    <p className="text-sm italic font-medium text-slate-600 leading-relaxed">{stageFeeData.textSource}</p>
-                                </div>
+                        {activeTab !== 'revenue' && result && loadingState === LoadingState.SUCCESS && (
+                            <div className="flex justify-center -mt-2 animate-fade-in-up relative z-10">
+                            <div className="text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full border border-white/60 bg-white/95 backdrop-blur-sm text-slate-500 shadow-sm flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                {formatExchangeRate(result.exchangeRate, fromCurrency.code, toCurrency.code)}
                             </div>
-
-                            <div className={`p-4 rounded-2xl flex flex-col justify-between shadow-lg backdrop-blur-md ${hasBackground ? 'bg-primary-50/80 border border-primary-100/40' : 'bg-primary-50/95 border border-primary-100/50'}`}>
-                                <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <img src={toCurrency.flag} alt={toCurrency.code} className="w-6 h-4 rounded shadow-sm object-cover" />
-                                        <span className="text-xs font-bold uppercase text-primary-500">{toCurrency.code}</span>
-                                    </div>
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="text-xl sm:text-2xl font-bold text-primary-700">
-                                            {stageFeeData.formattedTarget}
-                                        </div>
-                                        <CopyButton text={stageFeeData.formattedTarget} className="bg-white/80 border-primary-200 text-primary-500 hover:text-primary-700 hover:border-primary-300"/>
-                                    </div>
-                                </div>
-                                <div className="mt-3 pt-3 border-t border-primary-200/50">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-[10px] font-bold uppercase text-primary-400">Bằng chữ</span>
-                                        <CopyButton text={stageFeeData.textTarget} className="bg-white/80 border-primary-200 text-primary-500 hover:text-primary-700 hover:border-primary-300"/>
-                                    </div>
-                                    <p className="text-sm italic font-medium text-primary-800 leading-relaxed">{stageFeeData.textTarget}</p>
-                                </div>
                             </div>
-                        </div>
-                    </div>
-                )}
+                        )}
 
-                {activeTab === 'revenue' && revenueResult && (
-                    <div className="animate-fade-in-up space-y-4 pt-2">
-                        <div className="flex items-center gap-2 mt-2 mb-4">
-                            <div className="h-px bg-slate-200/50 flex-1"></div>
-                            <span className={`text-sm font-extrabold uppercase tracking-widest drop-shadow-sm ${hasBackground ? 'text-white drop-shadow-sm' : 'text-slate-500'}`}>Kết quả tính doanh thu</span>
-                            <div className="h-px bg-slate-200/50 flex-1"></div>
-                        </div>
-
-                        <div className={`p-5 rounded-3xl backdrop-blur-md shadow-lg flex flex-col gap-6 ${hasBackground ? 'bg-white/80 border border-white/40' : 'bg-white/95 border border-white/50'}`}>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                                        <img src={vietNamFlagUrl} alt="VND" className="w-6 h-4 rounded shadow-sm object-cover" />
+                        {activeTab !== 'revenue' && result && loadingState === LoadingState.SUCCESS && (
+                            <>
+                            {activeTab === 'calculate' && (
+                                    <div className="flex items-center gap-2 animate-fade-in-up mt-2">
+                                        <div className="h-px bg-slate-200/50 flex-1"></div>
+                                        <span className={`text-sm font-extrabold uppercase tracking-widest drop-shadow-sm ${hasBackground ? 'text-white drop-shadow-sm' : 'text-slate-500'}`}>Phí dịch vụ tổng</span>
+                                        <div className="h-px bg-slate-200/50 flex-1"></div>
                                     </div>
-                                    <div>
-                                        <span className="text-xs font-bold uppercase text-slate-400 block mb-0.5">Doanh thu tổng</span>
-                                        <span className="text-[10px] font-semibold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
-                                            {revenueShare === 'all' ? '100%' : revenueShare === 'cv' ? '70%' : '30%'}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-end gap-1">
-                                    <span className="text-xl sm:text-2xl font-bold text-slate-800">
-                                        {formatCurrency(revenueResult.totalRevenue, 'vi-VN', 'VND')}
-                                    </span>
-                                </div>
-                            </div>
+                            )}
+                            <ResultSection 
+                                result={result} 
+                                fromCurrency={fromCurrency} 
+                                toCurrency={toCurrency} 
+                                inputAmount={amount}
+                                formatCurrency={formatCurrency}
+                                theme={theme}
+                                hasBackgroundImage={hasBackground}
+                            />
+                            </>
+                        )}
 
-                            <div className="w-full h-px bg-slate-200/50"></div>
-
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                                        <img src={vietNamFlagUrl} alt="VND" className="w-6 h-4 rounded shadow-sm object-cover" />
-                                    </div>
-                                    <div>
-                                        <span className="text-xs font-bold uppercase text-slate-400 block mb-0.5">Doanh thu mỗi giai đoạn</span>
-                                        <span className="text-[10px] font-semibold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
-                                            50%
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-end gap-1">
-                                    <span className="text-xl sm:text-2xl font-bold text-slate-800">
-                                        {formatCurrency(revenueResult.stageRevenue, 'vi-VN', 'VND')}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-6 rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 shadow-lg shadow-primary-200 relative overflow-hidden group transform hover:scale-[1.01] transition-transform duration-300">
-                            <div className="absolute top-0 right-0 p-4 opacity-10">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-24 h-24 text-white">
-                                    <path d="M12 7.5a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
-                                    <path fillRule="evenodd" d="M1.5 4.875C1.5 3.839 2.34 3 3.375 3h17.25c1.035 0 1.875.84 1.875 1.875v9.75c0 1.036-.84 1.875-1.875 1.875H3.375A1.875 1.875 0 0 1 1.5 14.625v-9.75ZM8.25 9.75a3.75 3.75 0 1 1 7.5 0 3.75 3.75 0 0 1-7.5 0ZM18.75 9a.75.75 0 0 0-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 0 0 .75-.75V9.75a.75.75 0 0 0-.75-.75h-.008ZM4.5 9.75A.75.75 0 0 1 5.25 9h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75V9.75Z" clipRule="evenodd" />
-                                    <path d="M2.25 18a.75.75 0 0 0 0 1.5c5.4 0 10.63.722 15.6 2.075 1.19.324 2.4-.558 2.4-1.82V18.75a.75.75 0 0 0-.75-.75H2.25Z" />
-                                </svg>
-                            </div>
-
-                            <div className="relative z-10 flex flex-col items-center text-center">
-                                <div className="flex items-center gap-2 mb-2 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">
-                                    <img src={vietNamFlagUrl} alt="VND" className="w-5 h-3.5 rounded shadow-sm object-cover" />
-                                    <span className="text-xs font-bold uppercase text-white/90 tracking-widest">Thu nhập thực nhận (49%)</span>
+                        {activeTab === 'calculate' && stageFeeData && loadingState === LoadingState.SUCCESS && (
+                            <div className="animate-fade-in-up pt-2">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="h-px bg-slate-200/50 flex-1"></div>
+                                    <span className={`text-sm font-extrabold uppercase tracking-widest drop-shadow-sm ${hasBackground ? 'text-white drop-shadow-sm' : 'text-slate-500'}`}>Phí mỗi giai đoạn (50%)</span>
+                                    <div className="h-px bg-slate-200/50 flex-1"></div>
                                 </div>
                                 
-                                <div className="my-2">
-                                    <span className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight">
-                                        {formatCurrency(revenueResult.netIncome, 'vi-VN', 'VND')}
-                                    </span>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className={`p-4 rounded-2xl flex flex-col justify-between shadow-lg backdrop-blur-md ${hasBackground ? 'bg-white/80 border border-white/40' : 'bg-white/95 border border-white/50'}`}>
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-2 opacity-70">
+                                                <img src={fromCurrency.flag} alt={fromCurrency.code} className="w-6 h-4 rounded shadow-sm object-cover" />
+                                                <span className="text-xs font-bold uppercase text-slate-500">{fromCurrency.code}</span>
+                                            </div>
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="text-xl sm:text-2xl font-bold text-slate-700">
+                                                    {stageFeeData.formattedSource}
+                                                </div>
+                                                <CopyButton text={stageFeeData.formattedSource} />
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 pt-3 border-t border-slate-200/50">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-[10px] font-bold uppercase text-slate-400">Bằng chữ</span>
+                                                <CopyButton text={stageFeeData.textSource} className="bg-white/80 border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300"/>
+                                            </div>
+                                            <p className="text-sm italic font-medium text-slate-600 leading-relaxed">{stageFeeData.textSource}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className={`p-4 rounded-2xl flex flex-col justify-between shadow-lg backdrop-blur-md ${hasBackground ? 'bg-primary-50/80 border border-primary-100/40' : 'bg-primary-50/95 border border-primary-100/50'}`}>
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <img src={toCurrency.flag} alt={toCurrency.code} className="w-6 h-4 rounded shadow-sm object-cover" />
+                                                <span className="text-xs font-bold uppercase text-primary-500">{toCurrency.code}</span>
+                                            </div>
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="text-xl sm:text-2xl font-bold text-primary-700">
+                                                    {stageFeeData.formattedTarget}
+                                                </div>
+                                                <CopyButton text={stageFeeData.formattedTarget} className="bg-white/80 border-primary-200 text-primary-500 hover:text-primary-700 hover:border-primary-300"/>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 pt-3 border-t border-primary-200/50">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="text-[10px] font-bold uppercase text-primary-400">Bằng chữ</span>
+                                                <CopyButton text={stageFeeData.textTarget} className="bg-white/80 border-primary-200 text-primary-500 hover:text-primary-700 hover:border-primary-300"/>
+                                            </div>
+                                            <p className="text-sm italic font-medium text-primary-800 leading-relaxed">{stageFeeData.textTarget}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                        )}
+
+                        {activeTab === 'revenue' && revenueResult && (
+                            <div className="animate-fade-in-up space-y-4 pt-2">
+                                <div className="flex items-center gap-2 mt-2 mb-4">
+                                    <div className="h-px bg-slate-200/50 flex-1"></div>
+                                    <span className={`text-sm font-extrabold uppercase tracking-widest drop-shadow-sm ${hasBackground ? 'text-white drop-shadow-sm' : 'text-slate-500'}`}>Kết quả tính doanh thu</span>
+                                    <div className="h-px bg-slate-200/50 flex-1"></div>
+                                </div>
+
+                                <div className={`p-5 rounded-3xl backdrop-blur-md shadow-lg flex flex-col gap-6 ${hasBackground ? 'bg-white/80 border border-white/40' : 'bg-white/95 border border-white/50'}`}>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                                                <img src={vietNamFlagUrl} alt="VND" className="w-6 h-4 rounded shadow-sm object-cover" />
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-bold uppercase text-slate-400 block mb-0.5">Doanh thu tổng</span>
+                                                <span className="text-[10px] font-semibold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
+                                                    {revenueShare === 'all' ? '100%' : revenueShare === 'cv' ? '70%' : '30%'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <span className="text-xl sm:text-2xl font-bold text-slate-800">
+                                                {formatCurrency(revenueResult.totalRevenue, 'vi-VN', 'VND')}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full h-px bg-slate-200/50"></div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
+                                                <img src={vietNamFlagUrl} alt="VND" className="w-6 h-4 rounded shadow-sm object-cover" />
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-bold uppercase text-slate-400 block mb-0.5">Doanh thu mỗi giai đoạn</span>
+                                                <span className="text-[10px] font-semibold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
+                                                    50%
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <span className="text-xl sm:text-2xl font-bold text-slate-800">
+                                                {formatCurrency(revenueResult.stageRevenue, 'vi-VN', 'VND')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-6 rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 shadow-lg shadow-primary-200 relative overflow-hidden group transform hover:scale-[1.01] transition-transform duration-300">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-24 h-24 text-white">
+                                            <path d="M12 7.5a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
+                                            <path fillRule="evenodd" d="M1.5 4.875C1.5 3.839 2.34 3 3.375 3h17.25c1.035 0 1.875.84 1.875 1.875v9.75c0 1.036-.84 1.875-1.875 1.875H3.375A1.875 1.875 0 0 1 1.5 14.625v-9.75ZM8.25 9.75a3.75 3.75 0 1 1 7.5 0 3.75 3.75 0 0 1-7.5 0ZM18.75 9a.75.75 0 0 0-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 0 0 .75-.75V9.75a.75.75 0 0 0-.75-.75h-.008ZM4.5 9.75A.75.75 0 0 1 5.25 9h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75V9.75Z" clipRule="evenodd" />
+                                            <path d="M2.25 18a.75.75 0 0 0 0 1.5c5.4 0 10.63.722 15.6 2.075 1.19.324 2.4-.558 2.4-1.82V18.75a.75.75 0 0 0-.75-.75H2.25Z" />
+                                        </svg>
+                                    </div>
+
+                                    <div className="relative z-10 flex flex-col items-center text-center">
+                                        <div className="flex items-center gap-2 mb-2 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">
+                                            <img src={vietNamFlagUrl} alt="VND" className="w-5 h-3.5 rounded shadow-sm object-cover" />
+                                            <span className="text-xs font-bold uppercase text-white/90 tracking-widest">Thu nhập thực nhận (49%)</span>
+                                        </div>
+                                        
+                                        <div className="my-2">
+                                            <span className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight">
+                                                {formatCurrency(revenueResult.netIncome, 'vi-VN', 'VND')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button 
+                                    onClick={handleSaveRevenue}
+                                    className="w-full py-3 bg-white/60 hover:bg-white border border-white/60 hover:border-white rounded-2xl text-primary-700 font-bold shadow-sm transition-all flex items-center justify-center gap-2 backdrop-blur-sm group"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 group-hover:scale-110 transition-transform">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+                                    </svg>
+                                    Lưu doanh thu
+                                </button>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
           </div>

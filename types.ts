@@ -29,6 +29,17 @@ export interface ConversionHistoryItem {
   };
 }
 
+export interface RevenueRecord {
+  id: string;
+  timestamp: number;
+  inputSalary: number;
+  shareType: 'all' | 'cv' | 'job';
+  totalRevenue: number;
+  netIncome: number;
+  tagId?: string | null; // Link to NoteTag
+  note?: string; // Short note text
+}
+
 export enum LoadingState {
   IDLE = 'IDLE',
   LOADING = 'LOADING',

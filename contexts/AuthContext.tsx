@@ -21,6 +21,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   notification: NotificationState | null;
   closeNotification: () => void;
+  showNotification: (message: string, type: 'success' | 'error' | 'info') => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -102,7 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginGoogle, logout, notification, closeNotification }}>
+    <AuthContext.Provider value={{ user, loading, loginGoogle, logout, notification, closeNotification, showNotification }}>
       {children}
     </AuthContext.Provider>
   );
