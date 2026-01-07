@@ -129,9 +129,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({ hasBackgroundImage = false, 
         )}
       </div>
 
-      {/* Logout Confirmation Modal using Portal to avoid stacking context issues */}
+      {/* Logout Confirmation Modal using Portal to avoid stacking context issues and center on screen */}
       {showLogoutConfirm && createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
               <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={() => setShowLogoutConfirm(false)}></div>
               <div className="bg-white rounded-3xl shadow-2xl p-6 w-[90%] max-w-sm relative z-10 animate-scale-in border border-white/50">
                   <div className="text-center mb-8 mt-2">

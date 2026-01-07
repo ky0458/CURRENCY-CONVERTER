@@ -25,38 +25,65 @@ const ToastNotification = () => {
 
     if (!notification) return null;
 
-    const bgColors = {
-        success: 'bg-emerald-500',
-        error: 'bg-rose-500',
-        info: 'bg-slate-700'
+    const styles = {
+        success: { 
+            bg: 'bg-emerald-500', 
+            shadow: 'shadow-emerald-900/20',
+            icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5 text-white">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+            )
+        },
+        error: { 
+            bg: 'bg-rose-500', 
+            shadow: 'shadow-rose-900/20',
+            icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5 text-white">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                </svg>
+            )
+        },
+        info: { 
+            bg: 'bg-slate-800', 
+            shadow: 'shadow-slate-900/20',
+            icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 text-white">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+            )
+        }
     };
 
-    const icons = {
-        success: (
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-            </svg>
-        ),
-        error: (
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-            </svg>
-        ),
-        info: (
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-            </svg>
-        )
-    };
+    const currentStyle = styles[notification.type];
 
     return createPortal(
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[9999] animate-fade-in-up w-[90%] max-w-sm pointer-events-none">
-            <div className={`pointer-events-auto flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-2xl text-white backdrop-blur-md ${bgColors[notification.type]} bg-opacity-95 border border-white/20 ring-1 ring-black/5`}>
-                <div className="shrink-0 p-1 bg-white/20 rounded-full">
-                    {icons[notification.type]}
+        <div className="fixed top-0 left-0 right-0 z-[10000] flex justify-center px-4 pt-4 sm:pt-8 pointer-events-none">
+            <div className={`
+                pointer-events-auto 
+                flex items-start gap-3.5 p-4 pr-12
+                rounded-2xl shadow-2xl ${currentStyle.shadow}
+                backdrop-blur-xl bg-opacity-95 
+                border border-white/10 ring-1 ring-black/5
+                w-full max-w-sm sm:max-w-md
+                animate-slide-in-down 
+                text-white
+                ${currentStyle.bg}
+            `}>
+                <div className="shrink-0 pt-0.5">
+                    <div className="p-1.5 bg-white/20 rounded-full">
+                        {currentStyle.icon}
+                    </div>
                 </div>
-                <p className="text-sm font-bold flex-1 tracking-tight leading-tight">{notification.message}</p>
-                <button onClick={closeNotification} className="shrink-0 p-1.5 hover:bg-white/20 rounded-full transition-colors -mr-1">
+                <div className="flex-1">
+                    <p className="text-sm sm:text-base font-semibold leading-snug text-white/95 break-words">
+                        {notification.message}
+                    </p>
+                </div>
+                <button 
+                    onClick={closeNotification} 
+                    className="absolute top-2 right-2 p-2 hover:bg-white/20 rounded-xl transition-colors text-white/70 hover:text-white"
+                >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                     </svg>
