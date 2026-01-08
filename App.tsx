@@ -387,7 +387,7 @@ const AppContent: React.FC = () => {
           setTranslatedJobTitle(result);
       } catch (error) {
           console.error(error);
-          setTranslatedJobTitle("Lỗi dịch");
+          setTranslatedJobTitle("Lỗi cấu hình");
       } finally {
           setIsTranslatingJob(false);
       }
@@ -527,8 +527,8 @@ const AppContent: React.FC = () => {
                                     <div className={`flex items-center bg-white/70 backdrop-blur-sm border rounded-2xl p-1 shadow-sm transition-all h-[56px]
                                         ${hasBackground ? 'border-white/40 bg-white/80' : 'border-slate-200'}
                                     `}>
-                                        <div className="relative flex-1 h-full">
-                                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                        <div className="relative flex-1 h-full flex items-center">
+                                            <div className="absolute left-3 text-slate-400 pointer-events-none">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                                                     <path fillRule="evenodd" d="M6 3.75A2.75 2.75 0 0 1 8.75 1h2.5A2.75 2.75 0 0 1 14 3.75v.443c.572.055 1.14.122 1.706.2C17.053 4.582 18 5.75 18 7.07v3.469c0 1.126-.694 2.191-1.83 2.54-1.952.599-4.024.921-6.17.921s-4.219-.322-6.17-.921C2.694 12.73 2 11.665 2 10.539V7.07c0-1.321.947-2.489 2.294-2.676A41.047 41.047 0 0 1 6 4.193V3.75Zm6.5 0v.325a41.622 41.622 0 0 0-5 0V3.75c0-.69.56-1.25 1.25-1.25h2.5c.69 0 1.25.56 1.25 1.25Z" clipRule="evenodd" />
                                                     <path d="M12 8a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 12 8ZM8.75 10a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0V10ZM12 13.25a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 .75-.75ZM8.75 15.25a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0v-1.5Z" />
@@ -536,12 +536,28 @@ const AppContent: React.FC = () => {
                                             </div>
                                             <input 
                                                 type="text"
-                                                className="w-full h-full pl-10 pr-4 bg-transparent outline-none text-slate-800 text-sm font-medium placeholder-slate-400"
+                                                className="w-full h-full pl-10 pr-2 bg-transparent outline-none text-slate-800 text-sm font-medium placeholder-slate-400"
                                                 placeholder="Nhập tên vị trí (VD: Kế toán)"
                                                 value={jobTitle}
                                                 onChange={(e) => setJobTitle(e.target.value)}
                                                 onKeyDown={(e) => e.key === 'Enter' && handleTranslateJob()}
                                             />
+                                            <button 
+                                                onClick={handleTranslateJob}
+                                                disabled={!jobTitle.trim() || isTranslatingJob}
+                                                className={`mr-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1
+                                                    ${!jobTitle.trim() || isTranslatingJob
+                                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                                                        : 'bg-primary-600 text-white shadow-md shadow-primary-200 hover:bg-primary-700 active:scale-95'}
+                                                `}
+                                            >
+                                                {isTranslatingJob ? 'Đang dịch...' : 'Dịch'}
+                                                {!isTranslatingJob && (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3 h-3">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                                                    </svg>
+                                                )}
+                                            </button>
                                         </div>
                                         <div className="w-px h-8 bg-slate-200 mx-1"></div>
                                         {/* Result Area */}
@@ -716,230 +732,96 @@ const AppContent: React.FC = () => {
                                     Đang xử lý...
                                 </>
                                 ) : (
-                                    activeTab === 'revenue' ? 'Tính doanh thu' :
-                                    activeTab === 'calculate' ? 'Tính toán & Quy đổi' : 'Chuyển đổi ngay'
+                                    <span>
+                                        {activeTab === 'convert' ? 'Chuyển đổi' : activeTab === 'calculate' ? 'Tính phí & Quy đổi' : 'Tính doanh thu'}
+                                    </span>
                                 )}
                             </span>
                         </button>
-                        
-                        {activeTab !== 'revenue' && result && loadingState === LoadingState.SUCCESS && (
-                            <div className="flex justify-center -mt-2 animate-fade-in-up relative z-10">
-                            <div className="text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full border border-white/60 bg-white/95 backdrop-blur-sm text-slate-500 shadow-sm flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                {formatExchangeRate(result.exchangeRate, fromCurrency.code, toCurrency.code)}
-                            </div>
-                            </div>
-                        )}
 
-                        {activeTab !== 'revenue' && result && loadingState === LoadingState.SUCCESS && (
-                            <>
-                            {activeTab === 'calculate' && (
-                                    <div className="flex items-center gap-2 animate-fade-in-up mt-2">
-                                        <div className="h-px bg-slate-200/50 flex-1"></div>
-                                        <span className={`text-sm font-extrabold uppercase tracking-widest drop-shadow-sm ${hasBackground ? 'text-white drop-shadow-sm' : 'text-slate-500'}`}>Phí dịch vụ tổng</span>
-                                        <div className="h-px bg-slate-200/50 flex-1"></div>
-                                    </div>
-                            )}
+                        {(result && activeTab !== 'revenue') && (
                             <ResultSection 
                                 result={result} 
                                 fromCurrency={fromCurrency} 
                                 toCurrency={toCurrency} 
-                                inputAmount={amount}
+                                inputAmount={activeTab === 'calculate' ? (stageFeeData ? stageFeeData.source.toString() : amount) : amount}
                                 formatCurrency={formatCurrency}
                                 theme={theme}
                                 hasBackgroundImage={hasBackground}
                             />
-                            </>
-                        )}
-
-                        {activeTab === 'calculate' && stageFeeData && loadingState === LoadingState.SUCCESS && (
-                            <div className="animate-fade-in-up pt-2">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <div className="h-px bg-slate-200/50 flex-1"></div>
-                                    <span className={`text-sm font-extrabold uppercase tracking-widest drop-shadow-sm ${hasBackground ? 'text-white drop-shadow-sm' : 'text-slate-500'}`}>Phí mỗi giai đoạn (50%)</span>
-                                    <div className="h-px bg-slate-200/50 flex-1"></div>
-                                </div>
-                                
-                                <div className="grid md:grid-cols-2 gap-4">
-                                    <div className={`p-4 rounded-2xl flex flex-col justify-between shadow-lg backdrop-blur-md ${hasBackground ? 'bg-white/80 border border-white/40' : 'bg-white/95 border border-white/50'}`}>
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-2 opacity-70">
-                                                <img src={fromCurrency.flag} alt={fromCurrency.code} className="w-6 h-4 rounded shadow-sm object-cover" />
-                                                <span className="text-xs font-bold uppercase text-slate-500">{fromCurrency.code}</span>
-                                            </div>
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="text-xl sm:text-2xl font-bold text-slate-700">
-                                                    {stageFeeData.formattedSource}
-                                                </div>
-                                                <CopyButton text={stageFeeData.formattedSource} />
-                                            </div>
-                                        </div>
-                                        <div className="mt-3 pt-3 border-t border-slate-200/50">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="text-[10px] font-bold uppercase text-slate-400">Bằng chữ</span>
-                                                <CopyButton text={stageFeeData.textSource} className="bg-white/80 border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300"/>
-                                            </div>
-                                            <p className="text-sm italic font-medium text-slate-600 leading-relaxed">{stageFeeData.textSource}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className={`p-4 rounded-2xl flex flex-col justify-between shadow-lg backdrop-blur-md ${hasBackground ? 'bg-primary-50/80 border border-primary-100/40' : 'bg-primary-50/95 border border-primary-100/50'}`}>
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <img src={toCurrency.flag} alt={toCurrency.code} className="w-6 h-4 rounded shadow-sm object-cover" />
-                                                <span className="text-xs font-bold uppercase text-primary-500">{toCurrency.code}</span>
-                                            </div>
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="text-xl sm:text-2xl font-bold text-primary-700">
-                                                    {stageFeeData.formattedTarget}
-                                                </div>
-                                                <CopyButton text={stageFeeData.formattedTarget} className="bg-white/80 border-primary-200 text-primary-500 hover:text-primary-700 hover:border-primary-300"/>
-                                            </div>
-                                        </div>
-                                        <div className="mt-3 pt-3 border-t border-primary-200/50">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="text-[10px] font-bold uppercase text-primary-400">Bằng chữ</span>
-                                                <CopyButton text={stageFeeData.textTarget} className="bg-white/80 border-primary-200 text-primary-500 hover:text-primary-700 hover:border-primary-300"/>
-                                            </div>
-                                            <p className="text-sm italic font-medium text-primary-800 leading-relaxed">{stageFeeData.textTarget}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         )}
 
                         {activeTab === 'revenue' && revenueResult && (
-                            <div className="animate-fade-in-up space-y-4 pt-2">
-                                <div className="flex items-center gap-2 mt-2 mb-4">
-                                    <div className="h-px bg-slate-200/50 flex-1"></div>
-                                    <span className={`text-sm font-extrabold uppercase tracking-widest drop-shadow-sm ${hasBackground ? 'text-white drop-shadow-sm' : 'text-slate-500'}`}>Kết quả tính doanh thu</span>
-                                    <div className="h-px bg-slate-200/50 flex-1"></div>
-                                </div>
-
-                                <div className={`p-5 rounded-3xl backdrop-blur-md shadow-lg flex flex-col gap-6 ${hasBackground ? 'bg-white/80 border border-white/40' : 'bg-white/95 border border-white/50'}`}>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                                                <img src={vietNamFlagUrl} alt="VND" className="w-6 h-4 rounded shadow-sm object-cover" />
-                                            </div>
-                                            <div>
-                                                <span className="text-xs font-bold uppercase text-slate-400 block mb-0.5">Doanh thu tổng</span>
-                                                <span className="text-[10px] font-semibold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
-                                                    {revenueShare === 'all' ? '100%' : revenueShare === 'cv' ? '70%' : '30%'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1">
-                                            <span className="text-xl sm:text-2xl font-bold text-slate-800">
-                                                {formatCurrency(revenueResult.totalRevenue, 'vi-VN', 'VND')}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="w-full h-px bg-slate-200/50"></div>
-
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
-                                                <img src={vietNamFlagUrl} alt="VND" className="w-6 h-4 rounded shadow-sm object-cover" />
-                                            </div>
-                                            <div>
-                                                <span className="text-xs font-bold uppercase text-slate-400 block mb-0.5">Doanh thu mỗi giai đoạn</span>
-                                                <span className="text-[10px] font-semibold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
-                                                    50%
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1">
-                                            <span className="text-xl sm:text-2xl font-bold text-slate-800">
-                                                {formatCurrency(revenueResult.stageRevenue, 'vi-VN', 'VND')}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="p-6 rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 shadow-lg shadow-primary-200 relative overflow-hidden group transform hover:scale-[1.01] transition-transform duration-300">
+                             <div className="animate-fade-in-up pt-4">
+                                <div className="bg-white/90 backdrop-blur-md rounded-2xl p-5 border border-white/50 shadow-xl space-y-4 relative overflow-hidden">
                                     <div className="absolute top-0 right-0 p-4 opacity-10">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-24 h-24 text-white">
-                                            <path d="M12 7.5a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Z" />
-                                            <path fillRule="evenodd" d="M1.5 4.875C1.5 3.839 2.34 3 3.375 3h17.25c1.035 0 1.875.84 1.875 1.875v9.75c0 1.036-.84 1.875-1.875 1.875H3.375A1.875 1.875 0 0 1 1.5 14.625v-9.75ZM8.25 9.75a3.75 3.75 0 1 1 7.5 0 3.75 3.75 0 0 1-7.5 0ZM18.75 9a.75.75 0 0 0-.75.75v.008c0 .414.336.75.75.75h.008a.75.75 0 0 0 .75-.75V9.75a.75.75 0 0 0-.75-.75h-.008ZM4.5 9.75A.75.75 0 0 1 5.25 9h.008a.75.75 0 0 1 .75.75v.008a.75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75V9.75Z" clipRule="evenodd" />
-                                            <path d="M2.25 18a.75.75 0 0 0 0 1.5c5.4 0 10.63.722 15.6 2.075 1.19.324 2.4-.558 2.4-1.82V18.75a.75.75 0 0 0-.75-.75H2.25Z" />
-                                        </svg>
+                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-24 h-24 text-primary-500"><path d="M10.464 8.746c.227-.18.497-.311.786-.394v2.795a2.252 2.252 0 0 1-.786-.393c-.394-.313-.546-.681-.546-1.004 0-.324.152-.692.546-1.004ZM12.75 15.662v-2.824c.347.085.664.228.921.421.427.32.579.686.579.991 0 .305-.152.671-.579.991a2.534 2.534 0 0 1-.921.42Z" /><path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 6a.75.75 0 0 0-1.5 0v.816a3.836 3.836 0 0 0-1.72.756c-.712.566-1.112 1.35-1.112 2.178 0 .829.4 1.612 1.113 2.178.502.4 1.102.647 1.719.756v2.978a2.536 2.536 0 0 1-.921-.421l-.879-.66a.75.75 0 0 0-.9 1.2l.879.66c.533.4 1.169.645 1.821.75V18a.75.75 0 0 0 1.5 0v-.81a4.124 4.124 0 0 0 1.821-.749c.745-.559 1.179-1.344 1.179-2.191 0-.847-.434-1.632-1.179-2.191a4.122 4.122 0 0 0-1.821-.75V8.354c.29.082.559.213.786.393l.415.33a.75.75 0 0 0 .933-1.175l-.415-.33a3.836 3.836 0 0 0-1.719-.755V6Z" clipRule="evenodd" /></svg>
                                     </div>
-
-                                    <div className="relative z-10 flex flex-col items-center text-center">
-                                        <div className="flex items-center gap-2 mb-2 bg-white/10 px-3 py-1 rounded-full backdrop-blur-sm">
-                                            <img src={vietNamFlagUrl} alt="VND" className="w-5 h-3.5 rounded shadow-sm object-cover" />
-                                            <span className="text-xs font-bold uppercase text-white/90 tracking-widest">Thu nhập thực nhận (49%)</span>
-                                        </div>
-                                        
-                                        <div className="my-2">
-                                            <span className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight">
+                                    
+                                    <div className="relative z-10">
+                                        <p className="text-xs font-bold text-slate-500 uppercase mb-1">Thực nhận (Net Income)</p>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-4xl font-black text-primary-600 tracking-tighter">
                                                 {formatCurrency(revenueResult.netIncome, 'vi-VN', 'VND')}
                                             </span>
                                         </div>
+                                        <div className="mt-2 text-sm text-slate-600 font-medium">
+                                            <p>Doanh thu tổng: <span className="font-bold">{formatCurrency(revenueResult.totalRevenue, 'vi-VN', 'VND')}</span></p>
+                                            <p>Doanh thu Stage: <span className="font-bold">{formatCurrency(revenueResult.stageRevenue, 'vi-VN', 'VND')}</span></p>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 mt-2 border-t border-slate-200/50 flex justify-end">
+                                        <button 
+                                            onClick={handleSaveRevenue}
+                                            className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-primary-200 transition-colors flex items-center gap-2"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
+                                            </svg>
+                                            Lưu vào thống kê
+                                        </button>
                                     </div>
                                 </div>
-                                
-                                <button 
-                                    onClick={handleSaveRevenue}
-                                    className="w-full py-3 bg-white/60 hover:bg-white border border-white/60 hover:border-white rounded-2xl text-primary-700 font-bold shadow-sm transition-all flex items-center justify-center gap-2 backdrop-blur-sm group"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 group-hover:scale-110 transition-transform">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
-                                    </svg>
-                                    Lưu doanh thu
-                                </button>
-                            </div>
+                             </div>
                         )}
                     </>
                 )}
+
             </div>
+            
+            {/* History Panel - Absolute Positioned over Content */}
+            {showHistory && (
+                <div 
+                    className={`absolute inset-0 z-50 rounded-3xl overflow-hidden bg-slate-50 transition-all duration-300 origin-top
+                    ${isClosingHistory ? 'animate-fade-out-down opacity-0' : 'animate-fade-in-up opacity-100'}`}
+                >
+                    <HistorySection
+                        history={filteredHistory}
+                        onSelect={handleHistorySelect}
+                        onClear={clearHistory}
+                        onDeleteItems={deleteHistoryItems}
+                        formatCurrency={formatCurrency}
+                        onClose={handleCloseHistory}
+                    />
+                </div>
+            )}
           </div>
         </div>
       </div>
       
+      {/* Notes Manager Button/UI */}
       <NotesManager />
-      
-      <footer className="w-full bg-slate-900/80 backdrop-blur text-slate-400 py-6 mt-auto relative z-10">
-        <div className="container mx-auto px-4 text-center">
-            <p className="font-semibold text-slate-300 mb-1 tracking-wide text-sm">Powered by ZiQi</p>
-            <p className="text-xs opacity-60">Lasted update: {new Date().toLocaleDateString('vi-VN')} </p>
-        </div>
-      </footer>
-
-      {showHistory && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-             <div 
-                className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${isClosingHistory ? 'opacity-0' : 'opacity-100 animate-fade-in-up'}`} 
-                onClick={handleCloseHistory}
-            />
-             <div className={`bg-white rounded-2xl shadow-2xl w-full max-w-4xl relative z-10 overflow-hidden flex flex-col max-h-[85vh] 
-                ${isClosingHistory ? 'animate-fade-out-down' : 'animate-fade-in-up'}`}
-             >
-                <div className="p-0 flex-1 overflow-hidden flex flex-col min-h-0">
-                   <HistorySection 
-                        history={filteredHistory} 
-                        onSelect={handleHistorySelect} 
-                        onClear={clearHistory} 
-                        onDeleteItems={deleteHistoryItems}
-                        formatCurrency={formatCurrency}
-                        onClose={handleCloseHistory}
-                   />
-                </div>
-             </div>
-        </div>
-      )}
     </div>
   );
 };
 
-const App: React.FC = () => {
+const App = () => {
     return (
         <AuthProvider>
             <AppContent />
         </AuthProvider>
     );
-}
+};
 
 export default App;

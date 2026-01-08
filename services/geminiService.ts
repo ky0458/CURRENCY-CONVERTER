@@ -60,19 +60,34 @@ export const translateJobTitle = async (text: string): Promise<string> => {
 
     const ai = new GoogleGenAI({ apiKey });
     
-    // Use gemini-3-flash-preview for text tasks to avoid 404 errors with older/preview names
+    // Use gemini-3-flash-preview as the standard model for basic text tasks to avoid 403 errors
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Translate the following job title/position from Vietnamese to Simplified Chinese. 
-      Ensure professional business terminology. 
-      Output ONLY the Chinese translation text, do not include pinyin or explanations.
-      
-      Input: "${text}"`,
+      contents: {
+        parts: [{
+          text: `You are an expert translator specializing in Human Resources and Corporate Recruitment in China.
+          
+          Task: Translate the following Job Title from Vietnamese to Simplified Chinese (Mainland China standard).
+          
+          Requirements:
+          1. Use professional, standard business terminology commonly found on Chinese job boards (like Boss Zhipin, Liepin).
+          2. Ensure accuracy for seniority levels (e.g., 'Intern', 'Senior', 'Manager', 'Director').
+          3. Do not include Pinyin, explanations, or extra punctuation.
+          4. Output ONLY the Chinese characters.
+          
+          Input Job Title: "${text}"`
+        }]
+      }
     });
 
     return response.text?.trim() || "Không tìm thấy";
-  } catch (error) {
-    console.error("Translation error:", error);
-    return "Lỗi dịch";
+  } catch (error: any) {
+    // Handle Permission Denied (403) specifically
+    if (error?.status === 'PERMISSION_DENIED' || error?.code === 403 || (error.message && error.message.includes('permission'))) {
+        console.warn("Gemini API Permission Denied. Model access restricted or API Key invalid.");
+    } else {
+        console.error("Translation error:", error);
+    }
+    return "Lỗi cấu hình";
   }
 };
