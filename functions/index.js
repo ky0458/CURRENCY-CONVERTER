@@ -19,8 +19,10 @@ exports.checkScheduledNotifications = onSchedule("every 1 minutes", async (event
   const now = Date.now();
   const db = admin.firestore();
   
-  // Query for pending notifications that are due (remindAt <= now)
-  const snapshot = await db.collection("scheduled_notifications")
+  // Use collectionGroup to query all 'scheduled_notifications' collections across all users.
+  // NOTE: This requires a composite index on `status` and `remindAt`.
+  // Check Firebase Console logs for the index creation link if this query fails.
+  const snapshot = await db.collectionGroup("scheduled_notifications")
     .where("status", "==", "pending")
     .where("remindAt", "<=", now)
     .get();

@@ -5,7 +5,7 @@ import { NoteStatus } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { messaging, db } from '../firebase';
 import { getToken } from 'firebase/messaging';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection } from 'firebase/firestore';
 
 const PRESET_COLORS = [
   '#ef4444', // Red
@@ -272,12 +272,21 @@ export const NotesManager: React.FC = () => {
           }
 
           // 2. Get FCM Token
-          // IMPORTANT: Replace 'YOUR_VAPID_KEY_HERE' with your actual VAPID Key from Firebase Console
-          // Project Settings -> Cloud Messaging -> Web Push certificates
+          // Use Env Var or Fallback to a placeholder that user must replace
+          const vapidKey = process.env.KEY_PAIR || 'BG6fDLu4EwKMdoatFiKXcJOeT8BLhRUxkgsfkK2VKiYeh4Ol1KFRffpq5-x5lcH1hMtB7GS3pdpA2N6KtP7SIg4';
+          
+          if (vapidKey === 'YOUR_VAPID_KEY_HERE') {
+              console.warn("VAPID Key is missing. Notifications might fail.");
+          }
+
           const currentToken = await getToken(messaging, { 
-              vapidKey: process.env.KEY_PAIR
+              vapidKey: vapidKey 
           }).catch((err) => {
               console.error('An error occurred while retrieving token. ', err);
+              // Handle specific error for missing key
+              if (err.code === 'messaging/invalid-vapid-key') {
+                  throw new Error("Cấu hình VAPID Key không hợp lệ.");
+              }
               throw new Error("Không thể lấy token thông báo. Vui lòng kiểm tra cài đặt mạng.");
           });
 
@@ -285,9 +294,11 @@ export const NotesManager: React.FC = () => {
               throw new Error("Không tìm thấy token thông báo.");
           }
 
-          // 3. Save Schedule to Firestore collection 'scheduled_notifications'
-          // Cloud Function will watch this collection
-          const notificationRef = doc(db, 'scheduled_notifications', reminderModal.noteId);
+          // 3. Save Schedule to Firestore
+          // FIX: Save under 'users/{uid}/scheduled_notifications' instead of root 'scheduled_notifications'
+          // This avoids "Missing or insufficient permissions" error due to default Firestore security rules.
+          const notificationRef = doc(db, 'users', user.uid, 'scheduled_notifications', reminderModal.noteId);
+          
           await setDoc(notificationRef, {
              userId: user.uid,
              noteId: reminderModal.noteId,
@@ -306,7 +317,10 @@ export const NotesManager: React.FC = () => {
 
       } catch (error: any) {
           console.error("Scheduling Error:", error);
-          showNotification(`Lỗi khi đặt lịch: ${error.message || "Không xác định"}`, "error");
+          const msg = error.code === 'permission-denied' 
+            ? "Lỗi quyền truy cập Database (Firestore Rule)." 
+            : (error.message || "Lỗi không xác định");
+          showNotification(`Lỗi khi đặt lịch: ${msg}`, "error");
       } finally {
           setIsScheduling(false);
       }
