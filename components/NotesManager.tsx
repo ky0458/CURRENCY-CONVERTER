@@ -5,7 +5,7 @@ import { NoteStatus } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { messaging, db } from '../firebase';
 import { getToken } from 'firebase/messaging';
-import { doc, setDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 const PRESET_COLORS = [
   '#ef4444', // Red
@@ -273,7 +273,7 @@ export const NotesManager: React.FC = () => {
 
           // 2. Get FCM Token
           // Use Env Var or Fallback to a placeholder that user must replace
-          const vapidKey = process.env.KEY_PAIR || 'BG6fDLu4EwKMdoatFiKXcJOeT8BLhRUxkgsfkK2VKiYeh4Ol1KFRffpq5-x5lcH1hMtB7GS3pdpA2N6KtP7SIg4';
+          const vapidKey = process.env.KEY_PAIR || 'YOUR_VAPID_KEY_HERE';
           
           if (vapidKey === 'YOUR_VAPID_KEY_HERE') {
               console.warn("VAPID Key is missing. Notifications might fail.");
@@ -294,12 +294,24 @@ export const NotesManager: React.FC = () => {
               throw new Error("Không tìm thấy token thông báo.");
           }
 
-          // 3. Save Schedule to Firestore
-          // FIX: Save under 'users/{uid}/scheduled_notifications' instead of root 'scheduled_notifications'
-          // This avoids "Missing or insufficient permissions" error due to default Firestore security rules.
-          const notificationRef = doc(db, 'users', user.uid, 'scheduled_notifications', reminderModal.noteId);
+          // 3. Save Schedule to Firestore (User Document Array)
+          // To avoid permission errors on subcollections, we store this in the main user doc
+          const userRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userRef);
+          let currentReminders: any[] = [];
           
-          await setDoc(notificationRef, {
+          if (userDoc.exists()) {
+              const data = userDoc.data();
+              if (data.scheduled_reminders && Array.isArray(data.scheduled_reminders)) {
+                  currentReminders = data.scheduled_reminders;
+              }
+          }
+
+          // Remove old reminder for this note if exists to avoid duplicates
+          currentReminders = currentReminders.filter((r: any) => r.noteId !== reminderModal.noteId);
+
+          const newReminder = {
+             id: reminderModal.noteId, // Use noteId as ID for simplicity
              userId: user.uid,
              noteId: reminderModal.noteId,
              content: reminderModal.content,
@@ -307,7 +319,11 @@ export const NotesManager: React.FC = () => {
              fcmToken: currentToken,
              status: 'pending',
              createdAt: Date.now()
-          });
+          };
+          
+          currentReminders.push(newReminder);
+          
+          await setDoc(userRef, { scheduled_reminders: currentReminders }, { merge: true });
 
           // 4. Update Local/Firestore Note State
           setNoteReminder(reminderModal.noteId, targetTime);

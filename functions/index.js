@@ -19,59 +19,82 @@ exports.checkScheduledNotifications = onSchedule("every 1 minutes", async (event
   const now = Date.now();
   const db = admin.firestore();
   
-  // Use collectionGroup to query all 'scheduled_notifications' collections across all users.
-  // NOTE: This requires a composite index on `status` and `remindAt`.
-  // Check Firebase Console logs for the index creation link if this query fails.
-  const snapshot = await db.collectionGroup("scheduled_notifications")
-    .where("status", "==", "pending")
-    .where("remindAt", "<=", now)
-    .get();
+  // Since subcollections permissions can be tricky without manual rule updates,
+  // we are scanning the 'users' collection for the 'scheduled_reminders' field.
+  // Note: For large scale apps, this should use a separate collection/subcollection with proper rules.
+  const snapshot = await db.collection("users").get();
 
   if (snapshot.empty) {
-    console.log("No pending notifications.");
+    console.log("No users found.");
     return;
   }
 
-  const promises = [];
+  const updates = [];
 
-  snapshot.forEach((doc) => {
-    const data = doc.data();
-    const { fcmToken, content, noteId } = data;
+  for (const userDoc of snapshot.docs) {
+      const userData = userDoc.data();
+      const reminders = userData.scheduled_reminders || [];
+      
+      // Filter for due pending reminders
+      const dueReminders = reminders.filter(r => r.status === 'pending' && r.remindAt <= now);
 
-    if (!fcmToken) {
-        // Mark as failed if no token
-        promises.push(doc.ref.update({ status: "failed", error: "No Token" }));
-        return;
-    }
+      if (dueReminders.length === 0) continue;
 
-    const message = {
-      notification: {
-        title: "Nhắc nhở từ Gia Hân Converter",
-        body: content,
-      },
-      token: fcmToken,
-      webpush: {
-        fcmOptions: {
-            link: "https://giahanconverter-ggauth.firebaseapp.com/" // Replace with your domain
-        }
+      let dirty = false;
+      // Clone array to modify
+      const updatedReminders = [...reminders];
+
+      for (const reminder of dueReminders) {
+          const { fcmToken, content, id } = reminder;
+
+          if (!fcmToken) {
+              const idx = updatedReminders.findIndex(r => r.id === id);
+              if (idx > -1) {
+                  updatedReminders[idx].status = 'failed';
+                  updatedReminders[idx].error = 'No Token';
+                  dirty = true;
+              }
+              continue;
+          }
+
+          const message = {
+            notification: {
+                title: "Nhắc nhở từ Gia Hân Converter",
+                body: content,
+            },
+            token: fcmToken,
+            webpush: {
+                fcmOptions: {
+                    link: "https://giahanconverter-ggauth.firebaseapp.com/"
+                }
+            }
+          };
+
+          try {
+              const response = await admin.messaging().send(message);
+              console.log(`Successfully sent message for note ${id}:`, response);
+              
+              const idx = updatedReminders.findIndex(r => r.id === id);
+              if (idx > -1) {
+                  updatedReminders[idx].status = 'sent';
+                  updatedReminders[idx].sentAt = Date.now();
+                  dirty = true;
+              }
+          } catch (error) {
+              console.log(`Error sending message for note ${id}:`, error);
+              const idx = updatedReminders.findIndex(r => r.id === id);
+              if (idx > -1) {
+                  updatedReminders[idx].status = 'failed';
+                  updatedReminders[idx].error = error.message;
+                  dirty = true;
+              }
+          }
       }
-    };
 
-    // Send the message
-    const sendPromise = admin.messaging().send(message)
-      .then((response) => {
-        console.log("Successfully sent message:", response);
-        // Mark as sent to avoid duplicates
-        return doc.ref.update({ status: "sent", sentAt: Date.now() });
-      })
-      .catch((error) => {
-        console.log("Error sending message:", error);
-        // Mark as failed or retry depending on logic
-        return doc.ref.update({ status: "failed", error: error.message });
-      });
+      if (dirty) {
+          updates.push(userDoc.ref.update({ scheduled_reminders: updatedReminders }));
+      }
+  }
 
-    promises.push(sendPromise);
-  });
-
-  await Promise.all(promises);
+  await Promise.all(updates);
 });
