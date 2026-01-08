@@ -523,67 +523,102 @@ const AppContent: React.FC = () => {
                             
                             {/* Job Title Translation Section - Only visible in Calculate Tab */}
                             {activeTab === 'calculate' && (
-                                <div className="mb-4 animate-fade-in-up flex flex-col gap-1">
-                                    <div className={`flex items-center bg-white/70 backdrop-blur-sm border rounded-2xl p-1 shadow-sm transition-all h-[56px]
-                                        ${hasBackground ? 'border-white/40 bg-white/80' : 'border-slate-200'}
+                                <div className="mb-6 animate-fade-in-up">
+                                    <div className="flex items-center justify-between mb-2 px-1">
+                                        <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors flex items-center gap-1 ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM6.75 9.25a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5h-6.5Z" clipRule="evenodd" />
+                                            </svg>
+                                            Hỗ trợ dịch thuật
+                                        </label>
+                                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${hasBackground ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                            Việt <span className="opacity-60">→</span> Trung
+                                        </span>
+                                    </div>
+                                    
+                                    <div className={`
+                                        group flex flex-col md:flex-row w-full rounded-2xl transition-all duration-300 overflow-hidden
+                                        ${hasBackground 
+                                            ? 'bg-white/80 backdrop-blur-xl border border-white/40 shadow-lg shadow-black/5' 
+                                            : 'bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-primary-200'}
                                     `}>
-                                        <div className="relative flex-1 h-full flex items-center">
-                                            <div className="absolute left-3 text-slate-400 pointer-events-none">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                                                    <path fillRule="evenodd" d="M6 3.75A2.75 2.75 0 0 1 8.75 1h2.5A2.75 2.75 0 0 1 14 3.75v.443c.572.055 1.14.122 1.706.2C17.053 4.582 18 5.75 18 7.07v3.469c0 1.126-.694 2.191-1.83 2.54-1.952.599-4.024.921-6.17.921s-4.219-.322-6.17-.921C2.694 12.73 2 11.665 2 10.539V7.07c0-1.321.947-2.489 2.294-2.676A41.047 41.047 0 0 1 6 4.193V3.75Zm6.5 0v.325a41.622 41.622 0 0 0-5 0V3.75c0-.69.56-1.25 1.25-1.25h2.5c.69 0 1.25.56 1.25 1.25Z" clipRule="evenodd" />
-                                                    <path d="M12 8a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 12 8ZM8.75 10a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0V10ZM12 13.25a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 .75-.75ZM8.75 15.25a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0v-1.5Z" />
+                                        {/* Input Area */}
+                                        <div className="relative flex-1 flex items-center p-2">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 shrink-0 border border-slate-100">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                                                 </svg>
                                             </div>
                                             <input 
                                                 type="text"
-                                                className="w-full h-full pl-10 pr-2 bg-transparent outline-none text-slate-800 text-sm font-medium placeholder-slate-400"
+                                                className="flex-1 min-w-0 bg-transparent border-none outline-none px-3 text-slate-700 font-semibold placeholder:text-slate-400 placeholder:font-normal h-10 text-sm sm:text-base"
                                                 placeholder="Nhập tên vị trí (VD: Kế toán)"
                                                 value={jobTitle}
                                                 onChange={(e) => setJobTitle(e.target.value)}
                                                 onKeyDown={(e) => e.key === 'Enter' && handleTranslateJob()}
                                             />
+                                            
+                                            {jobTitle && (
+                                                <button 
+                                                    onClick={() => { setJobTitle(''); setTranslatedJobTitle(''); }}
+                                                    className="p-1.5 text-slate-300 hover:text-slate-500 rounded-full hover:bg-slate-100 transition-colors mr-1 shrink-0"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+                                                    </svg>
+                                                </button>
+                                            )}
+
                                             <button 
                                                 onClick={handleTranslateJob}
                                                 disabled={!jobTitle.trim() || isTranslatingJob}
-                                                className={`mr-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1
+                                                className={`
+                                                    h-10 px-4 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-sm shrink-0
                                                     ${!jobTitle.trim() || isTranslatingJob
                                                         ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                                                        : 'bg-primary-600 text-white shadow-md shadow-primary-200 hover:bg-primary-700 active:scale-95'}
+                                                        : 'bg-primary-600 text-white hover:bg-primary-700 active:scale-95 shadow-primary-200'}
                                                 `}
                                             >
-                                                {isTranslatingJob ? 'Đang dịch...' : 'Dịch'}
-                                                {!isTranslatingJob && (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3 h-3">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                                                    </svg>
+                                                {isTranslatingJob ? (
+                                                    <svg className="animate-spin h-4 w-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                                ) : (
+                                                    <>Dịch</>
                                                 )}
                                             </button>
                                         </div>
-                                        <div className="w-px h-8 bg-slate-200 mx-1"></div>
+
+                                        {/* Divider */}
+                                        <div className="h-px md:h-auto w-full md:w-px bg-slate-100 md:my-2"></div>
+
                                         {/* Result Area */}
-                                        <div className="flex-1 flex items-center justify-between px-3 h-full min-w-[120px] bg-slate-50/50 rounded-r-xl">
-                                            {isTranslatingJob ? (
-                                                <div className="flex items-center gap-2 text-slate-400">
-                                                    <div className="w-4 h-4 border-2 border-slate-300 border-t-primary-500 rounded-full animate-spin"></div>
-                                                    <span className="text-xs">Đang dịch...</span>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center justify-between w-full">
-                                                    <span className={`text-base font-bold truncate ${translatedJobTitle ? 'text-primary-700' : 'text-slate-400 italic font-normal text-xs'}`}>
-                                                        {translatedJobTitle || "Tiếng Trung"}
+                                        <div className={`
+                                            relative flex items-center justify-between p-2 md:pl-4 min-w-[35%] transition-colors duration-300
+                                            ${translatedJobTitle ? 'bg-primary-50/30' : 'bg-slate-50/50 md:bg-transparent'}
+                                        `}>
+                                            <div className="flex flex-col justify-center h-10 px-2 min-w-0">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Kết quả</span>
+                                                {isTranslatingJob ? (
+                                                    <div className="h-5 w-24 bg-slate-200 rounded animate-pulse"></div>
+                                                ) : (
+                                                    <span className={`text-sm sm:text-base font-bold truncate block ${translatedJobTitle ? 'text-primary-700' : 'text-slate-400 italic font-normal'}`}>
+                                                        {translatedJobTitle || "..."}
                                                     </span>
-                                                    {translatedJobTitle && (
-                                                        <button 
-                                                            onClick={() => navigator.clipboard.writeText(translatedJobTitle)}
-                                                            className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-white rounded-lg transition-colors ml-2"
-                                                            title="Sao chép"
-                                                        >
-                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
-                                                            </svg>
-                                                        </button>
-                                                    )}
-                                                </div>
+                                                )}
+                                            </div>
+
+                                            {translatedJobTitle && (
+                                                <button 
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(translatedJobTitle);
+                                                        showNotification('Đã sao chép tên vị trí!', 'success');
+                                                    }}
+                                                    className="w-10 h-10 flex items-center justify-center rounded-xl text-primary-500 hover:bg-white hover:shadow-sm transition-all bg-white/50 shrink-0 ml-2"
+                                                    title="Sao chép"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                                                    </svg>
+                                                </button>
                                             )}
                                         </div>
                                     </div>

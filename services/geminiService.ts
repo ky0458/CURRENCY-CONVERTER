@@ -51,7 +51,6 @@ export const translateJobTitle = async (text: string): Promise<string> => {
   if (!text || !text.trim()) return "";
   
   try {
-    // Initialize Gemini only when needed
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
         console.warn("API Key for Gemini is missing");
@@ -60,34 +59,33 @@ export const translateJobTitle = async (text: string): Promise<string> => {
 
     const ai = new GoogleGenAI({ apiKey });
     
-    // Use gemini-3-flash-preview as the standard model for basic text tasks to avoid 403 errors
+    // Switch to gemini-2.0-flash-exp per user request for a free/efficient model
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.0-flash-exp',
       contents: {
         parts: [{
-          text: `You are an expert translator specializing in Human Resources and Corporate Recruitment in China.
+          text: `Role: Expert HR Recruitment Specialist in China.
           
-          Task: Translate the following Job Title from Vietnamese to Simplified Chinese (Mainland China standard).
-          
-          Requirements:
-          1. Use professional, standard business terminology commonly found on Chinese job boards (like Boss Zhipin, Liepin).
-          2. Ensure accuracy for seniority levels (e.g., 'Intern', 'Senior', 'Manager', 'Director').
-          3. Do not include Pinyin, explanations, or extra punctuation.
-          4. Output ONLY the Chinese characters.
-          
-          Input Job Title: "${text}"`
+Task: Translate the Vietnamese Job Title "${text}" into the most standard, professional Simplified Chinese job title used on recruitment platforms like Boss Zhipin or Liepin.
+
+Context:
+- The translation must be accurate to the corporate hierarchy (Intern, Junior, Senior, Manager, Director).
+- It should sound natural to a Chinese HR professional.
+
+Output Rules:
+- Output ONLY the Chinese characters.
+- Do NOT include Pinyin, English explanations, or extra punctuation.`
         }]
       }
     });
 
     return response.text?.trim() || "Không tìm thấy";
   } catch (error: any) {
-    // Handle Permission Denied (403) specifically
     if (error?.status === 'PERMISSION_DENIED' || error?.code === 403 || (error.message && error.message.includes('permission'))) {
         console.warn("Gemini API Permission Denied. Model access restricted or API Key invalid.");
     } else {
         console.error("Translation error:", error);
     }
-    return "Lỗi cấu hình";
+    return "Lỗi dịch thuật";
   }
 };
