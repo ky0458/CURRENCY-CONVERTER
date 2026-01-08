@@ -7,7 +7,7 @@ import { getMessaging } from 'firebase/messaging';
 // --- CONFIG FIREBASE ---
 // Chỉ sử dụng biến môi trường cho API Key, các giá trị khác giữ nguyên hardcoded
 const firebaseConfig = {
-    apiKey: process.env.FIREBASE_API_KEY,
+    apiKey: process.env.FIREBASE_API_KEY || "AIzaSyBs6ovkuJ0xtrkCaaBC4nTNkfsR68ttztA",
     authDomain: "giahanconverter-ggauth.firebaseapp.com",
     projectId: "giahanconverter-ggauth",
     storageBucket: "giahanconverter-ggauth.firebasestorage.app",
