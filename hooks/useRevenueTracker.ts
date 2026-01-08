@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { RevenueRecord } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -100,10 +99,16 @@ export const useRevenueTracker = () => {
     persistData(updated);
   };
 
+  const deleteRecords = (ids: string[]) => {
+    const updated = records.filter(r => !ids.includes(r.id));
+    persistData(updated);
+  };
+
   return {
     records,
     addRecord,
     updateRecord,
-    deleteRecord
+    deleteRecord,
+    deleteRecords
   };
 };

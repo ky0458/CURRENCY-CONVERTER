@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CurrencyRow } from './components/CurrencyRow';
@@ -22,6 +21,7 @@ import { getReadFunction } from './utils/currencyTextFormatter';
 import { CopyButton } from './components/CopyButton';
 // Import useAuth to access notification state
 import { useAuth, AuthProvider } from './contexts/AuthContext';
+import { translateJobTitle } from './services/geminiService';
 
 const ToastNotification = () => {
     const { notification, closeNotification } = useAuth();
@@ -104,7 +104,7 @@ const AppContent: React.FC = () => {
     history, clearHistory, deleteHistoryItems, selectHistoryItem, resetResult, addToHistory
   } = useCurrencyConverter();
 
-  const { records, addRecord, updateRecord, deleteRecord } = useRevenueTracker();
+  const { records, addRecord, updateRecord, deleteRecord, deleteRecords } = useRevenueTracker();
   const { showNotification } = useAuth();
   
   const [activeDropdown, setActiveDropdown] = useState<'FROM' | 'TO' | null>(null);
@@ -121,6 +121,11 @@ const AppContent: React.FC = () => {
   const [revenueShare, setRevenueShare] = useState<'all' | 'cv' | 'job'>('all');
   const [isRevenueDropdownOpen, setIsRevenueDropdownOpen] = useState(false);
   const revenueDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Job Translation State
+  const [jobTitle, setJobTitle] = useState('');
+  const [translatedJobTitle, setTranslatedJobTitle] = useState('');
+  const [isTranslatingJob, setIsTranslatingJob] = useState(false);
 
   const [revenueResult, setRevenueResult] = useState<{
       totalRevenue: number;
@@ -374,6 +379,20 @@ const AppContent: React.FC = () => {
      showNotification('Đã lưu vào bảng thống kê!', 'success');
   };
 
+  const handleTranslateJob = async () => {
+      if (!jobTitle.trim()) return;
+      setIsTranslatingJob(true);
+      try {
+          const result = await translateJobTitle(jobTitle);
+          setTranslatedJobTitle(result);
+      } catch (error) {
+          console.error(error);
+          setTranslatedJobTitle("Lỗi dịch");
+      } finally {
+          setIsTranslatingJob(false);
+      }
+  };
+
   const renderHistoryButton = (
     <button 
         onClick={() => setShowHistory(true)}
@@ -472,7 +491,7 @@ const AppContent: React.FC = () => {
                 <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
                     <TabSelector 
                         activeTab={activeTab} 
-                        onTabChange={(tab) => { setActiveTab(tab); resetResult(); setAmount(''); setSalaryAmount(''); setRevenueResult(null); }} 
+                        onTabChange={(tab) => { setActiveTab(tab); resetResult(); setAmount(''); setSalaryAmount(''); setRevenueResult(null); setJobTitle(''); setTranslatedJobTitle(''); }} 
                         theme={theme} 
                     />
                 </div>
@@ -481,6 +500,7 @@ const AppContent: React.FC = () => {
                    <RevenueStatsSection 
                         records={records}
                         onDeleteRecord={deleteRecord}
+                        onDeleteRecords={deleteRecords}
                         onUpdateRecord={updateRecord}
                         formatCurrency={formatCurrency}
                         theme={theme}
@@ -500,6 +520,60 @@ const AppContent: React.FC = () => {
 
                         <div className="flex flex-col md:flex-row items-center md:items-start relative gap-3 md:gap-4">
                         <div className={`w-full md:flex-1 transition-all relative ${activeDropdown === 'FROM' || isRevenueDropdownOpen ? 'z-50' : 'z-20'}`}> 
+                            
+                            {/* Job Title Translation Section - Only visible in Calculate Tab */}
+                            {activeTab === 'calculate' && (
+                                <div className="mb-4 animate-fade-in-up flex flex-col gap-1">
+                                    <div className={`flex items-center bg-white/70 backdrop-blur-sm border rounded-2xl p-1 shadow-sm transition-all h-[56px]
+                                        ${hasBackground ? 'border-white/40 bg-white/80' : 'border-slate-200'}
+                                    `}>
+                                        <div className="relative flex-1 h-full">
+                                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                                                    <path fillRule="evenodd" d="M6 3.75A2.75 2.75 0 0 1 8.75 1h2.5A2.75 2.75 0 0 1 14 3.75v.443c.572.055 1.14.122 1.706.2C17.053 4.582 18 5.75 18 7.07v3.469c0 1.126-.694 2.191-1.83 2.54-1.952.599-4.024.921-6.17.921s-4.219-.322-6.17-.921C2.694 12.73 2 11.665 2 10.539V7.07c0-1.321.947-2.489 2.294-2.676A41.047 41.047 0 0 1 6 4.193V3.75Zm6.5 0v.325a41.622 41.622 0 0 0-5 0V3.75c0-.69.56-1.25 1.25-1.25h2.5c.69 0 1.25.56 1.25 1.25Z" clipRule="evenodd" />
+                                                    <path d="M12 8a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 12 8ZM8.75 10a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0V10ZM12 13.25a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 .75-.75ZM8.75 15.25a.75.75 0 0 0-1.5 0v1.5a.75.75 0 0 0 1.5 0v-1.5Z" />
+                                                </svg>
+                                            </div>
+                                            <input 
+                                                type="text"
+                                                className="w-full h-full pl-10 pr-4 bg-transparent outline-none text-slate-800 text-sm font-medium placeholder-slate-400"
+                                                placeholder="Nhập tên vị trí (VD: Kế toán)"
+                                                value={jobTitle}
+                                                onChange={(e) => setJobTitle(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && handleTranslateJob()}
+                                            />
+                                        </div>
+                                        <div className="w-px h-8 bg-slate-200 mx-1"></div>
+                                        {/* Result Area */}
+                                        <div className="flex-1 flex items-center justify-between px-3 h-full min-w-[120px] bg-slate-50/50 rounded-r-xl">
+                                            {isTranslatingJob ? (
+                                                <div className="flex items-center gap-2 text-slate-400">
+                                                    <div className="w-4 h-4 border-2 border-slate-300 border-t-primary-500 rounded-full animate-spin"></div>
+                                                    <span className="text-xs">Đang dịch...</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-between w-full">
+                                                    <span className={`text-base font-bold truncate ${translatedJobTitle ? 'text-primary-700' : 'text-slate-400 italic font-normal text-xs'}`}>
+                                                        {translatedJobTitle || "Tiếng Trung"}
+                                                    </span>
+                                                    {translatedJobTitle && (
+                                                        <button 
+                                                            onClick={() => navigator.clipboard.writeText(translatedJobTitle)}
+                                                            className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-white rounded-lg transition-colors ml-2"
+                                                            title="Sao chép"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <CurrencyRow
                                 key={activeTab}
                                 label={activeTab === 'convert' ? "Nhập số tiền cần đổi" : "Nhập mức lương"}

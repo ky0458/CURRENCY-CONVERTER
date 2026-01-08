@@ -1,5 +1,7 @@
+
 import { ConversionResult } from '../types';
 import { getReadFunction } from '../utils/currencyTextFormatter';
+import { GoogleGenAI } from "@google/genai";
 
 const getDecimals = (currencyCode: string): number => {
   if (['VND', 'JPY', 'KRW', 'TWD', 'HUF'].includes(currencyCode)) {
@@ -42,5 +44,35 @@ export const convertCurrencyApi = async (
   } catch (error) {
     console.error("Currency API error:", error);
     throw new Error("Failed to convert currency. Please try again.");
+  }
+};
+
+export const translateJobTitle = async (text: string): Promise<string> => {
+  if (!text || !text.trim()) return "";
+  
+  try {
+    // Initialize Gemini only when needed
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+        console.warn("API Key for Gemini is missing");
+        return "Lỗi cấu hình";
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+    
+    // Use gemini-3-flash-preview for text tasks to avoid 404 errors with older/preview names
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Translate the following job title/position from Vietnamese to Simplified Chinese. 
+      Ensure professional business terminology. 
+      Output ONLY the Chinese translation text, do not include pinyin or explanations.
+      
+      Input: "${text}"`,
+    });
+
+    return response.text?.trim() || "Không tìm thấy";
+  } catch (error) {
+    console.error("Translation error:", error);
+    return "Lỗi dịch";
   }
 };

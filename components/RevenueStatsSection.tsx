@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { RevenueRecord, ThemeColor } from '../types';
@@ -8,6 +7,7 @@ import { THEME_COLORS } from '../constants';
 interface RevenueStatsSectionProps {
   records: RevenueRecord[];
   onDeleteRecord: (id: string) => void;
+  onDeleteRecords?: (ids: string[]) => void;
   onUpdateRecord: (id: string, updates: Partial<RevenueRecord>) => void;
   formatCurrency: (val: number, locale: string, currencyCode: string) => string;
   theme: ThemeColor;
@@ -15,7 +15,8 @@ interface RevenueStatsSectionProps {
 
 export const RevenueStatsSection: React.FC<RevenueStatsSectionProps> = ({ 
   records, 
-  onDeleteRecord, 
+  onDeleteRecord,
+  onDeleteRecords,
   onUpdateRecord,
   formatCurrency, 
   theme 
