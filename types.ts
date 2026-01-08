@@ -66,4 +66,5 @@ export interface Note {
   timestamp: number;
   status: NoteStatus;
   tagId: string | null; // One tag per note for simplicity in filtering
+  reminderTime?: number;
 }

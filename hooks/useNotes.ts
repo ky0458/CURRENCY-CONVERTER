@@ -109,6 +109,11 @@ export const useNotes = () => {
     saveNotes(notes.filter(n => !ids.includes(n.id)));
   };
 
+  const setNoteReminder = (id: string, time: number) => {
+    const updated = notes.map(n => n.id === id ? { ...n, reminderTime: time } : n);
+    saveNotes(updated);
+  };
+
   // Tag Actions
   const addTag = (name: string, color: string) => {
     const newTag: NoteTag = {
@@ -147,6 +152,7 @@ export const useNotes = () => {
     deleteNotes,
     addTag,
     deleteTag,
-    toggleTagPin
+    toggleTagPin,
+    setNoteReminder
   };
 };

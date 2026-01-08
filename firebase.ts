@@ -2,11 +2,12 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getMessaging } from 'firebase/messaging';
 
 // --- CONFIG FIREBASE ---
 // Chỉ sử dụng biến môi trường cho API Key, các giá trị khác giữ nguyên hardcoded
 const firebaseConfig = {
-    apiKey: process.env.FIREBASE_API_KEY || "AIzaSyBs6ovkuJ0xtrkCaaBC4nTNkfsR68ttztA",
+    apiKey: process.env.FIREBASE_API_KEY,
     authDomain: "giahanconverter-ggauth.firebaseapp.com",
     projectId: "giahanconverter-ggauth",
     storageBucket: "giahanconverter-ggauth.firebasestorage.app",
@@ -19,4 +20,5 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const messaging = getMessaging(app);
 export const googleProvider = new GoogleAuthProvider();
