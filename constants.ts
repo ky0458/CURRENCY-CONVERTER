@@ -19,6 +19,18 @@ export const POPULAR_CURRENCIES: Currency[] = [
   { code: 'TWD', name: 'New Taiwan Dollar', flag: getFlagUrl('tw'), locale: 'zh-TW' },
 ];
 
+export const LANGUAGE_FLAGS: Record<string, string> = {
+    'vi': getFlagUrl('vn'),
+    'en': getFlagUrl('us'), // or gb
+    'zh-CN': getFlagUrl('cn'),
+    'ja': getFlagUrl('jp'),
+    'ko': getFlagUrl('kr'),
+    'fr': getFlagUrl('fr'),
+    'de': getFlagUrl('de'),
+    'ru': getFlagUrl('ru'),
+    'auto': 'https://cdn-icons-png.flaticon.com/512/5602/5602732.png' // Generic globe/detect icon
+};
+
 export const DEFAULT_SOURCE_CURRENCY = POPULAR_CURRENCIES[1]; // VND
 export const DEFAULT_TARGET_CURRENCY = POPULAR_CURRENCIES[0]; // CNY
 
