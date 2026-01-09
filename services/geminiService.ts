@@ -1,7 +1,6 @@
 
 import { ConversionResult } from '../types';
 import { getReadFunction } from '../utils/currencyTextFormatter';
-import { GoogleGenAI } from "@google/genai";
 
 const getDecimals = (currencyCode: string): number => {
   if (['VND', 'JPY', 'KRW', 'TWD', 'HUF'].includes(currencyCode)) {
@@ -51,62 +50,48 @@ export const translateJobTitle = async (text: string): Promise<string> => {
   if (!text || !text.trim()) return "";
   
   try {
-    // Robust API Key retrieval to prevent "Configuration Error"
-    // Checks for standard Node/Vercel env vars, Vite env vars, and React App env vars
-    let apiKey = '';
+    // Sử dụng Google Translate API (GTX endpoint - Free Client)
+    // API này xử lý ngữ cảnh "Chức danh" tốt hơn MyMemory nhờ data lớn hơn.
+    // sl: source language (vi), tl: target language (zh-CN), dt: data type (text)
+    const encodedText = encodeURIComponent(text.trim());
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&q=${encodedText}`;
+
+    const response = await fetch(url);
     
-    if (typeof process !== 'undefined' && process.env) {
-        apiKey = process.env.API_KEY || 
-                 process.env.NEXT_PUBLIC_API_KEY || 
-                 process.env.REACT_APP_API_KEY || 
-                 '';
-    } 
-    
-    // @ts-ignore
-    if (!apiKey && typeof import.meta !== 'undefined' && import.meta.env) {
-        // @ts-ignore
-        apiKey = import.meta.env.VITE_API_KEY || 
-                 // @ts-ignore
-                 import.meta.env.API_KEY || 
-                 '';
+    if (!response.ok) {
+        // Nếu Google chặn request (hiếm gặp với traffic thấp), fallback về MyMemory
+        console.warn("Google Translate blocked/failed, switching to fallback.");
+        return await translateWithFallback(text);
     }
 
-    if (!apiKey) {
-        console.warn("Gemini API Key is missing. Please add API_KEY to your environment variables.");
-        // If you absolutely must have it work without setup for a demo, 
-        // you would hardcode it here, but it is not recommended for security.
-        return "Lỗi cấu hình";
+    const data = await response.json();
+
+    // Cấu trúc response của Google: [[["TextDich", "TextGoc", ...], ...], ...]
+    if (data && data[0]) {
+        // Nối các đoạn văn bản lại nếu bị tách
+        return data[0].map((part: any) => part[0]).join('');
     }
 
-    const ai = new GoogleGenAI({ apiKey });
-    
-    // Using gemini-2.0-flash-exp which is currently free-to-use
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: {
-        parts: [{
-          text: `Role: Expert HR Recruitment Specialist in China.
-          
-Task: Translate the Vietnamese Job Title "${text}" into the most standard, professional Simplified Chinese job title used on recruitment platforms like Boss Zhipin or Liepin.
-
-Context:
-- The translation must be accurate to the corporate hierarchy (Intern, Junior, Senior, Manager, Director).
-- It should sound natural to a Chinese HR professional.
-
-Output Rules:
-- Output ONLY the Chinese characters.
-- Do NOT include Pinyin, English explanations, or extra punctuation.`
-        }]
-      }
-    });
-
-    return response.text?.trim() || "Không tìm thấy";
+    return "Không tìm thấy";
   } catch (error: any) {
-    if (error?.status === 'PERMISSION_DENIED' || error?.code === 403 || (error.message && error.message.includes('permission'))) {
-        console.warn("Gemini API Permission Denied. Model access restricted or API Key invalid.");
-    } else {
-        console.error("Translation error:", error);
-    }
-    return "Lỗi dịch thuật";
+    console.error("Primary translation error:", error);
+    return await translateWithFallback(text);
   }
+};
+
+// Hàm dự phòng sử dụng MyMemory (logic cũ) phòng khi Google lỗi
+const translateWithFallback = async (text: string): Promise<string> => {
+    try {
+        const encodedText = encodeURIComponent(text.trim());
+        const url = `https://api.mymemory.translated.net/get?q=${encodedText}&langpair=vi|zh-CN`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data && data.responseData && data.responseData.translatedText) {
+            return data.responseData.translatedText;
+        }
+    } catch (e) {
+        console.error("Fallback translation error", e);
+    }
+    return "Lỗi dịch vụ";
 };

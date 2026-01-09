@@ -518,7 +518,7 @@ const AppContent: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Job Translation Section - Moved outside flex row to be full width */}
+                        {/* Job Translation Section - Refined for "Single Line" look on Desktop */}
                         {activeTab === 'calculate' && (
                             <div className="animate-fade-in-up w-full">
                                 <div className="flex items-center justify-between mb-2 px-1">
@@ -531,15 +531,15 @@ const AppContent: React.FC = () => {
                                 </div>
                                 
                                 <div className={`
-                                    flex flex-col md:flex-row items-stretch w-full rounded-2xl transition-all duration-300 overflow-hidden
+                                    flex flex-col md:flex-row items-stretch md:items-center w-full rounded-2xl transition-all duration-300 overflow-hidden
                                     ${hasBackground 
                                         ? 'bg-white/80 backdrop-blur-xl border border-white/40 shadow-lg shadow-black/5' 
                                         : 'bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-primary-200'}
                                 `}>
                                     {/* Input Area */}
-                                    <div className="flex-1 flex items-center p-2 sm:p-3 gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0 border border-primary-100">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                    <div className="flex-1 flex items-center p-2 sm:p-2.5 gap-2 w-full md:w-auto">
+                                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0 border border-primary-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                                             </svg>
                                         </div>
@@ -569,7 +569,7 @@ const AppContent: React.FC = () => {
                                             onClick={handleTranslateJob}
                                             disabled={!jobTitle.trim() || isTranslatingJob}
                                             className={`
-                                                h-10 px-4 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-sm shrink-0
+                                                h-8 sm:h-10 px-3 sm:px-4 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm shrink-0
                                                 ${!jobTitle.trim() || isTranslatingJob
                                                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 
                                                     : 'bg-primary-600 text-white hover:bg-primary-700 active:scale-95 shadow-primary-200'}
@@ -583,16 +583,16 @@ const AppContent: React.FC = () => {
                                         </button>
                                     </div>
 
-                                    {/* Divider */}
-                                    <div className="h-px w-full md:w-px md:h-auto bg-slate-100"></div>
+                                    {/* Divider: Horizontal on mobile, Vertical on desktop */}
+                                    <div className="h-px w-full md:w-px md:h-10 bg-slate-100 mx-0 md:mx-0"></div>
 
                                     {/* Result Area */}
                                     <div className={`
-                                        flex-1 p-2 sm:p-3 flex items-center justify-between transition-colors duration-300 min-w-[35%]
+                                        flex-1 p-2 sm:p-2.5 flex items-center justify-between transition-colors duration-300 min-w-0 md:min-w-[250px] w-full md:w-auto h-full
                                         ${translatedJobTitle ? 'bg-primary-50/20' : 'bg-slate-50/50'}
                                     `}>
-                                        <div className="flex flex-col justify-center px-2 min-w-0">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Tiếng Trung</span>
+                                        <div className="flex flex-col justify-center px-2 min-w-0 flex-1">
+                                            <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Tiếng Trung</span>
                                             {isTranslatingJob ? (
                                                 <div className="h-5 w-24 bg-slate-200 rounded animate-pulse"></div>
                                             ) : (
@@ -608,10 +608,10 @@ const AppContent: React.FC = () => {
                                                     navigator.clipboard.writeText(translatedJobTitle);
                                                     showNotification('Đã sao chép tên vị trí!', 'success');
                                                 }}
-                                                className="w-10 h-10 flex items-center justify-center rounded-xl text-primary-500 hover:bg-white hover:shadow-sm transition-all bg-white/50 shrink-0 ml-2 border border-transparent hover:border-slate-100"
+                                                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl text-primary-500 hover:bg-white hover:shadow-sm transition-all bg-white/50 shrink-0 ml-2 border border-transparent hover:border-slate-100"
                                                 title="Sao chép"
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
                                                 </svg>
                                             </button>
