@@ -51,15 +51,36 @@ export const translateJobTitle = async (text: string): Promise<string> => {
   if (!text || !text.trim()) return "";
   
   try {
-    const apiKey = process.env.API_KEY;
+    // Robust API Key retrieval to prevent "Configuration Error"
+    // Checks for standard Node/Vercel env vars, Vite env vars, and React App env vars
+    let apiKey = '';
+    
+    if (typeof process !== 'undefined' && process.env) {
+        apiKey = process.env.API_KEY || 
+                 process.env.NEXT_PUBLIC_API_KEY || 
+                 process.env.REACT_APP_API_KEY || 
+                 '';
+    } 
+    
+    // @ts-ignore
+    if (!apiKey && typeof import.meta !== 'undefined' && import.meta.env) {
+        // @ts-ignore
+        apiKey = import.meta.env.VITE_API_KEY || 
+                 // @ts-ignore
+                 import.meta.env.API_KEY || 
+                 '';
+    }
+
     if (!apiKey) {
-        console.warn("API Key for Gemini is missing");
+        console.warn("Gemini API Key is missing. Please add API_KEY to your environment variables.");
+        // If you absolutely must have it work without setup for a demo, 
+        // you would hardcode it here, but it is not recommended for security.
         return "Lỗi cấu hình";
     }
 
     const ai = new GoogleGenAI({ apiKey });
     
-    // Switch to gemini-2.0-flash-exp per user request for a free/efficient model
+    // Using gemini-2.0-flash-exp which is currently free-to-use
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash-exp',
       contents: {
