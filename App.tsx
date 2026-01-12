@@ -407,25 +407,33 @@ const AppContent: React.FC = () => {
     </button>
   );
 
-  const stageFeeData = useMemo(() => {
+  const calculationData = useMemo(() => {
     if (activeTab !== 'calculate' || !result || !amount) return null;
     
-    const totalFeeSource = parseFloat(amount);
-    if (isNaN(totalFeeSource)) return null;
+    const totalSource = parseFloat(amount);
+    if (isNaN(totalSource)) return null;
 
-    const stageSource = Math.floor(totalFeeSource / 2);
+    const totalTarget = result.convertedAmount;
+
+    // Stage Calculation (50%)
+    const stageSource = Math.floor(totalSource / 2);
+    // Note: Re-calculate stage target based on rate to ensure accuracy, or derived from totalTarget/2? 
+    // Using rate is safer for rounding consistency with display.
     const stageTarget = Math.ceil(stageSource * result.exchangeRate);
 
-    const formattedSource = formatCurrency(stageSource, fromCurrency.locale, fromCurrency.code);
-    const formattedTarget = formatCurrency(stageTarget, toCurrency.locale, toCurrency.code);
-
     return {
-        source: stageSource,
-        target: stageTarget,
-        formattedSource,
-        formattedTarget,
-        textSource: getReadFunction(fromCurrency.code, stageSource),
-        textTarget: getReadFunction(toCurrency.code, stageTarget)
+        total: {
+            source: totalSource,
+            target: totalTarget,
+            textSource: getReadFunction(fromCurrency.code, totalSource),
+            textTarget: getReadFunction(toCurrency.code, totalTarget)
+        },
+        stage: {
+            source: stageSource,
+            target: stageTarget,
+            textSource: getReadFunction(fromCurrency.code, stageSource),
+            textTarget: getReadFunction(toCurrency.code, stageTarget)
+        }
     };
   }, [activeTab, result, amount, fromCurrency, toCurrency]);
 
@@ -778,7 +786,8 @@ const AppContent: React.FC = () => {
                         result={result} 
                         fromCurrency={fromCurrency} 
                         toCurrency={toCurrency} 
-                        inputAmount={activeTab === 'calculate' ? (stageFeeData ? stageFeeData.source.toString() : amount) : amount}
+                        inputAmount={amount}
+                        calculationData={calculationData}
                         formatCurrency={formatCurrency}
                         theme={theme}
                         hasBackgroundImage={hasBackground}
