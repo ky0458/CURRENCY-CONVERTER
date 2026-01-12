@@ -15,212 +15,330 @@ export const getPdfDocument = async (file: File) => {
     return pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 };
 
-export const extractTextFromPdf = async (file: File): Promise<string> => {
-    const pdf = await getPdfDocument(file);
-    let fullText = '';
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        
-        // Improve layout preservation by checking Y position gaps
-        let lastY = -1;
-        let pageText = '';
-        
-        for (const item of textContent.items as any[]) {
-            if (lastY !== -1 && Math.abs(item.transform[5] - lastY) > 10) {
-                 pageText += '\n'; // Add newline if Y difference implies new line
-            } else if (lastY !== -1) {
-                 pageText += ' '; // Add space for items on same line
-            }
-            pageText += item.str;
-            lastY = item.transform[5];
-        }
-        
-        fullText += pageText + '\n\n';
-    }
-
-    return fullText;
-};
-
-export const extractTextFromDocx = async (file: File): Promise<string> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-    return result.value;
-};
-
-export const convertDocxToHtml = async (file: File): Promise<string> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
-    return result.value;
-};
-
-// Return type for chunk translation
-interface ChunkResult {
-    translatedText: string;
-    detectedSource?: string;
+// --- PDF OVERLAY TYPES ---
+export interface PdfOverlayItem {
+    text: string;
+    originalText: string;
+    x: number; // PDF Unit
+    y: number; // PDF Unit (Baseline)
+    width: number;
+    height: number;
+    fontSize: number;
+    fontName: string;
+    color?: string;
 }
 
-// Helper function to translate a single chunk
-const translateChunk = async (text: string, sourceLang: string, targetLang: string): Promise<ChunkResult> => {
-    if (!text.trim()) return { translatedText: '' };
+export interface PdfPageOverlay {
+    pageIndex: number;
+    width: number;
+    height: number;
+    items: PdfOverlayItem[];
+}
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// --- TRANSLATION CORE ---
+
+const translateBatch = async (texts: string[], sourceLang: string, targetLang: string): Promise<string[]> => {
+    if (texts.length === 0) return [];
+    
+    const nonEmptyIndices: number[] = [];
+    const textsToTranslate: string[] = [];
+    
+    texts.forEach((t, i) => {
+        if (t && t.trim().length > 0) {
+            nonEmptyIndices.push(i);
+            textsToTranslate.push(t);
+        }
+    });
+
+    if (textsToTranslate.length === 0) return texts;
+
     try {
-        const encodedText = encodeURIComponent(text.trim());
+        // Use a complex delimiter to avoid conflict with normal text
+        const DELIMITER = ' ||| '; 
+        const combinedText = textsToTranslate.join(DELIMITER);
+        
+        const encodedText = encodeURIComponent(combinedText);
         const sl = sourceLang === 'auto' ? 'auto' : sourceLang;
         const tl = targetLang;
         
         const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodedText}`;
         
         const response = await fetch(url);
-        if (!response.ok) return { translatedText: text }; 
+        
+        if (!response.ok) {
+            console.warn("Translation API returned error status:", response.status);
+            return texts; 
+        }
 
         const data = await response.json();
-        // data[0] contains translated sentences
-        // data[2] usually contains detected language code (e.g., 'en', 'vi')
+        
+        let fullTranslatedString = '';
         if (data && data[0]) {
-             const translatedText = data[0].map((part: any) => part[0]).join('');
-             const detectedSource = data[2];
-             return { translatedText, detectedSource };
+             fullTranslatedString = data[0].map((part: any) => part[0]).join('');
         }
-        return { translatedText: text };
+
+        const splitRegex = /\s*\|\|\|\s*/;
+        const results = fullTranslatedString.split(splitRegex);
+        
+        const finalResults = [...texts];
+        nonEmptyIndices.forEach((originalIndex, i) => {
+            // If result is missing (API cut off), keep original
+            if (results[i] !== undefined) {
+                finalResults[originalIndex] = results[i].trim();
+            }
+        });
+
+        return finalResults;
     } catch (e) {
-        console.error("Translation chunk error", e);
-        return { translatedText: text };
+        console.error("Translation batch error", e);
+        return texts; 
     }
 };
 
-export interface TranslationResult {
-    text: string;
-    detectedLang: string;
-}
+// --- PDF LAYOUT PRESERVING TRANSLATION ---
 
-export const translateDocumentText = async (
-    text: string, 
-    sourceLang: string = 'auto', 
+export const translatePdfWithLayout = async (
+    file: File,
+    sourceLang: string = 'auto',
     targetLang: string = 'vi',
     onProgress?: (percent: number) => void
-): Promise<TranslationResult> => {
-    const CHUNK_SIZE = 2000;
-    // Split by paragraphs to preserve structure
-    // We split by double newline to identify paragraphs
-    const paragraphs = text.split(/\n\s*\n/);
+): Promise<{ overlays: PdfPageOverlay[], detectedLang: string, fullText: string }> => {
+    const pdf = await getPdfDocument(file);
+    const totalPages = pdf.numPages;
+    const allOverlays: PdfPageOverlay[] = [];
+    let fullTranslatedText = '';
     
-    let chunks: string[] = [];
-    let currentChunk = '';
-
-    for (const para of paragraphs) {
-        if ((currentChunk + para).length > CHUNK_SIZE) {
-            chunks.push(currentChunk);
-            currentChunk = para + '\n\n';
-        } else {
-            currentChunk += para + '\n\n';
-        }
-    }
-    if (currentChunk.trim()) chunks.push(currentChunk);
-
-    let translatedText = '';
-    let detectedLang = sourceLang;
-    const totalChunks = chunks.length;
-
-    for (let i = 0; i < totalChunks; i++) {
-        const chunk = chunks[i];
-        if (!chunk.trim()) continue;
+    for (let i = 1; i <= totalPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.0 });
+        const textContent = await page.getTextContent();
         
-        const result = await translateChunk(chunk, sourceLang, targetLang);
-        translatedText += result.translatedText + '\n\n'; 
+        // 1. Enhanced Clustering Logic
+        const items = textContent.items.map((item: any) => ({
+            str: item.str,
+            x: item.transform[4],
+            y: item.transform[5],
+            w: item.width,
+            h: item.height || Math.abs(item.transform[3]),
+            fontName: item.fontName,
+            transform: item.transform
+        })).filter(it => it.str.trim().length > 0);
+
+        // Sort: Top-Down (Y desc), then Left-Right (X asc)
+        items.sort((a, b) => {
+            const yDiff = Math.abs(a.y - b.y);
+            // Strict tolerance for Y alignment (30% of height)
+            if (yDiff < Math.max(a.h, b.h) * 0.3) {
+                return a.x - b.x;
+            }
+            return b.y - a.y;
+        });
+
+        const lines: { 
+            y: number, 
+            h: number, 
+            minX: number, 
+            maxX: number, 
+            items: typeof items 
+        }[] = [];
+
+        let currentLine: typeof lines[0] | null = null;
+
+        for (const item of items) {
+            if (!currentLine) {
+                currentLine = { 
+                    y: item.y, 
+                    h: item.h, 
+                    minX: item.x, 
+                    maxX: item.x + item.w, 
+                    items: [item] 
+                };
+                continue;
+            }
+
+            // Vertical overlap check
+            const verticalDist = Math.abs(item.y - currentLine.y);
+            const tolerance = Math.max(item.h, currentLine.h) * 0.5;
+
+            if (verticalDist < tolerance) {
+                // Horizontal gap check (Column detection)
+                // If gap > 4x font height, assume separate column -> New Block
+                const gap = item.x - currentLine.maxX;
+                if (gap > Math.max(item.h, 10) * 4) {
+                    lines.push(currentLine);
+                    currentLine = { 
+                        y: item.y, 
+                        h: item.h, 
+                        minX: item.x, 
+                        maxX: item.x + item.w, 
+                        items: [item] 
+                    };
+                } else {
+                    // Merge into current line
+                    currentLine.items.push(item);
+                    currentLine.h = Math.max(currentLine.h, item.h);
+                    currentLine.minX = Math.min(currentLine.minX, item.x);
+                    currentLine.maxX = Math.max(currentLine.maxX, item.x + item.w);
+                }
+            } else {
+                // New Line
+                lines.push(currentLine);
+                currentLine = { 
+                    y: item.y, 
+                    h: item.h, 
+                    minX: item.x, 
+                    maxX: item.x + item.w, 
+                    items: [item] 
+                };
+            }
+        }
+        if (currentLine) lines.push(currentLine);
+
+        // 2. Prepare text
+        const lineTextsToTranslate = lines.map(line => {
+            let str = "";
+            let lastEnd = line.items[0].x;
+            line.items.forEach((it, idx) => {
+                if (idx > 0) {
+                    const gap = it.x - lastEnd;
+                    if (gap > it.h * 0.3) str += " ";
+                }
+                str += it.str;
+                lastEnd = it.x + it.w;
+            });
+            return str;
+        });
+
+        // 3. Batch Translate (Safe Batch Size)
+        const translatedLines: string[] = [];
+        const BATCH_SIZE = 6; // Low batch size for accuracy
         
-        if (i === 0 && result.detectedSource) {
-            detectedLang = result.detectedSource;
+        for (let j = 0; j < lineTextsToTranslate.length; j += BATCH_SIZE) {
+            const batch = lineTextsToTranslate.slice(j, j + BATCH_SIZE);
+            if (j > 0) await delay(400); // More delay for reliability
+            
+            const translatedBatch = await translateBatch(batch, sourceLang, targetLang);
+            
+            // Fallback for length mismatch
+            if (translatedBatch.length !== batch.length) {
+                translatedLines.push(...batch); 
+            } else {
+                translatedLines.push(...translatedBatch);
+            }
+            
+            if (onProgress) {
+                const pageProgress = ((i - 1) / totalPages) * 100;
+                const batchProgress = (j / lineTextsToTranslate.length) * (100 / totalPages);
+                onProgress(Math.min(99, Math.round(pageProgress + batchProgress)));
+            }
         }
 
-        if (onProgress) {
-            onProgress(Math.round(((i + 1) / totalChunks) * 100));
-        }
+        // 4. Create Overlays
+        const pageOverlays: PdfOverlayItem[] = [];
+        
+        lines.forEach((line, index) => {
+            const originalText = lineTextsToTranslate[index];
+            const translatedText = translatedLines[index] || originalText;
+            fullTranslatedText += translatedText + '\n';
+
+            const width = line.maxX - line.minX;
+            // Height calculation: Ensure it covers ascenders. 
+            // Typically font bounding box is ~1.2 * font size
+            const adjustedHeight = line.h * 1.3; 
+
+            pageOverlays.push({
+                text: translatedText,
+                originalText: originalText,
+                x: line.minX,
+                y: line.y,
+                width: width,
+                height: adjustedHeight,
+                fontSize: line.h,
+                fontName: line.items[0].fontName
+            });
+        });
+
+        allOverlays.push({
+            pageIndex: i,
+            width: viewport.width,
+            height: viewport.height,
+            items: pageOverlays
+        });
     }
 
-    return { text: translatedText.trim(), detectedLang };
+    if (onProgress) onProgress(100);
+    return { overlays: allOverlays, detectedLang: 'auto', fullText: fullTranslatedText };
 };
+
+// --- HTML TRANSLATION (DOCX) ---
 
 export const translateHtml = async (
     html: string,
     sourceLang: string = 'auto', 
     targetLang: string = 'vi',
     onProgress?: (percent: number) => void
-): Promise<TranslationResult> => {
+): Promise<{ text: string, detectedLang: string }> => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null);
+    
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) => {
+            if (node.parentElement && ['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(node.parentElement.tagName)) return NodeFilter.FILTER_REJECT;
+            if (!node.textContent || node.textContent.trim().length < 1) return NodeFilter.FILTER_SKIP;
+            return NodeFilter.FILTER_ACCEPT;
+        }
+    });
     
     const textNodes: Node[] = [];
     let node;
     while(node = walker.nextNode()) {
-        if(node.textContent && node.textContent.trim().length > 0) {
-            textNodes.push(node);
-        }
+        textNodes.push(node);
     }
 
-    const SEPARATOR = ' ||| ';
-    const CHUNK_SIZE = 1500;
+    const textValues = textNodes.map(n => n.textContent || '');
+    const BATCH_SIZE = 20;
     
-    let batchNodes: Node[] = [];
-    let batchText = '';
-    const batches: { nodes: Node[], text: string }[] = [];
-
-    for (const n of textNodes) {
-        const text = n.textContent || '';
-        if (batchText.length + text.length + SEPARATOR.length > CHUNK_SIZE && batchNodes.length > 0) {
-            batches.push({ nodes: [...batchNodes], text: batchText });
-            batchNodes = [];
-            batchText = '';
-        }
-        batchText += (batchText ? SEPARATOR : '') + text;
-        batchNodes.push(n);
-    }
-    if (batchNodes.length > 0) batches.push({ nodes: batchNodes, text: batchText });
-
-    let detectedLang = sourceLang;
-    const total = batches.length;
-
-    for (let i = 0; i < total; i++) {
-        const { nodes, text } = batches[i];
-        const res = await translateChunk(text, sourceLang, targetLang);
+    for (let i = 0; i < textValues.length; i += BATCH_SIZE) {
+        const batchTexts = textValues.slice(i, i + BATCH_SIZE);
+        const batchNodes = textNodes.slice(i, i + BATCH_SIZE);
         
-        if (i === 0 && res.detectedSource) detectedLang = res.detectedSource;
+        if (i > 0) await delay(150);
 
-        // Split result by separator, allowing for flexible spacing
-        const translatedParts = res.translatedText.split(/\s*\|\|\|\s*/);
-
-        nodes.forEach((n, idx) => {
-            if (translatedParts[idx] !== undefined) {
-                n.textContent = translatedParts[idx].trim();
+        const translatedBatch = await translateBatch(batchTexts, sourceLang, targetLang);
+        
+        batchNodes.forEach((node, idx) => {
+            if (translatedBatch[idx]) {
+                node.textContent = translatedBatch[idx];
             }
         });
 
-        if (onProgress) onProgress(Math.round(((i + 1) / total) * 100));
+        if (onProgress) onProgress(Math.round(((i + BATCH_SIZE) / textValues.length) * 100));
     }
 
-    return { text: doc.body.innerHTML, detectedLang };
+    return { text: doc.body.innerHTML, detectedLang: 'auto' };
+};
+
+// --- HELPERS ---
+
+export const convertDocxToHtml = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.convertToHtml({ arrayBuffer });
+    return result.value;
+};
+
+export const extractTextFromPdf = async (file: File): Promise<string> => {
+    return "";
 };
 
 export const downloadTranslatedDocument = (content: string, fileName: string) => {
     let htmlContent = content;
-    
-    // Check if content is likely HTML (starts with tag) or Plain Text
     if (!content.trim().startsWith('<')) {
-         // Convert plain text to paragraphs
-         htmlContent = content
-            .split('\n\n')
-            .map(para => `<p style="margin-bottom: 12pt; line-height: 1.5; font-family: 'Times New Roman', serif; font-size: 12pt;">${para.replace(/\n/g, '<br>')}</p>`)
-            .join('');
-    } else {
-        // Wrap existing HTML in a styling div
-        htmlContent = `<div style="font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5;">${content}</div>`;
+         htmlContent = content.split('\n').map(p => `<p>${p}</p>`).join('');
     }
-
-    const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
-        "xmlns:w='urn:schemas-microsoft-com:office:word' " +
-        "xmlns='http://www.w3.org/TR/REC-html40'>" +
-        "<head><meta charset='utf-8'><title>Document</title></head><body>";
+    
+    const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'></head><body>";
     const footer = "</body></html>";
     const sourceHTML = header + htmlContent + footer;
 
