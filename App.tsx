@@ -14,7 +14,6 @@ import { UserMenu } from './components/UserMenu';
 import { useCurrencyConverter } from './hooks/useCurrencyConverter';
 import { useRevenueTracker } from './hooks/useRevenueTracker';
 import { RevenueStatsSection } from './components/RevenueStatsSection';
-import { ScanSection } from './components/ScanSection';
 import { LoadingState, ThemeColor, Currency, ConversionHistoryItem } from './types';
 import { THEME_COLORS, DEFAULT_SOURCE_CURRENCY } from './constants';
 import { generatePalette, extractDominantColor, compressImage } from './utils/themeUtils';
@@ -115,7 +114,7 @@ const AppContent: React.FC = () => {
   
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'revenue' | 'scan' | 'stats'>('convert');
+  const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'revenue'>('convert');
   const [salaryAmount, setSalaryAmount] = useState<string>('');
   const [calcType, setCalcType] = useState<'probation' | 'official'>('official');
   
@@ -136,13 +135,11 @@ const AppContent: React.FC = () => {
 
   const revenueOptions = [
     { value: 'all', label: 'Tất cả (100%)' },
-    { value: 'cv', label: 'Có hồ sơ (70%)' },
-    { value: 'job', label: 'Nhận việc (30%)' }
+    { value: 'job', label: 'Nắm job (70%)' },
+    { value: 'cv', label: 'Có CV (30%)' }
   ];
 
   const filteredHistory = useMemo(() => {
-    // Only filter for tabs that are NOT 'stats' or 'scan'
-    if (activeTab === 'stats' || activeTab === 'scan') return [];
     return history.filter(item => item.type === activeTab);
   }, [history, activeTab]);
 
@@ -330,8 +327,9 @@ const AppContent: React.FC = () => {
         const baseRevenue = Math.floor(salary * feeMultiplier);
 
         let shareMultiplier = 1;
-        if (revenueShare === 'cv') shareMultiplier = 0.7;
-        else if (revenueShare === 'job') shareMultiplier = 0.3;
+        // Adjusted logic: Job = 70%, CV = 30%
+        if (revenueShare === 'job') shareMultiplier = 0.7;
+        else if (revenueShare === 'cv') shareMultiplier = 0.3;
 
         const totalRevenue = Math.floor(baseRevenue * shareMultiplier);
 
@@ -505,8 +503,6 @@ const AppContent: React.FC = () => {
                     />
                 </div>
                 
-                {/* REMOVED STATS TAB BLOCK - NOW MERGED INTO REVENUE */}
-                
                 {activeTab === 'convert' && (
                     <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
                     <DenominationSelector 
@@ -621,8 +617,7 @@ const AppContent: React.FC = () => {
                     </div>
                 )}
 
-                {activeTab !== 'scan' && (
-                    <div className="flex flex-col md:flex-row items-center md:items-start relative gap-3 md:gap-4">
+                <div className="flex flex-col md:flex-row items-center md:items-start relative gap-3 md:gap-4">
                     <div className={`w-full md:flex-1 transition-all relative ${activeDropdown === 'FROM' || isRevenueDropdownOpen ? 'z-50' : 'z-20'}`}> 
 
                         <CurrencyRow
@@ -746,42 +741,35 @@ const AppContent: React.FC = () => {
                             />
                         </div>
                     )}
-                    </div>
-                )}
+                </div>
 
-                {activeTab !== 'scan' && (
-                    <button
-                        onClick={onCalculateAndConvert}
-                        disabled={loadingState === LoadingState.LOADING}
-                        className={`w-full py-3.5 sm:py-4 rounded-2xl text-white font-bold text-base sm:text-lg shadow-xl transition-all transform mt-4 relative z-20
-                        ${loadingState === LoadingState.LOADING 
-                            ? 'bg-slate-400 cursor-not-allowed opacity-80' 
-                            : `bg-gradient-to-r from-primary-600 to-primary-800 hover:-translate-y-1 active:scale-[0.98]`
-                        }`}
-                    >
-                        <span className="flex items-center justify-center gap-2">
-                            {loadingState === LoadingState.LOADING ? (
-                            <>
-                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Đang xử lý...
-                            </>
-                            ) : (
-                                <span>
-                                    {activeTab === 'convert' ? 'Chuyển đổi' : activeTab === 'calculate' ? 'Tính phí & Quy đổi' : 'Tính doanh thu'}
-                                </span>
-                            )}
-                        </span>
-                    </button>
-                )}
+                <button
+                    onClick={onCalculateAndConvert}
+                    disabled={loadingState === LoadingState.LOADING}
+                    className={`w-full py-3.5 sm:py-4 rounded-2xl text-white font-bold text-base sm:text-lg shadow-xl transition-all transform mt-4 relative z-20
+                    ${loadingState === LoadingState.LOADING 
+                        ? 'bg-slate-400 cursor-not-allowed opacity-80' 
+                        : `bg-gradient-to-r from-primary-600 to-primary-800 hover:-translate-y-1 active:scale-[0.98]`
+                    }`}
+                >
+                    <span className="flex items-center justify-center gap-2">
+                        {loadingState === LoadingState.LOADING ? (
+                        <>
+                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Đang xử lý...
+                        </>
+                        ) : (
+                            <span>
+                                {activeTab === 'convert' ? 'Chuyển đổi' : activeTab === 'calculate' ? 'Tính phí & Quy đổi' : 'Tính doanh thu'}
+                            </span>
+                        )}
+                    </span>
+                </button>
 
-                {activeTab === 'scan' && (
-                    <ScanSection theme={theme} />
-                )}
-
-                {(result && activeTab !== 'revenue' && activeTab !== 'scan') && (
+                {(result && activeTab !== 'revenue') && (
                     <ResultSection 
                         result={result} 
                         fromCurrency={fromCurrency} 
@@ -844,7 +832,6 @@ const AppContent: React.FC = () => {
 
                         {/* Merged Stats Section */}
                         <div className="mt-8 pt-6 border-t border-slate-200/50">
-                             <h3 className="text-sm font-extrabold text-slate-400 uppercase tracking-widest mb-4 px-1">Lịch sử thống kê</h3>
                              <RevenueStatsSection 
                                 records={records}
                                 onDeleteRecord={deleteRecord}

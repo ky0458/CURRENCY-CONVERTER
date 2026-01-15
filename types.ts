@@ -36,7 +36,8 @@ export interface RevenueRecord {
   shareType: 'all' | 'cv' | 'job';
   totalRevenue: number;
   netIncome: number;
-  tagId?: string | null; // Link to NoteTag
+  tagId?: string | null; // Deprecated but kept for backward compatibility
+  badgeColor?: string; // New field for custom badge color
   note?: string; // Short note text
 }
 
