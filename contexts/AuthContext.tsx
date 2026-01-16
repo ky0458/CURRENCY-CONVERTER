@@ -40,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  // --- PRESENCE SYSTEM (HEARTBEAT) ---
+  // --- OPTIMIZED PRESENCE SYSTEM ---
   useEffect(() => {
     let interval: any;
 
@@ -48,14 +48,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user) {
         try {
           const userRef = doc(db, 'users', user.uid);
-          // Update basic info and lastSeen timestamp
-          // Using merge: true to not overwrite other data like notes/history
           await setDoc(userRef, {
             uid: user.uid,
             displayName: user.displayName || 'Người dùng',
             photoURL: user.photoURL || '',
             email: user.email,
-            lastSeen: Date.now()
+            lastSeen: Date.now(),
+            status: document.visibilityState === 'visible' ? 'online' : 'away'
           }, { merge: true });
         } catch (error) {
           console.error("Presence update error:", error);
@@ -64,15 +63,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     if (user) {
-      // Initial update
+      // 1. Initial update on mount
       updatePresence();
-      // Heartbeat every 60 seconds
-      interval = setInterval(updatePresence, 60000);
-    }
 
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+      // 2. Heartbeat every 45 seconds (increased freq slightly for better accuracy)
+      interval = setInterval(updatePresence, 45000);
+
+      // 3. Update immediately when tab becomes visible
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          updatePresence();
+        }
+      };
+      
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+
+      return () => {
+        if (interval) clearInterval(interval);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      };
+    }
   }, [user]);
   // -----------------------------------
 

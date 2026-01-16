@@ -72,9 +72,15 @@ export interface Note {
 
 // --- CHAT SYSTEM TYPES ---
 
+export type MessageType = 'text' | 'image' | 'audio' | 'file';
+
 export interface ChatMessage {
   id: string;
-  text: string;
+  text: string; // For text messages, or description/filename for others
+  type: MessageType;
+  contentUrl?: string; // Base64 string for media
+  fileName?: string;
+  fileSize?: number; // In bytes
   senderId: string;
   senderName: string;
   photoURL?: string;
@@ -87,4 +93,5 @@ export interface ChatUser {
   photoURL?: string;
   lastSeen: number;
   isOnline?: boolean; // Computed on client side
+  status?: 'online' | 'away' | 'offline'; // More granular status
 }
