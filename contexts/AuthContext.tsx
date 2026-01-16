@@ -7,8 +7,7 @@ import {
   User,
   AuthError
 } from 'firebase/auth';
-import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, googleProvider, db } from '../firebase';
+import { auth, googleProvider } from '../firebase';
 
 interface NotificationState {
   message: string;
@@ -39,55 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     return () => unsubscribe();
   }, []);
-
-  // --- OPTIMIZED PRESENCE SYSTEM ---
-  useEffect(() => {
-    let interval: any;
-
-    const updatePresence = async () => {
-      if (user) {
-        try {
-          const userRef = doc(db, 'users', user.uid);
-          await setDoc(userRef, {
-            uid: user.uid,
-            displayName: user.displayName || 'Người dùng',
-            photoURL: user.photoURL || '',
-            email: user.email,
-            lastSeen: Date.now(),
-            status: document.visibilityState === 'visible' ? 'online' : 'away'
-          }, { merge: true });
-        } catch (error: any) {
-          // Suppress permission errors to avoid console noise if Firestore rules are strict
-          if (error.code !== 'permission-denied') {
-             console.error("Presence update error:", error);
-          }
-        }
-      }
-    };
-
-    if (user) {
-      // 1. Initial update on mount
-      updatePresence();
-
-      // 2. Heartbeat every 45 seconds
-      interval = setInterval(updatePresence, 45000);
-
-      // 3. Update immediately when tab becomes visible
-      const handleVisibilityChange = () => {
-        if (document.visibilityState === 'visible') {
-          updatePresence();
-        }
-      };
-      
-      document.addEventListener("visibilitychange", handleVisibilityChange);
-
-      return () => {
-        if (interval) clearInterval(interval);
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
-      };
-    }
-  }, [user]);
-  // -----------------------------------
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
     setNotification({ message, type });

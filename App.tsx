@@ -10,7 +10,6 @@ import { HistorySection } from './components/HistorySection';
 import { ThemeSelector } from './components/ThemeSelector';
 import { TabSelector } from './components/TabSelector';
 import { NotesManager } from './components/NotesManager';
-import { ChatWidget } from './components/ChatWidget'; // Import ChatWidget
 import { UserMenu } from './components/UserMenu';
 import { useCurrencyConverter } from './hooks/useCurrencyConverter';
 import { useRevenueTracker } from './hooks/useRevenueTracker';
@@ -885,8 +884,6 @@ const AppContent: React.FC = () => {
 
       {/* Notes Manager Button/UI */}
       <NotesManager />
-      {/* Chat Widget */}
-      <ChatWidget />
     </div>
   );
 };
