@@ -68,8 +68,10 @@ export const ChatWidget: React.FC = () => {
         setTimeout(scrollToBottom, 100);
       }
     }, (error) => {
-        // Gracefully handle permission errors (e.g. if user is not logged in and rules require auth)
-        console.log("Chat listener info:", error.code); 
+        // Silent catch for permission denied
+        if (error.code !== 'permission-denied') {
+             console.error("Chat listener error:", error);
+        }
     });
 
     return () => unsubscribe();
@@ -119,8 +121,10 @@ export const ChatWidget: React.FC = () => {
       
       setOnlineUsers(users);
     }, (error) => {
-        // Gracefully handle permission errors
-        console.log("User list listener info:", error.code);
+        // Silent catch for permission denied
+        if (error.code !== 'permission-denied') {
+             console.error("User list listener error:", error);
+        }
     });
 
     return () => unsubscribe();

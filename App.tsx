@@ -134,6 +134,14 @@ const AppContent: React.FC = () => {
       netIncome: number;
   } | null>(null);
 
+  // Footer Clock State
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentDate(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const revenueOptions = [
     { value: 'all', label: 'Tất cả (100%)' },
     { value: 'job', label: 'Nắm job (70%)' },
@@ -867,6 +875,14 @@ const AppContent: React.FC = () => {
         </div>
       </div>
       
+      {/* Footer */}
+      <div className="relative z-20 pb-4 text-center">
+          <p className={`text-xs font-bold uppercase tracking-widest ${hasBackground ? 'text-white/80 text-shadow-sm' : 'text-slate-400'}`}>Powered By ZiQi</p>
+          <p className={`text-[10px] font-medium mt-0.5 ${hasBackground ? 'text-white/60 text-shadow-sm' : 'text-slate-300'}`}>
+              Last update: {currentDate.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
+          </p>
+      </div>
+
       {/* Notes Manager Button/UI */}
       <NotesManager />
       {/* Chat Widget */}

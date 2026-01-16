@@ -56,8 +56,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             lastSeen: Date.now(),
             status: document.visibilityState === 'visible' ? 'online' : 'away'
           }, { merge: true });
-        } catch (error) {
-          console.error("Presence update error:", error);
+        } catch (error: any) {
+          // Suppress permission errors to avoid console noise if Firestore rules are strict
+          if (error.code !== 'permission-denied') {
+             console.error("Presence update error:", error);
+          }
         }
       }
     };
@@ -66,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 1. Initial update on mount
       updatePresence();
 
-      // 2. Heartbeat every 45 seconds (increased freq slightly for better accuracy)
+      // 2. Heartbeat every 45 seconds
       interval = setInterval(updatePresence, 45000);
 
       // 3. Update immediately when tab becomes visible
