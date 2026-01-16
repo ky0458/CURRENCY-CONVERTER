@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useNotes } from '../hooks/useNotes';
-import { NoteStatus } from '../types';
+import { NoteStatus, NoteTag } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { messaging, db } from '../firebase';
 import { getToken } from 'firebase/messaging';
@@ -31,7 +31,7 @@ const LoadingSpinner = () => (
 );
 
 export const NotesManager: React.FC = () => {
-  const { notes, tags, isLoading, addNote, updateNoteStatus, deleteNote, deleteNotes, addTag, deleteTag, toggleTagPin, setNoteReminder } = useNotes();
+  const { notes, tags, isLoading, addNote, updateNoteStatus, deleteNote, deleteNotes, addTag, updateTag, deleteTag, deleteTags, toggleTagPin, setNoteReminder } = useNotes();
   const { user, showNotification } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false); // Modal closing state
@@ -47,11 +47,19 @@ export const NotesManager: React.FC = () => {
   
   // Selection & Delete State (Notes)
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set<string>());
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean, ids: string[] }>({ isOpen: false, ids: [] });
 
-  // Delete State (Tags)
+  // Selection & Delete State (Tags)
+  const [isTagSelectionMode, setIsTagSelectionMode] = useState(false);
+  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set<string>());
+  const [confirmTagBatchDelete, setConfirmTagBatchDelete] = useState(false);
+
+  // Delete State (Single Tag)
   const [tagToDelete, setTagToDelete] = useState<string | null>(null);
+
+  // Edit State (Tags)
+  const [editingTagId, setEditingTagId] = useState<string | null>(null);
 
   // Reminder State
   const [reminderModal, setReminderModal] = useState<{ isOpen: boolean, noteId: string | null, content: string }>({ 
@@ -65,20 +73,28 @@ export const NotesManager: React.FC = () => {
   const isDragSelectingRef = useRef(false);
   const startPosRef = useRef<{ x: number, y: number } | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const selectionSetRef = useRef<Set<string>>(new Set()); // Mirror state for ref access in event handlers
   
+  // Mirror state for ref access in event handlers
+  const selectionSetRef = useRef<Set<string>>(new Set()); 
+  const tagSelectionSetRef = useRef<Set<string>>(new Set());
+
   // Add Note State
   const [newNoteContent, setNewNoteContent] = useState('');
   const [selectedTagForNewNote, setSelectedTagForNewNote] = useState<string>('');
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
   
-  // Create Tag State
+  // Create/Edit Tag State
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState('#3b82f6');
+  const tagInputRef = useRef<HTMLInputElement>(null); // Ref for tag input to auto-focus
 
   // --- DRAGGABLE BUTTON STATE ---
-  const [btnPos, setBtnPos] = useState({ x: 20, y: typeof window !== 'undefined' ? window.innerHeight - 150 : 500 });
+  // Default position changed to Bottom-Right
+  const [btnPos, setBtnPos] = useState({ 
+      x: typeof window !== 'undefined' ? window.innerWidth - 80 : 300, 
+      y: typeof window !== 'undefined' ? window.innerHeight - 150 : 500 
+  });
   const isDraggingBtn = useRef(false);
   const btnDragOffset = useRef({ x: 0, y: 0 });
   const btnDragStartPos = useRef({ x: 0, y: 0 });
@@ -97,7 +113,8 @@ export const NotesManager: React.FC = () => {
 
   useEffect(() => {
       // Initial position adjustment to avoid server/client mismatch
-      setBtnPos({ x: 30, y: window.innerHeight - 120 });
+      // Set to Right side (Window width - button width - margin)
+      setBtnPos({ x: window.innerWidth - 80, y: window.innerHeight - 120 });
   }, []);
 
   // Button Drag Handlers
@@ -168,6 +185,10 @@ export const NotesManager: React.FC = () => {
       selectionSetRef.current = selectedIds;
   }, [selectedIds]);
 
+  useEffect(() => {
+      tagSelectionSetRef.current = selectedTagIds;
+  }, [selectedTagIds]);
+
   const filteredNotes = notes.filter(n => {
       const matchesTag = activeTab === 'all' || n.tagId === activeTab;
       const matchesStatus = activeStatusFilter === 'all' || n.status === activeStatusFilter;
@@ -182,7 +203,10 @@ export const NotesManager: React.FC = () => {
         setIsOpen(false);
         setIsClosing(false);
         setIsSelectionMode(false);
+        setIsTagSelectionMode(false);
         setViewMode('list'); 
+        setEditingTagId(null);
+        setNewTagName('');
     }, 300);
   };
 
@@ -191,6 +215,10 @@ export const NotesManager: React.FC = () => {
     setTimeout(() => {
         setViewMode('list');
         setIsSubViewClosing(false);
+        setEditingTagId(null);
+        setNewTagName('');
+        setIsTagSelectionMode(false);
+        setSelectedTagIds(new Set());
     }, 300);
   };
 
@@ -202,11 +230,41 @@ export const NotesManager: React.FC = () => {
     handleBackToMain();
   };
 
-  const handleCreateTag = () => {
+  const handleSaveTag = () => {
     if (!newTagName.trim()) return;
-    addTag(newTagName, newTagColor);
+    
+    if (editingTagId) {
+        updateTag(editingTagId, newTagName, newTagColor);
+        setEditingTagId(null);
+        showNotification("Cập nhật thẻ thành công", "success");
+    } else {
+        addTag(newTagName, newTagColor);
+        showNotification("Đã tạo thẻ mới", "success");
+    }
+    
     setNewTagName('');
     setNewTagColor('#3b82f6');
+  };
+
+  const handleEditTag = (tag: NoteTag) => {
+      setEditingTagId(tag.id);
+      setNewTagName(tag.name);
+      setNewTagColor(tag.color);
+      // Auto scroll to top to show edit form
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      // Auto focus input AND Select All Text
+      setTimeout(() => {
+          if (tagInputRef.current) {
+              tagInputRef.current.focus();
+              tagInputRef.current.select(); // Added select() here
+          }
+      }, 100);
+  };
+
+  const cancelEditTag = () => {
+      setEditingTagId(null);
+      setNewTagName('');
+      setNewTagColor('#3b82f6');
   };
 
   const handleRequestDeleteTag = (id: string) => {
@@ -218,6 +276,23 @@ export const NotesManager: React.FC = () => {
           deleteTag(tagToDelete);
           if (activeTab === tagToDelete) setActiveTab('all');
           setTagToDelete(null);
+          if (editingTagId === tagToDelete) cancelEditTag();
+      }
+  };
+
+  const confirmBatchTagDeletion = () => {
+      const ids = Array.from(selectedTagIds) as string[];
+      if (ids.length > 0) {
+          deleteTags(ids);
+          // If current active tab is among deleted, reset to all
+          if (ids.includes(activeTab)) setActiveTab('all');
+          // If editing tag is among deleted, cancel edit
+          if (editingTagId && ids.includes(editingTagId)) cancelEditTag();
+          
+          setSelectedTagIds(new Set());
+          setIsTagSelectionMode(false);
+          setConfirmTagBatchDelete(false);
+          showNotification(`Đã xóa ${ids.length} thẻ`, "success");
       }
   };
 
@@ -359,7 +434,25 @@ export const NotesManager: React.FC = () => {
     setSelectedIds(newSelected);
   };
 
+  // Tag Selection Logic
+  const toggleTagSelectionMode = () => {
+      setIsTagSelectionMode(!isTagSelectionMode);
+      setSelectedTagIds(new Set());
+  };
+
+  const handleTagCheckboxChange = (id: string) => {
+      const newSelected = new Set(selectedTagIds);
+      if (newSelected.has(id)) {
+          newSelected.delete(id);
+      } else {
+          newSelected.add(id);
+      }
+      setSelectedTagIds(newSelected);
+  };
+
   // --- GESTURE LOGIC: Long Press & Drag ---
+  
+  // NOTE Handler
   const handlePointerDown = (e: React.PointerEvent, id: string) => {
       if (viewMode !== 'list' || confirmDelete.isOpen) return;
       if (isSelectionMode) return;
@@ -371,6 +464,19 @@ export const NotesManager: React.FC = () => {
           isDragSelectingRef.current = true;
           if (navigator.vibrate) navigator.vibrate(50);
       }, 500); 
+  };
+
+  // TAG Handler
+  const handleTagPointerDown = (e: React.PointerEvent, id: string) => {
+      if (viewMode !== 'add-tag' || isTagSelectionMode) return;
+
+      startPosRef.current = { x: e.clientX, y: e.clientY };
+      longPressTimerRef.current = window.setTimeout(() => {
+          setIsTagSelectionMode(true);
+          setSelectedTagIds(new Set([id]));
+          isDragSelectingRef.current = true;
+          if (navigator.vibrate) navigator.vibrate(50);
+      }, 500);
   };
 
   useEffect(() => {
@@ -387,12 +493,27 @@ export const NotesManager: React.FC = () => {
         if (isDragSelectingRef.current) {
             e.preventDefault();
             const element = document.elementFromPoint(e.clientX, e.clientY);
-            const noteItem = element?.closest('[data-note-id]');
-            if (noteItem) {
-                const noteId = noteItem.getAttribute('data-note-id');
-                if (noteId && !selectionSetRef.current.has(noteId)) {
-                    setSelectedIds(prev => new Set(prev).add(noteId));
-                    if (navigator.vibrate) navigator.vibrate(10);
+            
+            // Logic for Notes
+            if (viewMode === 'list') {
+                const noteItem = element?.closest('[data-note-id]');
+                if (noteItem) {
+                    const noteId = noteItem.getAttribute('data-note-id');
+                    if (noteId && !selectionSetRef.current.has(noteId)) {
+                        setSelectedIds(prev => new Set(prev).add(noteId));
+                        if (navigator.vibrate) navigator.vibrate(10);
+                    }
+                }
+            } 
+            // Logic for Tags
+            else if (viewMode === 'add-tag') {
+                const tagItem = element?.closest('[data-tag-id]');
+                if (tagItem) {
+                    const tagId = tagItem.getAttribute('data-tag-id');
+                    if (tagId && !tagSelectionSetRef.current.has(tagId)) {
+                        setSelectedTagIds(prev => new Set(prev).add(tagId));
+                        if (navigator.vibrate) navigator.vibrate(10);
+                    }
                 }
             }
         }
@@ -416,7 +537,7 @@ export const NotesManager: React.FC = () => {
         window.removeEventListener('pointerup', handleGlobalPointerUp);
         window.removeEventListener('pointercancel', handleGlobalPointerUp);
     };
-  }, []);
+  }, [viewMode]); // Re-bind if viewMode changes to ensure correct logic path
 
   const handleDeleteClick = (ids: string[]) => {
       setConfirmDelete({ isOpen: true, ids });
@@ -513,6 +634,16 @@ export const NotesManager: React.FC = () => {
                 </button>
             )}
             
+            {/* Tag Selection Mode Toggle Button */}
+            {viewMode === 'add-tag' && isTagSelectionMode && (
+                <button 
+                    onClick={toggleTagSelectionMode}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold transition-colors"
+                >
+                    Hủy chọn
+                </button>
+            )}
+
             <div className="w-px h-6 bg-slate-200 mx-1"></div>
 
             <button 
@@ -595,11 +726,21 @@ export const NotesManager: React.FC = () => {
                     {viewMode === 'add-tag' && (
                         <div className={`p-5 flex flex-col gap-6 overflow-y-auto custom-scrollbar ${isSubViewClosing ? 'animate-fade-out-down' : 'animate-fade-in-up'}`}>
                             <div className="max-w-3xl mx-auto w-full">
-                                <h4 className="text-sm font-extrabold text-slate-800 uppercase tracking-wide mb-4">Tạo thẻ mới</h4>
-                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                <h4 className="text-sm font-extrabold text-slate-800 uppercase tracking-wide mb-4">
+                                    {editingTagId ? 'Cập nhật thẻ' : 'Tạo thẻ mới'}
+                                </h4>
+                                <div className={`bg-slate-50 p-4 rounded-2xl border ${editingTagId ? 'border-indigo-200 ring-2 ring-indigo-50' : 'border-slate-100'} ${isTagSelectionMode ? 'opacity-50 pointer-events-none' : ''}`}>
                                     <div className="mb-4">
                                         <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tên thẻ</label>
-                                        <input type="text" className="w-full text-sm px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-white transition-all" value={newTagName} onChange={(e) => setNewTagName(e.target.value)} autoFocus />
+                                        <input 
+                                            ref={tagInputRef}
+                                            type="text" 
+                                            className="w-full text-sm px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-white transition-all text-slate-800" 
+                                            value={newTagName} 
+                                            onChange={(e) => setNewTagName(e.target.value)} 
+                                            autoFocus 
+                                            placeholder="Nhập tên thẻ..." 
+                                        />
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase mb-3">Màu nhận diện</label>
@@ -616,7 +757,14 @@ export const NotesManager: React.FC = () => {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-3 mt-1 pt-3 border-t border-slate-200/50">
-                                                <button onClick={handleCreateTag} className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-indigo-200">Tạo ngay</button>
+                                                {editingTagId && (
+                                                    <button onClick={cancelEditTag} className="py-3 px-6 bg-slate-200 hover:bg-slate-300 text-slate-600 text-sm font-bold rounded-xl transition-colors">
+                                                        Hủy
+                                                    </button>
+                                                )}
+                                                <button onClick={handleSaveTag} className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors shadow-lg shadow-indigo-200">
+                                                    {editingTagId ? 'Lưu thay đổi' : 'Tạo ngay'}
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -624,32 +772,81 @@ export const NotesManager: React.FC = () => {
                             </div>
                             <div className="w-full h-px bg-slate-100"></div>
                              <div className="max-w-3xl mx-auto w-full pb-6">
-                                <h4 className="text-sm font-extrabold text-slate-800 uppercase tracking-wide mb-4">Danh sách thẻ ({tags.length})</h4>
-                                <div className="flex flex-col gap-2">
-                                    {tags.map(tag => (
-                                        <div key={tag.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-white hover:shadow-sm transition-all">
-                                             <div className="flex items-center gap-3">
-                                                    <div className="w-6 h-6 rounded-full border border-slate-100 shadow-sm" style={{ backgroundColor: tag.color }}></div>
-                                                    <span className="font-bold text-slate-700">{tag.name}</span>
-                                                    {tag.isPinned && <span className="bg-slate-100 text-slate-500 text-[10px] uppercase font-bold px-2 py-0.5 rounded">Đã ghim</span>}
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <button onClick={() => toggleTagPin(tag.id)} className={`p-2 rounded-lg transition-colors ${tag.isPinned ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-slate-100'}`} title={tag.isPinned ? "Bỏ ghim" : "Ghim"}>
-                                                    {tag.isPinned ? (
-                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                                            <path fillRule="evenodd" d="M6.32 2.577a49.255 49.255 0 0 1 11.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 0 1-1.085.67L12 18.089l-7.165 3.583A.75.75 0 0 1 3.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93Z" clipRule="evenodd" />
-                                                        </svg>
-                                                    ) : (
-                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 11.186 0Z" />
-                                                        </svg>
-                                                    )}
-                                                </button>
-                                                <button onClick={() => handleRequestDeleteTag(tag.id)} className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 0 0 1.5.06l.3-7.5Z" clipRule="evenodd" /></svg></button>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="text-sm font-extrabold text-slate-800 uppercase tracking-wide">Danh sách thẻ ({tags.length})</h4>
+                                    {isTagSelectionMode && (
+                                        <button onClick={() => setSelectedTagIds(new Set(tags.map(t => t.id)))} className="text-xs font-bold text-indigo-600 hover:underline">Chọn tất cả</button>
+                                    )}
                                 </div>
+                                <div className="flex flex-col gap-2">
+                                    {tags.map((tag, index) => {
+                                        const isSelected = selectedTagIds.has(tag.id);
+                                        return (
+                                            <div 
+                                                key={tag.id} 
+                                                data-tag-id={tag.id}
+                                                onPointerDown={(e) => handleTagPointerDown(e, tag.id)}
+                                                onClick={() => {
+                                                    if (isTagSelectionMode) {
+                                                        handleTagCheckboxChange(tag.id);
+                                                    }
+                                                }}
+                                                className={`
+                                                    flex items-center justify-between p-3 rounded-xl border transition-all touch-manipulation select-none
+                                                    ${isTagSelectionMode && isSelected ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-500 shadow-md' : 'bg-white hover:shadow-sm'}
+                                                    ${!isTagSelectionMode && editingTagId === tag.id ? 'bg-indigo-50 border-indigo-200 shadow-sm' : 'border-slate-100'}
+                                                `}
+                                            >
+                                                 <div className="flex items-center gap-3">
+                                                        {isTagSelectionMode && (
+                                                            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300'}`}>
+                                                                {isSelected && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-white"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" /></svg>}
+                                                            </div>
+                                                        )}
+                                                        <div className="w-6 h-6 rounded-full border border-slate-100 shadow-sm" style={{ backgroundColor: tag.color }}></div>
+                                                        <span className="font-bold text-slate-700">{tag.name}</span>
+                                                        {tag.isPinned && <span className="bg-slate-100 text-slate-500 text-[10px] uppercase font-bold px-2 py-0.5 rounded">Đã ghim</span>}
+                                                </div>
+                                                
+                                                {!isTagSelectionMode && (
+                                                    <div className="flex items-center gap-1">
+                                                        <button onClick={() => toggleTagPin(tag.id)} className={`p-2 rounded-lg transition-colors ${tag.isPinned ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-slate-100'}`} title={tag.isPinned ? "Bỏ ghim" : "Ghim"}>
+                                                            {tag.isPinned ? (
+                                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                                                    <path fillRule="evenodd" d="M17.5 5.75l-3.25-3.25a.75.75 0 00-1.06 0L8.8 6.89a3.73 3.73 0 00-1.05 2.06H4.25a.75.75 0 000 1.5h1.55l-2.05 3.07a.75.75 0 00.1 1.02l2.56 1.92a.75.75 0 001.02-.1l3.07-2.05v1.55a.75.75 0 001.5 0v-3.5c.35 0 .69-.11.97-.3l4.39-4.39a.75.75 0 000-1.06l.12-.12z" clipRule="evenodd" />
+                                                                </svg>
+                                                            ) : (
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.5 5.75l-3.25-3.25a.75.75 0 00-1.06 0L8.8 6.89a3.73 3.73 0 00-1.05 2.06H4.25a.75.75 0 000 1.5h1.55l-2.05 3.07a.75.75 0 00.1 1.02l2.56 1.92a.75.75 0 001.02-.1l3.07-2.05v1.55a.75.75 0 001.5 0v-3.5c.35 0 .69-.11.97-.3l4.39-4.39a.75.75 0 000-1.06l.12-.12z" />
+                                                                </svg>
+                                                            )}
+                                                        </button>
+                                                        <button onClick={() => handleEditTag(tag)} className={`p-2 rounded-lg transition-colors ${editingTagId === tag.id ? 'text-indigo-600 bg-indigo-100' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`} title="Sửa thẻ">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                                                <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                                                                <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
+                                                            </svg>
+                                                        </button>
+                                                        <button onClick={() => handleRequestDeleteTag(tag.id)} className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Xóa thẻ">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                                                <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 0 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                                
+                                {isTagSelectionMode && (
+                                    <div className="absolute bottom-4 left-4 right-4 bg-white border-t border-slate-200 shadow-lg z-30 animate-fade-in-up rounded-2xl overflow-hidden p-2">
+                                        <button onClick={() => setConfirmTagBatchDelete(true)} disabled={selectedTagIds.size === 0} className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${selectedTagIds.size > 0 ? 'bg-red-500 hover:bg-red-600 active:scale-[0.98]' : 'bg-slate-300 cursor-not-allowed'}`}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                                            Xóa {selectedTagIds.size} thẻ
+                                        </button>
+                                    </div>
+                                )}
                              </div>
                         </div>
                     )}
@@ -659,7 +856,13 @@ export const NotesManager: React.FC = () => {
                            <div className="max-w-3xl mx-auto w-full h-full flex flex-col">
                                 <div className="flex-1 flex flex-col gap-2 min-h-[200px]">
                                     <label className="block text-xs font-bold text-slate-500 uppercase">Nội dung ghi chú</label>
-                                    <textarea className="w-full flex-1 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-all resize-none shadow-inner" placeholder="Nhập nội dung ghi chú của bạn..." value={newNoteContent} onChange={(e) => setNewNoteContent(e.target.value)} autoFocus />
+                                    <textarea 
+                                        className="w-full flex-1 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium text-slate-800 caret-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all resize-none shadow-inner" 
+                                        placeholder="Nhập nội dung ghi chú của bạn..." 
+                                        value={newNoteContent} 
+                                        onChange={(e) => setNewNoteContent(e.target.value)} 
+                                        autoFocus 
+                                    />
                                 </div>
                                 <div className="relative shrink-0 mt-4" ref={tagDropdownRef}>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Phân loại thẻ</label>
@@ -704,9 +907,9 @@ export const NotesManager: React.FC = () => {
                                             <div key={tag.id} className={`snap-start shrink-0 h-9 flex items-center rounded-full transition-all duration-300 group overflow-hidden ${isActive ? 'bg-white shadow-md ring-2 ring-offset-2 ring-white scale-100' : 'bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`} style={isActive ? { borderColor: tag.color, '--tw-ring-color': tag.color } as React.CSSProperties : {}}>
                                                 <button onClick={() => setActiveTab(tag.id)} className={`px-4 h-full flex items-center gap-2 text-xs font-bold transition-colors ${isActive ? 'text-white' : 'text-slate-600'}`} style={{ backgroundColor: isActive ? tag.color : 'transparent' }}>
                                                     {!isActive && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }}></span>}{tag.name}
-                                                    {tag.isPinned && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-3 h-3 ${isActive ? 'text-white/80' : 'text-slate-400'}`}><path fillRule="evenodd" d="M6.32 2.577a49.255 49.255 0 0 1 11.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 0 1-1.085.67L12 18.089l-7.165 3.583A.75.75 0 0 1 3.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93Z" clipRule="evenodd" /></svg>}
+                                                    {tag.isPinned && <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-3 h-3 ${isActive ? 'text-white/80' : 'text-slate-400'}`}><path fillRule="evenodd" d="M17.5 5.75l-3.25-3.25a.75.75 0 00-1.06 0L8.8 6.89a3.73 3.73 0 00-1.05 2.06H4.25a.75.75 0 000 1.5h1.55l-2.05 3.07a.75.75 0 00.1 1.02l2.56 1.92a.75.75 0 001.02-.1l3.07-2.05v1.55a.75.75 0 001.5 0v-3.5c.35 0 .69-.11.97-.3l4.39-4.39a.75.75 0 000-1.06l.12-.12z" clipRule="evenodd" /></svg>}
                                                 </button>
-                                                {isActive && <div className="flex items-center h-full" style={{ backgroundColor: tag.color }}><div className="h-4 w-px bg-white/30"></div><button onClick={(e) => { e.stopPropagation(); toggleTagPin(tag.id); }} className="h-full px-2.5 flex items-center justify-center hover:bg-black/10 transition-colors text-white" title={tag.isPinned ? "Bỏ ghim" : "Ghim"}>{tag.isPinned ? <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path fillRule="evenodd" d="M6.32 2.577a49.255 49.255 0 0 1 11.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 0 1-1.085.67L12 18.089l-7.165 3.583A.75.75 0 0 1 3.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93Z" clipRule="evenodd" /></svg> : <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 opacity-80"><path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 11.186 0Z" /></svg>}</button></div>}
+                                                {isActive && <div className="flex items-center h-full" style={{ backgroundColor: tag.color }}><div className="h-4 w-px bg-white/30"></div><button onClick={(e) => { e.stopPropagation(); toggleTagPin(tag.id); }} className="h-full px-2.5 flex items-center justify-center hover:bg-black/10 transition-colors text-white" title={tag.isPinned ? "Bỏ ghim" : "Ghim"}>{tag.isPinned ? <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5"><path fillRule="evenodd" d="M17.5 5.75l-3.25-3.25a.75.75 0 00-1.06 0L8.8 6.89a3.73 3.73 0 00-1.05 2.06H4.25a.75.75 0 000 1.5h1.55l-2.05 3.07a.75.75 0 00.1 1.02l2.56 1.92a.75.75 0 001.02-.1l3.07-2.05v1.55a.75.75 0 001.5 0v-3.5c.35 0 .69-.11.97-.3l4.39-4.39a.75.75 0 000-1.06l.12-.12z" clipRule="evenodd" /></svg> : <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5 opacity-80"><path strokeLinecap="round" strokeLinejoin="round" d="M17.5 5.75l-3.25-3.25a.75.75 0 00-1.06 0L8.8 6.89a3.73 3.73 0 00-1.05 2.06H4.25a.75.75 0 000 1.5h1.55l-2.05 3.07a.75.75 0 00.1 1.02l2.56 1.92a.75.75 0 001.02-.1l3.07-2.05v1.55a.75.75 0 001.5 0v-3.5c.35 0 .69-.11.97-.3l4.39-4.39a.75.75 0 000-1.06l.12-.12z" /></svg>}</button></div>}
                                             </div>
                                         )
                                     })}
@@ -821,7 +1024,7 @@ export const NotesManager: React.FC = () => {
                             </div>
                             {isSelectionMode && (
                                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200 shadow-lg z-30 animate-fade-in-up">
-                                    <button onClick={() => handleDeleteClick(Array.from(selectedIds))} disabled={selectedIds.size === 0} className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${selectedIds.size > 0 ? 'bg-red-500 hover:bg-red-600 active:scale-[0.98]' : 'bg-slate-300 cursor-not-allowed'}`}>
+                                    <button onClick={() => handleDeleteClick(Array.from(selectedIds) as string[])} disabled={selectedIds.size === 0} className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${selectedIds.size > 0 ? 'bg-red-500 hover:bg-red-600 active:scale-[0.98]' : 'bg-slate-300 cursor-not-allowed'}`}>
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
                                         Xóa {selectedIds.size} ghi chú
                                     </button>
@@ -865,6 +1068,24 @@ export const NotesManager: React.FC = () => {
                   <div className="flex gap-3">
                       <button onClick={() => setTagToDelete(null)} className="flex-1 py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">Hủy bỏ</button>
                       <button onClick={confirmTagDeletion} className="flex-1 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-200">Xóa thẻ</button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* Batch Delete Confirmation Modal (TAGS) */}
+      {confirmTagBatchDelete && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" onClick={() => setConfirmTagBatchDelete(false)}></div>
+              <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm relative z-10 animate-pulse-soft">
+                  <div className="text-center mb-6">
+                      <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500 ring-4 ring-red-50"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg></div>
+                      <h4 className="text-xl font-bold text-slate-800 mb-2">Xác nhận xóa</h4>
+                      <p className="text-slate-500">Bạn có chắc chắn muốn xóa {selectedTagIds.size} thẻ đã chọn không? Ghi chú thuộc các thẻ này sẽ bị mất phân loại.</p>
+                  </div>
+                  <div className="flex gap-3">
+                      <button onClick={() => setConfirmTagBatchDelete(false)} className="flex-1 py-3 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">Hủy bỏ</button>
+                      <button onClick={confirmBatchTagDeletion} className="flex-1 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-200">Xóa ngay</button>
                   </div>
               </div>
           </div>

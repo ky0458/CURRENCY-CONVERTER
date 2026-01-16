@@ -69,3 +69,22 @@ export interface Note {
   tagId: string | null; // One tag per note for simplicity in filtering
   reminderTime?: number;
 }
+
+// --- CHAT SYSTEM TYPES ---
+
+export interface ChatMessage {
+  id: string;
+  text: string;
+  senderId: string;
+  senderName: string;
+  photoURL?: string;
+  timestamp: number;
+}
+
+export interface ChatUser {
+  uid: string;
+  displayName: string;
+  photoURL?: string;
+  lastSeen: number;
+  isOnline?: boolean; // Computed on client side
+}

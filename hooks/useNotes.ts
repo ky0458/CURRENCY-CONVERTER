@@ -125,8 +125,19 @@ export const useNotes = () => {
     saveTags([...tags, newTag]);
   };
 
+  const updateTag = (id: string, name: string, color: string) => {
+    const updatedTags = tags.map(t => 
+        t.id === id ? { ...t, name, color } : t
+    );
+    saveTags(updatedTags);
+  };
+
   const deleteTag = (id: string) => {
     saveTags(tags.filter(t => t.id !== id));
+  };
+
+  const deleteTags = (ids: string[]) => {
+    saveTags(tags.filter(t => !ids.includes(t.id)));
   };
 
   const toggleTagPin = (id: string) => {
@@ -151,7 +162,9 @@ export const useNotes = () => {
     deleteNote,
     deleteNotes,
     addTag,
+    updateTag,
     deleteTag,
+    deleteTags,
     toggleTagPin,
     setNoteReminder
   };

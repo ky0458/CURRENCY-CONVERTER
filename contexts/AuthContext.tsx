@@ -7,7 +7,8 @@ import {
   User,
   AuthError
 } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase';
+import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, googleProvider, db } from '../firebase';
 
 interface NotificationState {
   message: string;
@@ -38,6 +39,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
     return () => unsubscribe();
   }, []);
+
+  // --- PRESENCE SYSTEM (HEARTBEAT) ---
+  useEffect(() => {
+    let interval: any;
+
+    const updatePresence = async () => {
+      if (user) {
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          // Update basic info and lastSeen timestamp
+          // Using merge: true to not overwrite other data like notes/history
+          await setDoc(userRef, {
+            uid: user.uid,
+            displayName: user.displayName || 'Người dùng',
+            photoURL: user.photoURL || '',
+            email: user.email,
+            lastSeen: Date.now()
+          }, { merge: true });
+        } catch (error) {
+          console.error("Presence update error:", error);
+        }
+      }
+    };
+
+    if (user) {
+      // Initial update
+      updatePresence();
+      // Heartbeat every 60 seconds
+      interval = setInterval(updatePresence, 60000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [user]);
+  // -----------------------------------
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
     setNotification({ message, type });
