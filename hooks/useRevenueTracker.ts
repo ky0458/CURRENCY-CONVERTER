@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { RevenueRecord } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export const useRevenueTracker = () => {
   const [records, setRecords] = useState<RevenueRecord[]>([]);
@@ -11,55 +10,51 @@ export const useRevenueTracker = () => {
 
   // Load Data & Sync Logic
   useEffect(() => {
-    let unsubscribe = () => {};
-
-    if (user) {
-        // LOGGED IN USER: Sync with Firestore Real-time
-        const docRef = doc(db, "users", user.uid);
-        
-        unsubscribe = onSnapshot(docRef, async (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (data.revenueRecords) {
-                    setRecords(data.revenueRecords);
-                }
-            } else {
-                // If user document doesn't exist, we might want to migrate local data once
-                try {
-                    const localData = localStorage.getItem('app_revenue_records');
-                    if (localData) {
-                        const parsedRecords = JSON.parse(localData);
-                        if (Array.isArray(parsedRecords) && parsedRecords.length > 0) {
-                            // Initial Migration: Create doc with local data
-                            await setDoc(docRef, { revenueRecords: parsedRecords }, { merge: true });
-                            // The snapshot will fire again after this write, updating state
-                        }
+    const loadData = async () => {
+      if (user) {
+        // LOGGED IN USER: Sync with Firestore
+        try {
+          const docRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists() && docSnap.data().revenueRecords) {
+             // Case 1: Cloud data exists -> Load it
+             setRecords(docSnap.data().revenueRecords);
+          } else {
+             // Case 2: Cloud data empty (New user or first sync) -> Check LocalStorage to migrate
+             try {
+                const localData = localStorage.getItem('app_revenue_records');
+                if (localData) {
+                    const parsedRecords = JSON.parse(localData);
+                    if (Array.isArray(parsedRecords) && parsedRecords.length > 0) {
+                        // Migrate local records to cloud
+                        setRecords(parsedRecords);
+                        await setDoc(docRef, { revenueRecords: parsedRecords }, { merge: true });
                     }
-                } catch (err) {
-                    console.error("Error migrating local revenue data to cloud", err);
                 }
-            }
-        }, (error) => {
-            console.error("Firestore revenue sync error:", error);
-        });
-
-    } else {
+             } catch (err) {
+                 console.error("Error migrating local revenue data to cloud", err);
+             }
+          }
+        } catch (e) {
+          console.error("Failed to load revenue records from Firestore", e);
+        }
+      } else {
         // GUEST USER: Load from LocalStorage
         try {
           const savedRecords = localStorage.getItem('app_revenue_records');
           if (savedRecords) setRecords(JSON.parse(savedRecords));
-          else setRecords([]);
         } catch (e) {
           console.error("Failed to load revenue records from LocalStorage", e);
         }
-    }
-
-    return () => unsubscribe();
+      }
+    };
+    loadData();
   }, [user]);
 
   // Unified Persist Function
   const persistData = async (newRecords: RevenueRecord[]) => {
-    // 1. Update State (Optimistic)
+    // 1. Update State
     setRecords(newRecords);
 
     // 2. Always save to LocalStorage (as cache/backup)

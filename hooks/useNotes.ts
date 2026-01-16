@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Note, NoteTag, NoteStatus } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const DEFAULT_TAGS: NoteTag[] = [
   { id: 'personal', name: 'Cá nhân', color: '#3b82f6', isPinned: false },
@@ -18,38 +18,35 @@ export const useNotes = () => {
   
   const { user } = useAuth();
 
-  // Load Data & Sync Real-time
+  // Load Data
   useEffect(() => {
-    let unsubscribe = () => {};
-    setIsLoading(true);
-
-    if (user) {
-        // LOGGED IN: Listen to Firestore changes
-        const docRef = doc(db, "users", user.uid);
-        unsubscribe = onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                setNotes(data.notes || []);
-                setTags(data.tags || DEFAULT_TAGS);
-            } else {
-                // New user - keep defaults or empty
-                setNotes([]);
-                setTags(DEFAULT_TAGS);
-            }
-            setIsLoading(false);
-        }, (error) => {
-            console.error("Firestore notes sync error", error);
-            setIsLoading(false);
-        });
-    } else {
-        // GUEST: Load from LocalStorage
+    const loadData = async () => {
+      setIsLoading(true);
+      if (user) {
         try {
+          const docRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+             const data = docSnap.data();
+             if (data.notes) setNotes(data.notes);
+             if (data.tags) setTags(data.tags);
+          } else {
+              setTags(DEFAULT_TAGS);
+          }
+        } catch (e) {
+          console.error("Failed to load notes from Firestore", e);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        try {
+          // Simulate a small delay for smoother UX or remove setTimeout for instant load
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
           const savedNotes = localStorage.getItem('app_notes');
           const savedTags = localStorage.getItem('app_note_tags');
           
           if (savedNotes) setNotes(JSON.parse(savedNotes));
-          else setNotes([]);
-
           if (savedTags) setTags(JSON.parse(savedTags));
           else setTags(DEFAULT_TAGS);
         } catch (e) {
@@ -57,9 +54,9 @@ export const useNotes = () => {
         } finally {
           setIsLoading(false);
         }
-    }
-
-    return () => unsubscribe();
+      }
+    };
+    loadData();
   }, [user]);
 
   // Helper to save everything to Firestore or LocalStorage
@@ -78,12 +75,12 @@ export const useNotes = () => {
   };
 
   const saveNotes = (newNotes: Note[]) => {
-    setNotes(newNotes); // Optimistic Update
+    setNotes(newNotes);
     persistData(newNotes, tags);
   };
 
   const saveTags = (newTags: NoteTag[]) => {
-    setTags(newTags); // Optimistic Update
+    setTags(newTags);
     persistData(notes, newTags);
   };
 

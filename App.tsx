@@ -10,6 +10,7 @@ import { HistorySection } from './components/HistorySection';
 import { ThemeSelector } from './components/ThemeSelector';
 import { TabSelector } from './components/TabSelector';
 import { NotesManager } from './components/NotesManager';
+import { ChatWidget } from './components/ChatWidget'; // Import ChatWidget
 import { UserMenu } from './components/UserMenu';
 import { useCurrencyConverter } from './hooks/useCurrencyConverter';
 import { useRevenueTracker } from './hooks/useRevenueTracker';
@@ -133,8 +134,13 @@ const AppContent: React.FC = () => {
       netIncome: number;
   } | null>(null);
 
-  // Footer Static Timestamp
-  const lastUpdate = "26/02/2025 16:30";
+  // Footer Clock State
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentDate(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const revenueOptions = [
     { value: 'all', label: 'Tất cả (100%)' },
@@ -873,12 +879,14 @@ const AppContent: React.FC = () => {
       <div className="relative z-20 pb-4 text-center">
           <p className={`text-xs font-bold uppercase tracking-widest ${hasBackground ? 'text-white/80 text-shadow-sm' : 'text-slate-400'}`}>Powered By ZiQi</p>
           <p className={`text-[10px] font-medium mt-0.5 ${hasBackground ? 'text-white/60 text-shadow-sm' : 'text-slate-300'}`}>
-              Last update: {lastUpdate}
+              Last update: {currentDate.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
           </p>
       </div>
 
       {/* Notes Manager Button/UI */}
       <NotesManager />
+      {/* Chat Widget */}
+      <ChatWidget />
     </div>
   );
 };
