@@ -48,6 +48,7 @@ export const ChatWidget: React.FC = () => {
   // 1. Fetch Messages Real-time
   useEffect(() => {
     const q = query(collection(db, 'messages'), orderBy('timestamp', 'asc'), limit(100));
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgs: ChatMessage[] = [];
       snapshot.forEach((doc) => {
@@ -66,12 +67,22 @@ export const ChatWidget: React.FC = () => {
       if (isOpen) {
         setTimeout(scrollToBottom, 100);
       }
+    }, (error) => {
+        // Gracefully handle permission errors (e.g. if user is not logged in and rules require auth)
+        console.log("Chat listener info:", error.code); 
     });
+
     return () => unsubscribe();
   }, [isOpen, isFirstLoad]);
 
-  // 2. Fetch Online Users Real-time (Optimized)
+  // 2. Fetch Online Users Real-time (Optimized & Guarded)
   useEffect(() => {
+    // Guard: Only attempt to fetch users if logged in to avoid permission-denied loop
+    if (!user) {
+        setOnlineUsers([]);
+        return;
+    }
+
     // Fetch active users in last 24h
     const yesterday = Date.now() - 24 * 60 * 60 * 1000; 
     const q = query(collection(db, 'users'), where('lastSeen', '>', yesterday));
@@ -85,7 +96,7 @@ export const ChatWidget: React.FC = () => {
         const timeDiff = now - data.lastSeen;
         let isOnline = false;
         
-        // Online if seen within 2 minutes (tightened from 3)
+        // Online if seen within 2 minutes
         if (timeDiff < 2 * 60 * 1000) {
             isOnline = true;
         }
@@ -107,9 +118,13 @@ export const ChatWidget: React.FC = () => {
       });
       
       setOnlineUsers(users);
+    }, (error) => {
+        // Gracefully handle permission errors
+        console.log("User list listener info:", error.code);
     });
+
     return () => unsubscribe();
-  }, []);
+  }, [user]); // Add user dependency so it re-subscribes on login
 
   // --- MEDIA HANDLERS ---
 
@@ -358,7 +373,7 @@ export const ChatWidget: React.FC = () => {
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
-                {/* Active Indicator (Green Dot) */}
+                {/* Active Indicator */}
                 <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-slate-100 rounded-full"></span>
             </div>
         )}
