@@ -17,27 +17,34 @@ export const useCurrencyConverter = () => {
   const [isSwapping, setIsSwapping] = useState(false);
   const [history, setHistory] = useState<ConversionHistoryItem[]>([]);
   
+  // CNY Rate State
+  const [cnyRate, setCnyRateState] = useState<number>(3700);
+  const [useCustomCnyRate, setUseCustomCnyRateState] = useState<boolean>(true);
+  
   const { user } = useAuth();
 
-  // Load history logic (Firestore vs LocalStorage)
+  // Load history & Settings
   useEffect(() => {
+    const loadSettings = () => {
+       const savedRate = localStorage.getItem('cny_custom_rate');
+       const savedMode = localStorage.getItem('cny_use_custom_mode');
+       if (savedRate) setCnyRateState(parseFloat(savedRate));
+       if (savedMode !== null) setUseCustomCnyRateState(savedMode === 'true');
+    };
+    loadSettings();
+
     const loadHistory = async () => {
       if (user) {
-        // Load from Firestore
         try {
           const docRef = doc(db, "users", user.uid);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists() && docSnap.data().history) {
              setHistory(docSnap.data().history);
-          } else {
-             // Optional: If firestore empty, maybe migrate local storage? 
-             // For now, start empty or keep local as fallback
           }
         } catch (e) {
           console.error("Failed to load history from Firestore", e);
         }
       } else {
-        // Load from LocalStorage
         try {
           const savedHistory = localStorage.getItem('conversion_history');
           if (savedHistory) {
@@ -56,20 +63,26 @@ export const useCurrencyConverter = () => {
     loadHistory();
   }, [user]);
 
+  const setCnyRate = (rate: number) => {
+      setCnyRateState(rate);
+      localStorage.setItem('cny_custom_rate', rate.toString());
+  };
+
+  const setUseCustomCnyRate = (useCustom: boolean) => {
+      setUseCustomCnyRateState(useCustom);
+      localStorage.setItem('cny_use_custom_mode', String(useCustom));
+  };
+
   const saveHistory = async (newHistory: ConversionHistoryItem[]) => {
     setHistory(newHistory);
-    
     if (user) {
-      // Save to Firestore
       try {
         const docRef = doc(db, "users", user.uid);
-        // Use setDoc with merge to avoid overwriting Notes/Tags
         await setDoc(docRef, { history: newHistory }, { merge: true });
       } catch (e) {
         console.error("Failed to save history to Firestore", e);
       }
     } else {
-      // Save to LocalStorage
       localStorage.setItem('conversion_history', JSON.stringify(newHistory));
     }
   };
@@ -142,7 +155,8 @@ export const useCurrencyConverter = () => {
     setErrorMsg('');
     
     try {
-      const data = await convertCurrencyApi(currentAmount, source.code, target.code);
+      // Pass the current CNY settings
+      const data = await convertCurrencyApi(currentAmount, source.code, target.code, cnyRate, useCustomCnyRate);
       setResult(data);
       setLoadingState(LoadingState.SUCCESS);
       addToHistory(currentAmount, source, target, data.convertedAmount, type, originalSalary);
@@ -162,7 +176,7 @@ export const useCurrencyConverter = () => {
       return;
     }
     executeConversion(numAmount, fromCurrency, toCurrency, type, originalSalary);
-  }, [amount, fromCurrency, toCurrency]);
+  }, [amount, fromCurrency, toCurrency, cnyRate, useCustomCnyRate]);
 
   const handleSwap = (currentType: 'convert' | 'calculate' | 'revenue' = 'convert') => {
     setIsSwapping(true);
@@ -190,6 +204,7 @@ export const useCurrencyConverter = () => {
     amount, setAmount, fromCurrency, setFromCurrency, toCurrency, setToCurrency,
     loadingState, result, errorMsg, setErrorMsg,
     isSwapping, handleConvert, handleSwap,
-    history, clearHistory, deleteHistoryItems, selectHistoryItem, resetResult, addToHistory
+    history, clearHistory, deleteHistoryItems, selectHistoryItem, resetResult, addToHistory,
+    cnyRate, setCnyRate, useCustomCnyRate, setUseCustomCnyRate
   };
 };

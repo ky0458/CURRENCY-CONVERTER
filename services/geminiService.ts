@@ -12,15 +12,21 @@ const getDecimals = (currencyCode: string): number => {
 export const convertCurrencyApi = async (
   amount: number,
   fromCurrency: string,
-  toCurrency: string
+  toCurrency: string,
+  customCnyRate: number = 3700,
+  useCustomCnyRate: boolean = true
 ): Promise<ConversionResult> => {
   try {
     let rate: number;
 
-    if (fromCurrency === 'CNY' && toCurrency === 'VND') {
-        rate = 3450;
-    } else if (fromCurrency === 'VND' && toCurrency === 'CNY') {
-        rate = 1 / 3450;
+    const isCnyVndPair = (fromCurrency === 'CNY' && toCurrency === 'VND') || (fromCurrency === 'VND' && toCurrency === 'CNY');
+
+    if (isCnyVndPair && useCustomCnyRate) {
+        if (fromCurrency === 'CNY' && toCurrency === 'VND') {
+            rate = customCnyRate;
+        } else {
+            rate = 1 / customCnyRate;
+        }
     } else {
         const response = await fetch(`https://open.er-api.com/v6/latest/${fromCurrency}?t=${Date.now()}`);
         if (!response.ok) throw new Error('Network response was not ok');
@@ -51,24 +57,19 @@ export const translateJobTitle = async (text: string): Promise<string> => {
   
   try {
     // Sử dụng Google Translate API (GTX endpoint - Free Client)
-    // API này xử lý ngữ cảnh "Chức danh" tốt hơn MyMemory nhờ data lớn hơn.
-    // sl: source language (vi), tl: target language (zh-CN), dt: data type (text)
     const encodedText = encodeURIComponent(text.trim());
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&q=${encodedText}`;
 
     const response = await fetch(url);
     
     if (!response.ok) {
-        // Nếu Google chặn request (hiếm gặp với traffic thấp), fallback về MyMemory
         console.warn("Google Translate blocked/failed, switching to fallback.");
         return await translateWithFallback(text);
     }
 
     const data = await response.json();
 
-    // Cấu trúc response của Google: [[["TextDich", "TextGoc", ...], ...], ...]
     if (data && data[0]) {
-        // Nối các đoạn văn bản lại nếu bị tách
         return data[0].map((part: any) => part[0]).join('');
     }
 
@@ -79,7 +80,6 @@ export const translateJobTitle = async (text: string): Promise<string> => {
   }
 };
 
-// Hàm dự phòng sử dụng MyMemory (logic cũ) phòng khi Google lỗi
 const translateWithFallback = async (text: string): Promise<string> => {
     try {
         const encodedText = encodeURIComponent(text.trim());

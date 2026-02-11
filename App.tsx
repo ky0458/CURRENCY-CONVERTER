@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { CurrencyRow } from './components/CurrencyRow';
@@ -23,6 +22,7 @@ import { CopyButton } from './components/CopyButton';
 // Import useAuth to access notification state
 import { useAuth, AuthProvider } from './contexts/AuthContext';
 import { translateJobTitle } from './services/geminiService';
+import { Tooltip } from './components/Tooltip';
 
 const ToastNotification = () => {
     const { notification, closeNotification } = useAuth();
@@ -102,7 +102,8 @@ const AppContent: React.FC = () => {
   const {
     amount, setAmount, fromCurrency, setFromCurrency, toCurrency, setToCurrency,
     loadingState, result, errorMsg, setErrorMsg, isSwapping, handleConvert, handleSwap,
-    history, clearHistory, deleteHistoryItems, selectHistoryItem, resetResult, addToHistory
+    history, clearHistory, deleteHistoryItems, selectHistoryItem, resetResult, addToHistory,
+    cnyRate, setCnyRate, useCustomCnyRate, setUseCustomCnyRate
   } = useCurrencyConverter();
 
   const { records, addRecord, updateRecord, deleteRecord, deleteRecords } = useRevenueTracker();
@@ -128,6 +129,13 @@ const AppContent: React.FC = () => {
   const [translatedJobTitle, setTranslatedJobTitle] = useState('');
   const [isTranslatingJob, setIsTranslatingJob] = useState(false);
 
+  // Temp state for editing rate input
+  const [tempCnyRate, setTempCnyRate] = useState(cnyRate.toString());
+  
+  // New State for Rate Config Dropdown
+  const [showRateConfig, setShowRateConfig] = useState(false);
+  const rateConfigRef = useRef<HTMLDivElement>(null);
+
   const [revenueResult, setRevenueResult] = useState<{
       totalRevenue: number;
       stageRevenue: number;
@@ -140,6 +148,22 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const timer = setInterval(() => setCurrentDate(new Date()), 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Sync temp rate when actual rate changes (e.g. from local storage load)
+  useEffect(() => {
+      setTempCnyRate(cnyRate.toString());
+  }, [cnyRate]);
+
+  // Click outside for Rate Config Dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+        if (rateConfigRef.current && !rateConfigRef.current.contains(event.target as Node)) {
+            setShowRateConfig(false);
+        }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const revenueOptions = [
@@ -446,6 +470,7 @@ const AppContent: React.FC = () => {
 
   const vietNamFlagUrl = "https://flagcdn.com/w80/vn.png";
   const hasBackground = !!backgroundImage;
+  const isCnyInvolved = fromCurrency.code === 'CNY' || toCurrency.code === 'CNY';
 
   return (
     <div 
@@ -463,6 +488,102 @@ const AppContent: React.FC = () => {
 
       {/* GLOBAL FIXED CONTROLS */}
       <div className="fixed top-3 right-3 sm:top-5 sm:right-6 z-[100] flex items-center gap-3 animate-fade-in-up">
+        {/* CNY Rate Configuration Button (Fixed Position) */}
+        <div className="relative" ref={rateConfigRef}>
+            <Tooltip content="Cấu hình tỷ giá CNY" position="bottom">
+                <button
+                    onClick={() => setShowRateConfig(!showRateConfig)}
+                    className={`
+                        w-10 h-10 rounded-full backdrop-blur-md transition-all duration-300 flex items-center justify-center group border font-bold text-sm
+                        ${hasBackground 
+                            ? 'bg-white/20 hover:bg-white/30 text-white shadow-lg shadow-black/5 border-white/20' 
+                            : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-primary-600 shadow-md hover:shadow-xl hover:-translate-y-0.5 border-transparent'}
+                    `}
+                >
+                    ¥
+                </button>
+            </Tooltip>
+
+            {showRateConfig && (
+                <div className="absolute right-0 top-[calc(100%+12px)] bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-white/60 p-4 w-[280px] sm:w-[320px] z-[100] animate-fade-in-up origin-top-right ring-1 ring-black/5">
+                    <div className="flex items-center justify-between mb-3 px-1">
+                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <img src="https://flagcdn.com/w40/cn.png" className="w-4 h-3 rounded-[2px] object-cover" alt="CNY" />
+                            Cấu hình tỷ giá CNY
+                        </p>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${useCustomCnyRate ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+                            {useCustomCnyRate ? 'Thủ công' : 'Tự động'}
+                        </span>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <button 
+                            onClick={() => {
+                                setUseCustomCnyRate(!useCustomCnyRate);
+                                setTimeout(() => handleConvert(), 0);
+                            }}
+                            className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2
+                                ${useCustomCnyRate 
+                                    ? 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50' 
+                                    : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                                }`}
+                        >
+                            {useCustomCnyRate ? (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                                    Chuyển sang Tự động (API)
+                                </>
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                                    Chuyển sang Thủ công
+                                </>
+                            )}
+                        </button>
+
+                        {useCustomCnyRate && (
+                            <div className="space-y-3 animate-fade-in-up">
+                                <div className="relative group">
+                                    <input 
+                                        type="number" 
+                                        value={tempCnyRate} 
+                                        onChange={(e) => setTempCnyRate(e.target.value)}
+                                        className="w-full pl-4 pr-12 py-3 rounded-xl border border-slate-200 text-base font-bold text-slate-700 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all bg-slate-50/50 focus:bg-white"
+                                        placeholder="VD: 3700"
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-extrabold pointer-events-none uppercase">VND</span>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        const val = parseFloat(tempCnyRate);
+                                        if (!isNaN(val) && val > 0) {
+                                            setCnyRate(val);
+                                            handleConvert(); 
+                                            showNotification('Đã cập nhật tỷ giá CNY: ' + val, 'success');
+                                            setShowRateConfig(false);
+                                        } else {
+                                            showNotification('Vui lòng nhập tỷ giá hợp lệ', 'error');
+                                        }
+                                    }}
+                                    className="w-full bg-slate-800 text-white py-3 rounded-xl text-sm font-bold hover:bg-slate-700 active:scale-95 transition-all shadow-lg shadow-slate-200"
+                                >
+                                    Cập nhật & Áp dụng
+                                </button>
+                            </div>
+                        )}
+                        
+                        {!useCustomCnyRate && (
+                            <div className="p-3 bg-green-50 rounded-xl border border-green-100">
+                                <p className="text-[11px] text-green-700 font-medium text-center leading-relaxed">
+                                    Đang sử dụng tỷ giá thị trường thực tế. Dữ liệu được cập nhật tự động từ nguồn quốc tế.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+
         <UserMenu hasBackgroundImage={hasBackground} theme={theme} />
         <ThemeSelector 
             currentTheme={theme} 
@@ -523,7 +644,7 @@ const AppContent: React.FC = () => {
                     </div>
                 )}
 
-                {/* Job Translation Section - Refined for "Single Line" look on Desktop */}
+                {/* Job Translation Section */}
                 {activeTab === 'calculate' && (
                     <div className="animate-fade-in-up w-full">
                         <div className="flex items-center justify-between mb-2 px-1">
@@ -588,10 +709,8 @@ const AppContent: React.FC = () => {
                                 </button>
                             </div>
 
-                            {/* Divider: Horizontal on mobile, Vertical on desktop */}
                             <div className="h-px w-full md:w-px md:h-10 bg-slate-100 mx-0 md:mx-0"></div>
 
-                            {/* Result Area */}
                             <div className={`
                                 flex-1 p-2 sm:p-2.5 flex items-center justify-between transition-colors duration-300 min-w-0 md:min-w-[250px] w-full md:w-auto h-full
                                 ${translatedJobTitle ? 'bg-primary-50/20' : 'bg-slate-50/50'}
@@ -800,7 +919,7 @@ const AppContent: React.FC = () => {
                                         
                                         {/* Decorative Background */}
                                         <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
-                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-32 h-32 text-emerald-600"><path d="M10.464 8.746c.227-.18.497-.311.786-.394v2.795a2.252 2.252 0 0 1-.786-.393c-.394-.313-.546-.681-.546-1.004 0-.324.152-.692.546-1.004ZM12.75 15.662v-2.824c.347.085.664.228.921.421.427.32.579.686.579.991 0 .305-.152.671-.579.991a2.534 2.534 0 0 1-.921.42Z" /><path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 6a.75.75 0 0 0-1.5 0v.816a3.836 3.836 0 0 0-1.72.756c-.712.566-1.112 1.35-1.112 2.178 0 .829.4 1.612 1.113 2.178.502.4 1.102.647 1.719.756v2.978a2.536 2.536 0 0 1-.921-.421l-.879-.66a.75.75 0 0 0-.9 1.2l.879.66c.533.4 1.169.645 1.821.75V18a.75.75 0 0 0 1.5 0v-.81a4.124 4.124 0 0 0 1.821-.749c.745-.559 1.179-1.344 1.179-2.191 0-.847-.434-1.632-1.179-2.191a4.122 4.122 0 0 0-1.821-.75V8.354c.29.082.559.213.786.393l.415.33a.75.75 0 0 0 .933-1.175l-.415-.33a3.836 3.836 0 0 0-1.719-.755V6Z" clipRule="evenodd" /></svg>
+                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-32 h-32 text-emerald-600"><path d="M10.464 8.746c.227-.18.497-.311.786-.394v2.795a2.252 2.252 0 0 1-.786-.393c-.394-.313-.546-.681-.546-1.004 0-.324.152-.692.546-1.004ZM12.75 15.662v-2.824c.347.085.664.228.921.421.427.32.579.686.579.991 0 .305-.152.671-.579.991a2.534 2.534 0 0 1-.921.42Z" /><path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 6a.75.75 0 0 0-1.5 0v.816a3.836 3.836 0 0 0-1.72.756c-.712.566-1.112 1.35-1.112 2.178 0 .829.4 1.612 1.113 2.178.502.4 1.102.647 1.719.756v2.978a2.536 2.536 0 0 1-.921-.421l-.879-.66a.75.75 0 0 0-.9 1.2l.879.66c.533.4 1.169.645 1.821.75V18a.75.75 0 0 0 1.5 0v-.81a4.124 4.124 0 0 0 1.821-.749c.745-.559 1.179-1.344 1.179-2.191 0-.847-.434-1.632-1.179-2.191a4.122 4.122 0 0 0-1.821-.75V8.354c.29.082.559.213.786.393l.415.33a.75.75 0 0 0 .933-1.175l-.415-.33a3.836 3.836 0 0 0-1.719-.755V6Z" clipRule="evenodd" /></svg>
                                         </div>
                                         
                                         <div className="relative z-10 text-center mb-5">
