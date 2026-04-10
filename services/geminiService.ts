@@ -1,6 +1,9 @@
 
 import { ConversionResult } from '../types';
 import { getReadFunction } from '../utils/currencyTextFormatter';
+import { GoogleGenAI } from '@google/genai';
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const getDecimals = (currencyCode: string): number => {
   if (['VND', 'JPY', 'KRW', 'TWD', 'HUF'].includes(currencyCode)) {
@@ -56,42 +59,16 @@ export const translateJobTitle = async (text: string): Promise<string> => {
   if (!text || !text.trim()) return "";
   
   try {
-    // Sử dụng Google Translate API (GTX endpoint - Free Client)
-    const encodedText = encodeURIComponent(text.trim());
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=vi&tl=zh-CN&dt=t&q=${encodedText}`;
-
-    const response = await fetch(url);
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: `Dịch tên vị trí tuyển dụng sau từ tiếng Việt sang tiếng Trung. Hãy trả về đúng tên vị trí tuyển dụng khớp trong tiếng Trung thường được người Trung và người Việt sử dụng trong công việc thực tế. Chỉ trả về kết quả dịch, tuyệt đối không giải thích hay thêm bất kỳ chữ nào khác.
+      
+Tên vị trí: ${text.trim()}`
+    });
     
-    if (!response.ok) {
-        console.warn("Google Translate blocked/failed, switching to fallback.");
-        return await translateWithFallback(text);
-    }
-
-    const data = await response.json();
-
-    if (data && data[0]) {
-        return data[0].map((part: any) => part[0]).join('');
-    }
-
-    return "Không tìm thấy";
+    return response.text?.trim() || "Không tìm thấy";
   } catch (error: any) {
-    console.error("Primary translation error:", error);
-    return await translateWithFallback(text);
+    console.error("Gemini translation error:", error);
+    return "Lỗi dịch vụ AI";
   }
-};
-
-const translateWithFallback = async (text: string): Promise<string> => {
-    try {
-        const encodedText = encodeURIComponent(text.trim());
-        const url = `https://api.mymemory.translated.net/get?q=${encodedText}&langpair=vi|zh-CN`;
-        const response = await fetch(url);
-        const data = await response.json();
-
-        if (data && data.responseData && data.responseData.translatedText) {
-            return data.responseData.translatedText;
-        }
-    } catch (e) {
-        console.error("Fallback translation error", e);
-    }
-    return "Lỗi dịch vụ";
 };
