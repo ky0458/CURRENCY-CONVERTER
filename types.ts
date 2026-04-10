@@ -26,6 +26,8 @@ export interface ConversionHistoryItem {
       shareType: 'all' | 'cv' | 'job';
       stageRevenue: number;
       totalRevenue: number;
+      isSalesExecutive?: boolean;
+      salesExecutiveType?: 'with_language' | 'without_language';
   };
 }
 

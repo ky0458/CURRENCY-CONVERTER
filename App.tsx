@@ -116,9 +116,12 @@ const AppContent: React.FC = () => {
   
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'revenue'>('convert');
+  const [activeTab, setActiveTab] = useState<'convert' | 'calculate'>('convert');
   const [salaryAmount, setSalaryAmount] = useState<string>('');
   const [calcType, setCalcType] = useState<'probation' | 'official'>('official');
+  
+  const [isSalesExecutive, setIsSalesExecutive] = useState(false);
+  const [salesExecutiveType, setSalesExecutiveType] = useState<'with_language' | 'without_language'>('with_language');
   
   const [revenueShare, setRevenueShare] = useState<'all' | 'cv' | 'job'>('all');
   const [isRevenueDropdownOpen, setIsRevenueDropdownOpen] = useState(false);
@@ -173,6 +176,9 @@ const AppContent: React.FC = () => {
   ];
 
   const filteredHistory = useMemo(() => {
+    if (activeTab === 'calculate') {
+        return history.filter(item => item.type === 'calculate' || item.type === 'revenue');
+    }
     return history.filter(item => item.type === activeTab);
   }, [history, activeTab]);
 
@@ -255,7 +261,7 @@ const AppContent: React.FC = () => {
   }, []);
 
   const handleAmountChange = (val: string) => {
-    if (activeTab === 'calculate' || activeTab === 'revenue') {
+    if (activeTab === 'calculate') {
         setSalaryAmount(val);
     } else {
         setAmount(val);
@@ -308,29 +314,44 @@ const AppContent: React.FC = () => {
     selectHistoryItem(item);
     
     // Switch active tab to match history item type
-    if (item.type === 'calculate') {
+    if (item.type === 'calculate' || item.type === 'revenue') {
         setActiveTab('calculate');
-    } else if (item.type === 'revenue') {
-        setActiveTab('revenue');
     } else {
         setActiveTab('convert');
     }
 
-    if (item.type === 'calculate' && item.originalSalary) {
-        setSalaryAmount(item.originalSalary.toString());
-        // Use item.type explicitly instead of activeTab to ensure type safety
-        handleConvert(item.inputAmount.toString(), item.type, item.originalSalary);
-    } 
-    else if (item.type === 'revenue' && item.revenueDetails) {
-        setSalaryAmount(item.inputAmount.toString());
-        setRevenueShare(item.revenueDetails.shareType);
-        setRevenueResult({
-            totalRevenue: item.revenueDetails.totalRevenue,
-            stageRevenue: item.revenueDetails.stageRevenue,
-            netIncome: item.convertedAmount
-        });
-    }
-    else {
+    if (item.type === 'calculate' || item.type === 'revenue') {
+        if (item.originalSalary) {
+            setSalaryAmount(item.originalSalary.toString());
+        } else if (item.type === 'revenue') {
+            setSalaryAmount(item.inputAmount.toString());
+        }
+        
+        if (item.revenueDetails) {
+            setRevenueShare(item.revenueDetails.shareType);
+            setRevenueResult({
+                totalRevenue: item.revenueDetails.totalRevenue,
+                stageRevenue: item.revenueDetails.stageRevenue,
+                netIncome: item.type === 'revenue' ? item.convertedAmount : Math.floor(item.revenueDetails.totalRevenue * 0.49)
+            });
+            
+            if (item.revenueDetails.isSalesExecutive) {
+                setIsSalesExecutive(true);
+                if (item.revenueDetails.salesExecutiveType) {
+                    setSalesExecutiveType(item.revenueDetails.salesExecutiveType);
+                }
+            } else {
+                setIsSalesExecutive(false);
+            }
+        } else {
+            setRevenueResult(null);
+            setIsSalesExecutive(false);
+        }
+        
+        if (item.type === 'calculate') {
+            handleConvert(item.inputAmount.toString(), 'calculate', item.originalSalary, item.revenueDetails);
+        }
+    } else {
         // Use item.type explicitly instead of activeTab to ensure type safety
         handleConvert(item.inputAmount.toString(), item.type);
     }
@@ -346,26 +367,35 @@ const AppContent: React.FC = () => {
   };
 
   const onCalculateAndConvert = () => {
-    if (activeTab === 'revenue') {
-        const salary = parseFloat(salaryAmount.replace(/,/g, ''));
-        if (isNaN(salary) || salary <= 0) {
-             setRevenueResult(null);
-             setErrorMsg("Vui lòng nhập số tiền hợp lệ");
-             return;
+    if (activeTab === 'calculate') {
+        let fee = 0;
+        let salary = 0;
+
+        if (isSalesExecutive) {
+            fee = salesExecutiveType === 'with_language' ? 10000000 : 6000000;
+            salary = fee; // Use fee as salary for history to avoid NaN
+        } else {
+            salary = parseFloat(salaryAmount.replace(/,/g, ''));
+            if (isNaN(salary) || salary <= 0) {
+                handleConvert('0', activeTab); 
+                setRevenueResult(null);
+                return;
+            }
+            
+            // Calculate Fee
+            const multiplier = calcType === 'probation' ? 0.75 : 0.60;
+            fee = Math.floor(salary * multiplier);
         }
+
+        setAmount(fee.toString()); 
         
-        setErrorMsg(""); // Clear error if valid
-
-        const feeMultiplier = calcType === 'probation' ? 0.75 : 0.60;
-        const baseRevenue = Math.floor(salary * feeMultiplier);
-
+        // Calculate Revenue
+        const baseRevenue = fee;
         let shareMultiplier = 1;
-        // Adjusted logic: Job = 70%, CV = 30%
         if (revenueShare === 'job') shareMultiplier = 0.7;
         else if (revenueShare === 'cv') shareMultiplier = 0.3;
 
         const totalRevenue = Math.floor(baseRevenue * shareMultiplier);
-
         const stageRevenue = Math.floor(totalRevenue / 2);
         const netIncome = Math.floor(totalRevenue * 0.49);
 
@@ -375,30 +405,14 @@ const AppContent: React.FC = () => {
             netIncome
         });
 
-        addToHistory(
-            salary,
-            DEFAULT_SOURCE_CURRENCY, 
-            DEFAULT_SOURCE_CURRENCY, 
-            netIncome,
-            'revenue',
-            undefined,
-            {
-                shareType: revenueShare,
-                stageRevenue: stageRevenue,
-                totalRevenue: totalRevenue
-            }
-        );
-
-    } else if (activeTab === 'calculate') {
-        const salary = parseFloat(salaryAmount.replace(/,/g, ''));
-        if (isNaN(salary) || salary <= 0) {
-            handleConvert('0', activeTab); 
-            return;
-        }
-        const multiplier = calcType === 'probation' ? 0.75 : 0.60;
-        const fee = Math.floor(salary * multiplier);
-        setAmount(fee.toString()); 
-        handleConvert(fee.toString(), activeTab, salary); 
+        // Convert fee and add to history with revenue details
+        handleConvert(fee.toString(), activeTab, salary, {
+            shareType: revenueShare,
+            stageRevenue: stageRevenue,
+            totalRevenue: totalRevenue,
+            isSalesExecutive: isSalesExecutive,
+            salesExecutiveType: salesExecutiveType
+        }); 
     } else if (activeTab === 'convert') {
         handleConvert(amount, activeTab); 
     }
@@ -627,8 +641,8 @@ const AppContent: React.FC = () => {
                 
                 <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
                     <TabSelector 
-                        activeTab={activeTab as any} 
-                        onTabChange={(tab) => { setActiveTab(tab); resetResult(); setAmount(''); setSalaryAmount(''); setRevenueResult(null); setJobTitle(''); setTranslatedJobTitle(''); }} 
+                        activeTab={activeTab} 
+                        onTabChange={(tab) => { setActiveTab(tab); resetResult(); setAmount(''); setSalaryAmount(''); setRevenueResult(null); setJobTitle(''); setTranslatedJobTitle(''); setIsSalesExecutive(false); }} 
                         theme={theme} 
                     />
                 </div>
@@ -745,130 +759,225 @@ const AppContent: React.FC = () => {
                     </div>
                 )}
 
+                {activeTab === 'calculate' && (
+                    <div className="mb-3 flex items-center justify-between animate-fade-in-up">
+                        <label className="flex items-center gap-2 cursor-pointer w-fit">
+                            <input 
+                                type="checkbox" 
+                                checked={isSalesExecutive}
+                                onChange={(e) => setIsSalesExecutive(e.target.checked)}
+                                className="w-4 h-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500"
+                            />
+                            <span className={`text-sm font-bold ${hasBackground ? 'text-white drop-shadow-sm' : 'text-slate-700'}`}>
+                                Trường hợp đặc biệt: Nhân viên kinh doanh
+                            </span>
+                        </label>
+                        {isSalesExecutive && renderHistoryButton}
+                    </div>
+                )}
+
                 <div className="flex flex-col md:flex-row items-center md:items-start relative gap-3 md:gap-4">
-                    <div className={`w-full md:flex-1 transition-all relative ${activeDropdown === 'FROM' || isRevenueDropdownOpen ? 'z-50' : 'z-20'}`}> 
-
-                        <CurrencyRow
-                            key={activeTab}
-                            label={activeTab === 'convert' ? "Nhập số tiền cần đổi" : "Nhập mức lương"}
-                            amount={activeTab === 'convert' ? amount : salaryAmount}
-                            currency={fromCurrency}
-                            onAmountChange={handleAmountChange}
-                            onCurrencyChange={handleFromChange}
-                            inputPlacement="left"
-                            autoFocus={true}
-                            isActive={activeDropdown === 'FROM'}
-                            onToggleDropdown={() => setActiveDropdown(activeDropdown === 'FROM' ? null : 'FROM')}
-                            onCloseDropdown={() => setActiveDropdown(null)}
-                            theme={theme}
-                            headerAction={renderHistoryButton}
-                            error={errorMsg}
-                            onEnter={onCalculateAndConvert}
-                            hasBackgroundImage={hasBackground}
-                        />
-
-                        {(activeTab === 'calculate' || activeTab === 'revenue') && (
-                            <div className="mt-3 flex gap-3 animate-fade-in-up">
-                                <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
-                                    ${calcType === 'official' 
-                                        ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
-                                        : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
-                                    <input type="radio" name="calcType" value="official" checked={calcType === 'official'} onChange={() => setCalcType('official')} className="hidden" />
-                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${calcType === 'official' ? 'border-primary-500' : 'border-slate-300'}`}>
-                                        {calcType === 'official' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
-                                        <span className="text-sm">Chính thức</span>
-                                        <span className="text-[10px] sm:text-xs opacity-70 font-normal">(60%)</span>
-                                    </div>
-                                </label>
-
-                                <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
-                                    ${calcType === 'probation' 
-                                        ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
-                                        : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
-                                    <input type="radio" name="calcType" value="probation" checked={calcType === 'probation'} onChange={() => setCalcType('probation')} className="hidden" />
-                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${calcType === 'probation' ? 'border-primary-500' : 'border-slate-300'}`}>
-                                        {calcType === 'probation' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
-                                        <span className="text-sm">Thử việc</span>
-                                        <span className="text-[10px] sm:text-xs opacity-70 font-normal">(75%)</span>
-                                    </div>
-                                </label>
-                            </div>
+                    <div className={`w-full md:flex-1 transition-all relative flex flex-col gap-3 sm:gap-4 ${activeDropdown === 'FROM' ? 'z-50' : 'z-20'}`}> 
+                        {activeTab === 'convert' && (
+                            <CurrencyRow
+                                key={activeTab}
+                                label="Nhập số tiền cần đổi"
+                                amount={amount}
+                                currency={fromCurrency}
+                                onAmountChange={handleAmountChange}
+                                onCurrencyChange={handleFromChange}
+                                inputPlacement="left"
+                                autoFocus={true}
+                                isActive={activeDropdown === 'FROM'}
+                                onToggleDropdown={() => setActiveDropdown(activeDropdown === 'FROM' ? null : 'FROM')}
+                                onCloseDropdown={() => setActiveDropdown(null)}
+                                theme={theme}
+                                headerAction={renderHistoryButton}
+                                error={errorMsg}
+                                onEnter={onCalculateAndConvert}
+                                hasBackgroundImage={hasBackground}
+                            />
                         )}
 
-                        {activeTab === 'revenue' && (
-                            <div className="mt-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-                                <div className="flex flex-col gap-1.5 w-full" ref={revenueDropdownRef}>
-                                    <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide ml-1 transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
-                                        Tùy chọn tỷ lệ
-                                    </label>
-                                    <div className="relative group">
-                                        <button
-                                            onClick={() => setIsRevenueDropdownOpen(!isRevenueDropdownOpen)}
-                                            className={`relative w-full border text-slate-800 text-left text-base sm:text-lg font-bold py-4 px-4 pr-12 rounded-2xl transition-all h-[60px] sm:h-[66px] flex items-center backdrop-blur-md
-                                            ${isRevenueDropdownOpen 
-                                                ? 'border-primary-500 ring-2 ring-primary-100 z-50 bg-white' 
-                                                : hasBackground 
-                                                    ? 'bg-white/80 border-white/40 hover:bg-white' 
-                                                    : 'bg-white/90 border-slate-200 hover:border-primary-300 hover:bg-white'}`}
-                                        >
-                                            {revenueOptions.find(o => o.value === revenueShare)?.label}
-                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className={`w-4 h-4 transition-transform ${isRevenueDropdownOpen ? 'rotate-180 text-primary-500' : ''}`}>
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                                </svg>
+                        {activeTab === 'calculate' && !isSalesExecutive && (
+                            <>
+                                <CurrencyRow
+                                    key={activeTab}
+                                    label="Nhập mức lương"
+                                    amount={salaryAmount}
+                                    currency={fromCurrency}
+                                    onAmountChange={handleAmountChange}
+                                    onCurrencyChange={handleFromChange}
+                                    inputPlacement="left"
+                                    autoFocus={true}
+                                    isActive={activeDropdown === 'FROM'}
+                                    onToggleDropdown={() => setActiveDropdown(activeDropdown === 'FROM' ? null : 'FROM')}
+                                    onCloseDropdown={() => setActiveDropdown(null)}
+                                    theme={theme}
+                                    headerAction={renderHistoryButton}
+                                    error={errorMsg}
+                                    onEnter={onCalculateAndConvert}
+                                    hasBackgroundImage={hasBackground}
+                                />
+                                <div className="flex flex-col gap-0 w-full animate-fade-in-up">
+                                    <div className="flex items-center justify-between ml-1 h-8">
+                                        <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                            Loại hợp đồng
+                                        </label>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
+                                            ${calcType === 'official' 
+                                                ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
+                                                : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
+                                            <input type="radio" name="calcType" value="official" checked={calcType === 'official'} onChange={() => setCalcType('official')} className="hidden" />
+                                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${calcType === 'official' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                                {calcType === 'official' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
                                             </div>
-                                        </button>
-                                        
-                                        {isRevenueDropdownOpen && (
-                                            <div className="absolute top-[calc(100%+8px)] w-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden transition-all z-[100] animate-fade-in-up">
-                                                <div className="p-1">
-                                                    {revenueOptions.map((option) => (
-                                                        <div 
-                                                            key={option.value}
-                                                            onClick={() => {
-                                                                setRevenueShare(option.value as any);
-                                                                setIsRevenueDropdownOpen(false);
-                                                            }}
-                                                            className={`flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-colors ${revenueShare === option.value ? 'bg-primary-50 text-primary-700' : 'hover:bg-slate-50 text-slate-700'}`}
-                                                        >
-                                                            <span className="font-bold">{option.label}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                            <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
+                                                <span className="text-sm">Chính thức</span>
+                                                <span className="text-[10px] sm:text-xs opacity-70 font-normal">(60%)</span>
                                             </div>
-                                        )}
+                                        </label>
+
+                                        <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
+                                            ${calcType === 'probation' 
+                                                ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
+                                                : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
+                                            <input type="radio" name="calcType" value="probation" checked={calcType === 'probation'} onChange={() => setCalcType('probation')} className="hidden" />
+                                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${calcType === 'probation' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                                {calcType === 'probation' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
+                                                <span className="text-sm">Thử việc</span>
+                                                <span className="text-[10px] sm:text-xs opacity-70 font-normal">(75%)</span>
+                                            </div>
+                                        </label>
                                     </div>
                                 </div>
-                            </div>
+                            </>
+                        )}
+
+                        {activeTab === 'calculate' && isSalesExecutive && (
+                            <>
+                                <div className="flex flex-col gap-0 w-full animate-fade-in-up">
+                                    <div className="flex items-center justify-between ml-1 h-8">
+                                        <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                            Yêu cầu ngoại ngữ
+                                        </label>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
+                                            ${salesExecutiveType === 'with_language' 
+                                                ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
+                                                : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
+                                            <input type="radio" name="salesExecutiveType" value="with_language" checked={salesExecutiveType === 'with_language'} onChange={() => setSalesExecutiveType('with_language')} className="hidden" />
+                                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${salesExecutiveType === 'with_language' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                                {salesExecutiveType === 'with_language' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
+                                                <span className="text-sm">Có ngoại ngữ</span>
+                                            </div>
+                                        </label>
+
+                                        <label className={`flex-1 flex items-center justify-center gap-2 px-3 rounded-2xl border cursor-pointer transition-all h-[60px] sm:h-[66px]
+                                            ${salesExecutiveType === 'without_language' 
+                                                ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' 
+                                                : hasBackground ? 'bg-white/80 border-white/40 text-slate-700 hover:bg-white' : 'bg-white/90 border-slate-200 text-slate-600 hover:bg-white'}`}>
+                                            <input type="radio" name="salesExecutiveType" value="without_language" checked={salesExecutiveType === 'without_language'} onChange={() => setSalesExecutiveType('without_language')} className="hidden" />
+                                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${salesExecutiveType === 'without_language' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                                {salesExecutiveType === 'without_language' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
+                                                <span className="text-sm">Không ngoại ngữ</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex flex-col gap-0 w-full animate-fade-in-up">
+                                    <div className="flex items-center justify-between ml-1 h-8">
+                                        <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                            Phí dịch vụ mặc định
+                                        </label>
+                                    </div>
+                                    <div className="flex items-center justify-center h-[60px] sm:h-[66px] bg-primary-50 rounded-2xl border border-primary-100 shadow-inner">
+                                        <p className="text-2xl sm:text-3xl font-black text-primary-700">
+                                            {formatCurrency(salesExecutiveType === 'with_language' ? 10000000 : 6000000, 'vi-VN', 'VND')}
+                                        </p>
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </div>
 
                     {activeTab === 'convert' && (
-                        <div className="md:mt-12 z-30 shrink-0 relative">
+                        <div className="md:mt-12 z-30 shrink-0 relative flex justify-center">
                             <SwapButton onClick={handleSwapClick} isSwapping={isSwapping} theme={theme} />
                         </div>
                     )}
 
-                    {activeTab !== 'revenue' && (
-                        <div className={`w-full md:flex-1 transition-all relative ${activeDropdown === 'TO' ? 'z-50' : 'z-20'}`}>
-                            <CurrencyRow
-                                label={activeTab === 'calculate' ? "Quy đổi phí sang" : "Quy đổi sang"}
-                                amount=""
-                                currency={toCurrency}
-                                onCurrencyChange={handleToChange}
-                                inputPlacement="hidden"
-                                isActive={activeDropdown === 'TO'}
-                                onToggleDropdown={() => setActiveDropdown(activeDropdown === 'TO' ? null : 'TO')}
-                                onCloseDropdown={() => setActiveDropdown(null)}
-                                theme={theme}
-                                hasBackgroundImage={hasBackground}
-                            />
-                        </div>
-                    )}
+                    <div className={`w-full md:flex-1 transition-all relative flex flex-col gap-3 sm:gap-4 ${activeDropdown === 'TO' || isRevenueDropdownOpen ? 'z-50' : 'z-20'}`}>
+                        <CurrencyRow
+                            label={activeTab === 'calculate' ? "Quy đổi phí sang" : "Quy đổi sang"}
+                            amount=""
+                            currency={toCurrency}
+                            onCurrencyChange={handleToChange}
+                            inputPlacement="hidden"
+                            isActive={activeDropdown === 'TO'}
+                            onToggleDropdown={() => setActiveDropdown(activeDropdown === 'TO' ? null : 'TO')}
+                            onCloseDropdown={() => setActiveDropdown(null)}
+                            theme={theme}
+                            hasBackgroundImage={hasBackground}
+                        />
+
+                        {activeTab === 'calculate' && (
+                            <div className="flex flex-col gap-0 w-full animate-fade-in-up" ref={revenueDropdownRef}>
+                                <div className="flex items-center justify-between ml-1 h-8">
+                                    <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                        Tùy chọn tỷ lệ
+                                    </label>
+                                </div>
+                                <div className="relative group">
+                                    <button
+                                        onClick={() => setIsRevenueDropdownOpen(!isRevenueDropdownOpen)}
+                                        className={`relative w-full border text-slate-800 text-left text-base sm:text-lg font-bold py-4 px-4 pr-12 rounded-2xl transition-all h-[60px] sm:h-[66px] flex items-center backdrop-blur-md
+                                        ${isRevenueDropdownOpen 
+                                            ? 'border-primary-500 ring-2 ring-primary-100 z-50 bg-white' 
+                                            : hasBackground 
+                                                ? 'bg-white/80 border-white/40 hover:bg-white' 
+                                                : 'bg-white/90 border-slate-200 hover:border-primary-300 hover:bg-white'}`}
+                                    >
+                                        {revenueOptions.find(o => o.value === revenueShare)?.label}
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className={`w-4 h-4 transition-transform ${isRevenueDropdownOpen ? 'rotate-180 text-primary-500' : ''}`}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                            </svg>
+                                        </div>
+                                    </button>
+                                    
+                                    {isRevenueDropdownOpen && (
+                                        <div className="absolute top-[calc(100%+8px)] w-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden transition-all z-[100] animate-fade-in-up">
+                                            <div className="p-1">
+                                                {revenueOptions.map((option) => (
+                                                    <div 
+                                                        key={option.value}
+                                                        onClick={() => {
+                                                            setRevenueShare(option.value as any);
+                                                            setIsRevenueDropdownOpen(false);
+                                                        }}
+                                                        className={`flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-colors ${revenueShare === option.value ? 'bg-primary-50 text-primary-700' : 'hover:bg-slate-50 text-slate-700'}`}
+                                                    >
+                                                        <span className="font-bold">{option.label}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <button
@@ -891,13 +1000,13 @@ const AppContent: React.FC = () => {
                         </>
                         ) : (
                             <span>
-                                {activeTab === 'convert' ? 'Chuyển đổi' : activeTab === 'calculate' ? 'Tính phí & Quy đổi' : 'Tính doanh thu'}
+                                {activeTab === 'convert' ? 'Chuyển đổi' : 'Tính phí & Doanh thu'}
                             </span>
                         )}
                     </span>
                 </button>
 
-                {(result && activeTab !== 'revenue') && (
+                {result && (
                     <ResultSection 
                         result={result} 
                         fromCurrency={fromCurrency} 
@@ -910,7 +1019,7 @@ const AppContent: React.FC = () => {
                     />
                 )}
 
-                {activeTab === 'revenue' && (
+                {activeTab === 'calculate' && (
                      <>
                         {revenueResult && (
                              <div className="animate-fade-in-up pt-4">
