@@ -94,7 +94,7 @@ export const useCurrencyConverter = () => {
       converted: number, 
       type: 'convert' | 'calculate' | 'revenue', 
       originalSalary?: number,
-      revenueDetails?: { shareType: 'all' | 'cv' | 'job', stageRevenue: number, totalRevenue: number }
+      revenueDetails?: { shareType: 'all' | 'cv' | 'job', stageRevenue: number, totalRevenue: number, isSalesExecutive?: boolean, salesExecutiveType?: 'with_language' | 'without_language' }
   ) => {
     const newItem: ConversionHistoryItem = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -150,7 +150,7 @@ export const useCurrencyConverter = () => {
     setLoadingState(LoadingState.IDLE);
   }, []);
 
-  const executeConversion = async (currentAmount: number, source: Currency, target: Currency, type: 'convert' | 'calculate' | 'revenue', originalSalary?: number) => {
+  const executeConversion = async (currentAmount: number, source: Currency, target: Currency, type: 'convert' | 'calculate' | 'revenue', originalSalary?: number, revenueDetails?: { shareType: 'all' | 'cv' | 'job', stageRevenue: number, totalRevenue: number, isSalesExecutive?: boolean, salesExecutiveType?: 'with_language' | 'without_language' }) => {
     setLoadingState(LoadingState.LOADING);
     setErrorMsg('');
     
@@ -159,7 +159,7 @@ export const useCurrencyConverter = () => {
       const data = await convertCurrencyApi(currentAmount, source.code, target.code, cnyRate, useCustomCnyRate);
       setResult(data);
       setLoadingState(LoadingState.SUCCESS);
-      addToHistory(currentAmount, source, target, data.convertedAmount, type, originalSalary);
+      addToHistory(currentAmount, source, target, data.convertedAmount, type, originalSalary, revenueDetails);
     } catch (err) {
       setErrorMsg("Có lỗi xảy ra khi lấy tỷ giá. Vui lòng thử lại.");
       setLoadingState(LoadingState.ERROR);
@@ -167,7 +167,7 @@ export const useCurrencyConverter = () => {
     }
   };
 
-  const handleConvert = useCallback((amountOverride?: string, type: 'convert' | 'calculate' | 'revenue' = 'convert', originalSalary?: number) => {
+  const handleConvert = useCallback((amountOverride?: string, type: 'convert' | 'calculate' | 'revenue' = 'convert', originalSalary?: number, revenueDetails?: { shareType: 'all' | 'cv' | 'job', stageRevenue: number, totalRevenue: number, isSalesExecutive?: boolean, salesExecutiveType?: 'with_language' | 'without_language' }) => {
     const valueToCheck = amountOverride !== undefined ? amountOverride : amount;
     const numAmount = parseFloat(valueToCheck);
 
@@ -175,7 +175,7 @@ export const useCurrencyConverter = () => {
       setErrorMsg("Vui lòng nhập số tiền hợp lệ");
       return;
     }
-    executeConversion(numAmount, fromCurrency, toCurrency, type, originalSalary);
+    executeConversion(numAmount, fromCurrency, toCurrency, type, originalSalary, revenueDetails);
   }, [amount, fromCurrency, toCurrency, cnyRate, useCustomCnyRate]);
 
   const handleSwap = (currentType: 'convert' | 'calculate' | 'revenue' = 'convert') => {
