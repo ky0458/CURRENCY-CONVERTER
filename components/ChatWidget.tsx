@@ -29,7 +29,7 @@ export const ChatWidget: React.FC = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -37,9 +37,39 @@ export const ChatWidget: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState<'normal' | 'deep_translate'>('normal');
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
+  const [isDeletingMultiple, setIsDeletingMultiple] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const chatSessionRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const savedAvatar = localStorage.getItem('ai_avatar');
+    if (savedAvatar) {
+      setAvatarUrl(savedAvatar);
+    }
+  }, []);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setAvatarUrl(base64String);
+        localStorage.setItem('ai_avatar', base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Fetch sessions from Firebase if user is logged in
   useEffect(() => {
@@ -114,9 +144,9 @@ export const ChatWidget: React.FC = () => {
         }));
         
         chatSessionRef.current = ai.chats.create({
-          model: "gemini-3-flash-preview",
+          model: "gemini-2.5-flash",
           config: {
-            systemInstruction: "Bạn là một trợ lý AI thân thiện, giúp người dùng giải đáp các thắc mắc về ứng dụng chuyển đổi tiền tệ và các câu hỏi chung khác. Hãy trả lời bằng tiếng Việt, ngắn gọn, súc tích, chính xác và dễ hiểu.",
+            systemInstruction: "Bạn là trợ lý AI của Gia Hân, một trợ lý thân thiện, thông minh và hữu ích. Hãy xưng hô là 'em' và gọi người dùng là 'chị'. Hãy trả lời một cách tự nhiên như đang nhắn tin trò chuyện, ngắn gọn, súc tích, chính xác và dễ hiểu bằng tiếng Việt. LUÔN LUÔN tự kiểm tra lại câu trả lời của mình trước khi xuất ra kết quả cuối cùng để đảm bảo tính chính xác và đúng yêu cầu.",
           },
           history: history.length > 0 ? history : undefined
         });
@@ -124,14 +154,14 @@ export const ChatWidget: React.FC = () => {
     } else {
       setMessages([{
         id: Date.now().toString(),
-        text: "Xin chào! Tôi là trợ lý AI. Tôi có thể giúp gì cho bạn hôm nay?",
+        text: "Xin chào! Em là trợ lý AI của Gia Hân. Em có thể giúp gì cho chị hôm nay?",
         sender: 'ai',
         timestamp: Date.now()
       }]);
       chatSessionRef.current = ai.chats.create({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.5-flash",
         config: {
-          systemInstruction: "Bạn là một trợ lý AI thân thiện, giúp người dùng giải đáp các thắc mắc về ứng dụng chuyển đổi tiền tệ và các câu hỏi chung khác. Hãy trả lời bằng tiếng Việt, ngắn gọn, súc tích, chính xác và dễ hiểu.",
+          systemInstruction: "Bạn là trợ lý AI của Gia Hân, một trợ lý thân thiện, thông minh và hữu ích. Hãy xưng hô là 'em' và gọi người dùng là 'chị'. Hãy trả lời một cách tự nhiên như đang nhắn tin trò chuyện, ngắn gọn, súc tích, chính xác và dễ hiểu bằng tiếng Việt. LUÔN LUÔN tự kiểm tra lại câu trả lời của mình trước khi xuất ra kết quả cuối cùng để đảm bảo tính chính xác và đúng yêu cầu.",
         },
       });
     }
@@ -236,30 +266,34 @@ export const ChatWidget: React.FC = () => {
     }
 
     // Save user message immediately
-    saveSession(sessionId, sessionTitle, currentMessages);
+    saveSession(sessionId, sessionTitle, currentMessages, sessions.find(s => s.id === sessionId)?.isPinned || false);
 
     try {
       if (!chatSessionRef.current) {
         chatSessionRef.current = ai.chats.create({
-          model: "gemini-3-flash-preview",
+          model: "gemini-2.5-flash",
           config: {
-            systemInstruction: "Bạn là một trợ lý AI thân thiện, giúp người dùng giải đáp các thắc mắc về ứng dụng chuyển đổi tiền tệ và các câu hỏi chung khác. Hãy trả lời bằng tiếng Việt, ngắn gọn, súc tích, chính xác và dễ hiểu.",
+            systemInstruction: "Bạn là trợ lý AI của Gia Hân, một trợ lý thân thiện, thông minh và hữu ích. Hãy xưng hô là 'em' và gọi người dùng là 'chị'. Hãy trả lời một cách tự nhiên như đang nhắn tin trò chuyện, ngắn gọn, súc tích, chính xác và dễ hiểu bằng tiếng Việt. LUÔN LUÔN tự kiểm tra lại câu trả lời của mình trước khi xuất ra kết quả cuối cùng để đảm bảo tính chính xác và đúng yêu cầu.",
           },
         });
       }
 
       let promptText = text;
       if (chatMode === 'deep_translate') {
-          promptText = `[YÊU CẦU DỊCH CHUYÊN SÂU - HÃY KIỂM TRA KỸ TRƯỚC KHI TRẢ LỜI]
-Hãy đóng vai là một chuyên gia dịch thuật tiếng Trung cao cấp.
-1. Nếu input là tiếng Việt: Dịch sang tiếng Trung. Đảm bảo văn phong tự nhiên, chuyên nghiệp và lịch sự để giao tiếp với khách hàng. Sau đó, XUỐNG DÒNG và cung cấp bản dịch ngược từ tiếng Trung đó sang tiếng Việt để tôi đối chiếu.
-2. Nếu input là tiếng Trung: Dịch sang tiếng Việt chính xác, đúng ngữ cảnh.
-3. TUYỆT ĐỐI KHÔNG giải thích, KHÔNG thêm chữ thừa. Chỉ trả về kết quả.
+          promptText = `[DỊCH THUẬT GIAO TIẾP KHÁCH HÀNG - HÃY KIỂM TRA LẠI KẾT QUẢ TRƯỚC KHI TRẢ VỀ]
+Em là một trợ lý dịch thuật chuyên hỗ trợ giao tiếp với khách hàng qua tin nhắn. Hãy xưng hô là 'em' và gọi người dùng là 'chị'.
+1. Nếu input là tiếng Việt: Dịch sang tiếng Trung. YÊU CẦU QUAN TRỌNG: Văn phong phải cực kỳ tự nhiên, giống như người bản xứ đang nhắn tin trò chuyện thực tế, KHÔNG dùng từ ngữ quá sách vở hay cứng nhắc. Tuy nhiên, vẫn phải giữ thái độ lịch sự, tôn trọng và chuyên nghiệp của người làm dịch vụ chăm sóc khách hàng.
+Định dạng đầu ra BẮT BUỘC khi dịch từ tiếng Việt sang tiếng Trung:
+[Câu dịch tiếng Trung]
+
+Nghĩa tiếng Việt: [Nghĩa tiếng Việt khi dịch ngược lại câu tiếng Trung vừa dịch]
+2. Nếu input là tiếng Trung: Dịch sang tiếng Việt một cách tự nhiên, đúng ngữ cảnh giao tiếp.
+3. TUYỆT ĐỐI KHÔNG giải thích, KHÔNG thêm chữ thừa. Chỉ trả về kết quả dịch theo đúng định dạng.
 
 Input cần dịch:
 ${text}`;
       } else {
-          promptText = `[HÃY KIỂM TRA KỸ CÂU TRẢ LỜI ĐỂ ĐẢM BẢO ĐÚNG YÊU CẦU TRƯỚC KHI XUẤT KẾT QUẢ]
+          promptText = `[HÃY KIỂM TRA KỸ LẠI CÂU TRẢ LỜI CỦA BẠN TRƯỚC KHI XUẤT KẾT QUẢ. TRẢ LỜI TỰ NHIÊN, NGẮN GỌN VÀ ĐÚNG TRỌNG TÂM]
 ${text}`;
       }
 
@@ -304,7 +338,7 @@ ${text}`;
       currentMessages = [...currentMessages, errorMsg];
       setMessages(currentMessages);
       if (sessionId) {
-         saveSession(sessionId, sessionTitle, currentMessages);
+         saveSession(sessionId, sessionTitle, currentMessages, sessions.find(s => s.id === sessionId)?.isPinned || false);
       }
     } finally {
       setIsLoading(false);
@@ -321,14 +355,14 @@ ${text}`;
     setCurrentSessionId(null);
     setMessages([{
       id: Date.now().toString(),
-      text: "Xin chào! Tôi là trợ lý AI. Tôi có thể giúp gì cho bạn hôm nay?",
+      text: "Xin chào! Em là trợ lý AI của Gia Hân. Em có thể giúp gì cho bạn hôm nay?",
       sender: 'ai',
       timestamp: Date.now()
     }]);
     chatSessionRef.current = ai.chats.create({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       config: {
-        systemInstruction: "Bạn là một trợ lý AI thân thiện, giúp người dùng giải đáp các thắc mắc về ứng dụng chuyển đổi tiền tệ và các câu hỏi chung khác. Hãy trả lời bằng tiếng Việt, ngắn gọn, súc tích, chính xác và dễ hiểu.",
+        systemInstruction: "Bạn là trợ lý AI của Gia Hân, một trợ lý thân thiện, thông minh và hữu ích. Hãy xưng hô là 'em' và gọi người dùng là 'bạn' hoặc 'anh/chị'. Hãy trả lời một cách tự nhiên như đang nhắn tin trò chuyện, ngắn gọn, súc tích, chính xác và dễ hiểu bằng tiếng Việt. LUÔN LUÔN tự kiểm tra lại câu trả lời của mình trước khi xuất ra kết quả cuối cùng để đảm bảo tính chính xác và đúng yêu cầu.",
       },
     });
     if (window.innerWidth < 640) setShowSidebar(false);
@@ -352,27 +386,118 @@ ${text}`;
     }
   };
 
-  const deleteSession = async (sessionId: string, e: React.MouseEvent) => {
+  const handleSessionClick = (sessionId: string) => {
+    if (isSelectionMode) {
+        const newSet = new Set(selectedSessions);
+        if (newSet.has(sessionId)) newSet.delete(sessionId);
+        else newSet.add(sessionId);
+        setSelectedSessions(newSet);
+    } else {
+        setCurrentSessionId(sessionId);
+        if (window.innerWidth < 640) setShowSidebar(false);
+    }
+  };
+
+  const handleTouchStart = (sessionId: string) => {
+    if (isSelectionMode) return;
+    longPressTimerRef.current = setTimeout(() => {
+      setIsSelectionMode(true);
+      setSelectedSessions(new Set([sessionId]));
+    }, 500); // 500ms long press
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const startRenaming = (session: ChatSession, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm("Bạn có chắc chắn muốn xóa cuộc trò chuyện này?")) {
-      if (!user) {
-        const updatedSessions = sessions.filter(s => s.id !== sessionId);
+    setEditingSessionId(session.id);
+    setEditingTitle(session.title);
+  };
+
+  const saveRenamedSession = async (sessionId: string) => {
+    if (!editingTitle.trim()) {
+        setEditingSessionId(null);
+        return;
+    }
+    
+    if (!user) {
+        const updatedSessions = sessions.map(s => 
+            s.id === sessionId ? { ...s, title: editingTitle.trim() } : s
+        );
         setSessions(updatedSessions);
         localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
-        if (currentSessionId === sessionId) {
+    } else {
+        try {
+            const sessionRef = doc(db, 'chat_sessions', sessionId);
+            await setDoc(sessionRef, { title: editingTitle.trim() }, { merge: true });
+        } catch (error) {
+            console.error("Error renaming session:", error);
+        }
+    }
+    setEditingSessionId(null);
+  };
+
+  const confirmDeleteSession = (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSessionToDelete(sessionId);
+    setIsDeletingMultiple(false);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteSelectedSessions = () => {
+    setIsDeletingMultiple(true);
+    setShowDeleteConfirm(true);
+  };
+
+  const executeDelete = async () => {
+    if (isDeletingMultiple) {
+        if (!user) {
+            const updatedSessions = sessions.filter(s => !selectedSessions.has(s.id));
+            setSessions(updatedSessions);
+            localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+            if (currentSessionId && selectedSessions.has(currentSessionId)) {
+                createNewChat();
+            }
+        } else {
+            try {
+                for (const id of selectedSessions) {
+                    await deleteDoc(doc(db, 'chat_sessions', id));
+                }
+                if (currentSessionId && selectedSessions.has(currentSessionId)) {
+                    createNewChat();
+                }
+            } catch (error) {
+                console.error("Error deleting sessions:", error);
+            }
+        }
+        setIsSelectionMode(false);
+        setSelectedSessions(new Set());
+    } else if (sessionToDelete) {
+      if (!user) {
+        const updatedSessions = sessions.filter(s => s.id !== sessionToDelete);
+        setSessions(updatedSessions);
+        localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+        if (currentSessionId === sessionToDelete) {
           createNewChat();
         }
-        return;
-      }
-      try {
-        await deleteDoc(doc(db, 'chat_sessions', sessionId));
-        if (currentSessionId === sessionId) {
-          createNewChat();
+      } else {
+        try {
+          await deleteDoc(doc(db, 'chat_sessions', sessionToDelete));
+          if (currentSessionId === sessionToDelete) {
+            createNewChat();
+          }
+        } catch (error) {
+          console.error("Error deleting session:", error);
         }
-      } catch (error) {
-        console.error("Error deleting session:", error);
       }
     }
+    setShowDeleteConfirm(false);
+    setSessionToDelete(null);
   };
 
   const formatTime = (timestamp: number) => {
@@ -408,111 +533,210 @@ ${text}`;
 
       {/* Main Chat Window */}
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center sm:p-6 overflow-hidden">
             <div 
                 className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100 animate-fade-in'}`}
                 onClick={toggleChat}
             />
             
             <div 
-                className={`bg-white/95 backdrop-blur-xl w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex relative z-10 origin-center border border-white/60
+                className={`bg-white/95 backdrop-blur-xl w-full max-w-full h-full sm:h-auto sm:max-w-5xl sm:rounded-3xl shadow-2xl overflow-hidden flex relative z-10 origin-center sm:border border-white/60
                     ${isClosing ? 'animate-fade-out-down' : 'animate-fade-in-up'}
                 `}
                 style={{
-                    maxHeight: '85dvh',
-                    height: typeof window !== 'undefined' && window.innerWidth >= 768 ? '85vh' : '85dvh',
+                    height: typeof window !== 'undefined' && window.innerWidth < 640 ? '100dvh' : '85vh',
+                    maxHeight: typeof window !== 'undefined' && window.innerWidth < 640 ? '100dvh' : '85vh',
                     animationDuration: '0.3s'
                 }}
             >
                 {/* Sidebar (History) */}
-                <div className={`absolute sm:relative z-20 w-72 h-full bg-slate-50/90 backdrop-blur-md border-r border-slate-200/60 flex flex-col transition-transform duration-300 ${showSidebar ? 'translate-x-0' : '-translate-x-full sm:translate-x-0 sm:w-72 sm:border-r sm:overflow-hidden'}`}>
-                    <div className="p-5 border-b border-slate-200/60 flex items-center justify-between bg-white/50 shrink-0">
-                        <h3 className="font-bold text-slate-800 text-lg">Lịch sử chat</h3>
-                        <button onClick={() => setShowSidebar(false)} className="sm:hidden p-1.5 text-slate-500 hover:bg-slate-200 rounded-xl transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                <div className={`absolute z-30 h-full bg-slate-50/95 backdrop-blur-md border-r border-slate-200/60 flex flex-col transition-all duration-300 ease-in-out shadow-2xl sm:shadow-none
+                    ${showSidebar ? 'translate-x-0 w-[85%] sm:w-72 sm:relative' : '-translate-x-full w-[85%] sm:w-0 sm:border-none sm:opacity-0 sm:overflow-hidden'}`}>
+                    <div className="p-4 sm:p-5 border-b border-slate-200/60 flex items-center justify-between bg-white/50 shrink-0 w-full sm:w-72">
+                        <div className="flex items-center justify-start gap-2">
+                            <button 
+                                onClick={() => setShowSidebar(false)}
+                                className="sm:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                                </svg>
+                            </button>
+                            <h3 className="font-bold text-slate-800 text-lg">Lịch sử chat</h3>
+                        </div>
+                        {isSelectionMode && (
+                            <button 
+                                onClick={() => {
+                                    setIsSelectionMode(false);
+                                    setSelectedSessions(new Set());
+                                }}
+                                className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                            >
+                                Hủy
+                            </button>
+                        )}
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4 w-full sm:w-72">
                         {!user && (
-                            <div className="p-4 text-center text-sm text-slate-500 bg-indigo-50/50 rounded-xl border border-indigo-100/50">
-                                Đăng nhập để lưu và đồng bộ lịch sử trò chuyện.
+                            <div className="p-3 text-center text-xs text-slate-500 bg-indigo-50/50 rounded-xl border border-indigo-100/50 mb-2">
+                                Đăng nhập để đồng bộ lịch sử trò chuyện lên đám mây.
                             </div>
                         )}
                         
-                        {user && (
-                            <>
-                                <button 
-                                    onClick={createNewChat}
-                                    className="w-full flex items-center gap-2 p-3.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 font-medium text-sm"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                    </svg>
-                                    Cuộc trò chuyện mới
-                                </button>
+                        <button 
+                            onClick={createNewChat}
+                            className="w-full flex items-center gap-2 p-3.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 font-medium text-sm"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                            Cuộc trò chuyện mới
+                        </button>
 
-                                {pinnedSessions.length > 0 && (
-                                    <div>
-                                        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-2">Đã ghim</h4>
-                                        <div className="space-y-1">
-                                            {pinnedSessions.map(session => (
-                                                <div 
-                                                    key={session.id}
-                                                    onClick={() => { setCurrentSessionId(session.id); if (window.innerWidth < 640) setShowSidebar(false); }}
-                                                    className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${currentSessionId === session.id ? 'bg-white shadow-sm border border-indigo-100 ring-1 ring-indigo-50' : 'hover:bg-white/60 border border-transparent hover:border-slate-200/50'}`}
-                                                >
-                                                    <div className="flex-1 min-w-0 pr-2">
-                                                        <p className={`text-sm truncate ${currentSessionId === session.id ? 'text-indigo-700 font-semibold' : 'text-slate-700 font-medium'}`}>{session.title}</p>
-                                                        <p className="text-[10px] text-slate-400 mt-1">{formatDate(session.updatedAt)}</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button onClick={(e) => togglePin(session, e)} className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                                                                <path fillRule="evenodd" d="M12 2.25a.75.75 0 0 1 .75.75v11.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V3a.75.75 0 0 1 .75-.75Zm-9 13.5a.75.75 0 0 1 .75.75v2.25a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5V16.5a.75.75 0 0 1 1.5 0v2.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V16.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
+                        {isSelectionMode && selectedSessions.size > 0 && (
+                            <button 
+                                onClick={confirmDeleteSelectedSessions}
+                                className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-rose-100 text-rose-600 hover:bg-rose-200 transition-colors text-sm font-medium mb-4"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                </svg>
+                                Xóa {selectedSessions.size} mục
+                            </button>
+                        )}
+
+                        {pinnedSessions.length > 0 && (
+                            <div>
+                                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-2">Đã ghim</h4>
+                                <div className="space-y-1">
+                                    {pinnedSessions.map(session => (
+                                        <div 
+                                            key={session.id}
+                                            onClick={() => handleSessionClick(session.id)}
+                                            onTouchStart={() => handleTouchStart(session.id)}
+                                            onTouchEnd={handleTouchEnd}
+                                            onMouseDown={() => handleTouchStart(session.id)}
+                                            onMouseUp={handleTouchEnd}
+                                            onMouseLeave={handleTouchEnd}
+                                            className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${currentSessionId === session.id && !isSelectionMode ? 'bg-white shadow-sm border border-indigo-100 ring-1 ring-indigo-50' : 'hover:bg-white/60 border border-transparent hover:border-slate-200/50'} ${selectedSessions.has(session.id) ? 'bg-indigo-50 border-indigo-200' : ''}`}
+                                        >
+                                            {isSelectionMode && (
+                                                <div className="mr-3 flex-shrink-0">
+                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedSessions.has(session.id) ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300'}`}>
+                                                        {selectedSessions.has(session.id) && (
+                                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
+                                                                <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 0 1 1.04-.208Z" clipRule="evenodd" />
                                                             </svg>
-                                                        </button>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            ))}
+                                            )}
+                                            <div className="flex-1 min-w-0 pr-2">
+                                                {editingSessionId === session.id ? (
+                                                    <input 
+                                                        type="text" 
+                                                        value={editingTitle}
+                                                        onChange={(e) => setEditingTitle(e.target.value)}
+                                                        onBlur={() => saveRenamedSession(session.id)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && saveRenamedSession(session.id)}
+                                                        className="w-full text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-1 outline-none"
+                                                        autoFocus
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                ) : (
+                                                    <p className={`text-sm truncate ${currentSessionId === session.id ? 'text-indigo-700 font-semibold' : 'text-slate-700 font-medium'}`}>{session.title}</p>
+                                                )}
+                                                <p className="text-[10px] text-slate-400 mt-1">{formatDate(session.updatedAt)}</p>
+                                            </div>
+                                            {!isSelectionMode && (
+                                                <div className="flex items-center gap-1 opacity-100 transition-opacity">
+                                                    <button onClick={(e) => startRenaming(session, e)} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors" title="Đổi tên">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                        </svg>
+                                                    </button>
+                                                    <button onClick={(e) => togglePin(session, e)} className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors" title="Bỏ ghim">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                                                            <line x1="12" y1="17" x2="12" y2="22"></line>
+                                                            <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                )}
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
-                                {unpinnedSessions.length > 0 && (
-                                    <div>
-                                        <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-2 mt-5">Gần đây</h4>
-                                        <div className="space-y-1">
-                                            {unpinnedSessions.map(session => (
-                                                <div 
-                                                    key={session.id}
-                                                    onClick={() => { setCurrentSessionId(session.id); if (window.innerWidth < 640) setShowSidebar(false); }}
-                                                    className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${currentSessionId === session.id ? 'bg-white shadow-sm border border-indigo-100 ring-1 ring-indigo-50' : 'hover:bg-white/60 border border-transparent hover:border-slate-200/50'}`}
-                                                >
-                                                    <div className="flex-1 min-w-0 pr-2">
-                                                        <p className={`text-sm truncate ${currentSessionId === session.id ? 'text-indigo-700 font-semibold' : 'text-slate-700 font-medium'}`}>{session.title}</p>
-                                                        <p className="text-[10px] text-slate-400 mt-1">{formatDate(session.updatedAt)}</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button onClick={(e) => togglePin(session, e)} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                        {unpinnedSessions.length > 0 && (
+                            <div>
+                                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-2 mt-5">Gần đây</h4>
+                                <div className="space-y-1">
+                                    {unpinnedSessions.map(session => (
+                                        <div 
+                                            key={session.id}
+                                            onClick={() => handleSessionClick(session.id)}
+                                            onTouchStart={() => handleTouchStart(session.id)}
+                                            onTouchEnd={handleTouchEnd}
+                                            onMouseDown={() => handleTouchStart(session.id)}
+                                            onMouseUp={handleTouchEnd}
+                                            onMouseLeave={handleTouchEnd}
+                                            className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${currentSessionId === session.id && !isSelectionMode ? 'bg-white shadow-sm border border-indigo-100 ring-1 ring-indigo-50' : 'hover:bg-white/60 border border-transparent hover:border-slate-200/50'} ${selectedSessions.has(session.id) ? 'bg-indigo-50 border-indigo-200' : ''}`}
+                                        >
+                                            {isSelectionMode && (
+                                                <div className="mr-3 flex-shrink-0">
+                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedSessions.has(session.id) ? 'bg-indigo-500 border-indigo-500 text-white' : 'border-slate-300'}`}>
+                                                        {selectedSessions.has(session.id) && (
+                                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
+                                                                <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 0 1 1.04-.208Z" clipRule="evenodd" />
                                                             </svg>
-                                                        </button>
-                                                        <button onClick={(e) => deleteSession(session.id, e)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                                                            </svg>
-                                                        </button>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            ))}
+                                            )}
+                                            <div className="flex-1 min-w-0 pr-2">
+                                                {editingSessionId === session.id ? (
+                                                    <input 
+                                                        type="text" 
+                                                        value={editingTitle}
+                                                        onChange={(e) => setEditingTitle(e.target.value)}
+                                                        onBlur={() => saveRenamedSession(session.id)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && saveRenamedSession(session.id)}
+                                                        className="w-full text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-1 outline-none"
+                                                        autoFocus
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                ) : (
+                                                    <p className={`text-sm truncate ${currentSessionId === session.id ? 'text-indigo-700 font-semibold' : 'text-slate-700 font-medium'}`}>{session.title}</p>
+                                                )}
+                                                <p className="text-[10px] text-slate-400 mt-1">{formatDate(session.updatedAt)}</p>
+                                            </div>
+                                            {!isSelectionMode && (
+                                                <div className="flex items-center gap-1 opacity-100 transition-opacity">
+                                                    <button onClick={(e) => startRenaming(session, e)} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors" title="Đổi tên">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                                        </svg>
+                                                    </button>
+                                                    <button onClick={(e) => togglePin(session, e)} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors" title="Ghim">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                                                            <line x1="12" y1="17" x2="12" y2="22"></line>
+                                                            <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
+                                                        </svg>
+                                                    </button>
+                                                    <button onClick={(e) => confirmDeleteSession(session.id, e)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" title="Xóa">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                )}
-                            </>
+                                    ))}
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -520,8 +744,8 @@ ${text}`;
                 {/* Main Chat Area */}
                 <div className="flex-1 flex flex-col min-w-0 bg-white relative z-10">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-white/50 backdrop-blur-md shrink-0">
-                        <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 bg-white/50 backdrop-blur-md shrink-0">
+                        <div className="flex items-center gap-3 sm:gap-4">
                             <button 
                                 onClick={() => setShowSidebar(!showSidebar)}
                                 className="sm:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
@@ -539,23 +763,44 @@ ${text}`;
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
                                 </svg>
                             </button>
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md ring-2 ring-white">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-7 h-7">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
-                                    </svg>
+                            <div className="flex items-center gap-2 sm:gap-3">
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    onChange={handleAvatarChange} 
+                                    accept="image/*" 
+                                    className="hidden" 
+                                />
+                                <div 
+                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md ring-2 ring-white cursor-pointer overflow-hidden relative group"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    title="Thay đổi ảnh đại diện"
+                                >
+                                    {avatarUrl ? (
+                                        <img src={avatarUrl} alt="AI Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 sm:w-7 sm:h-7">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                                        </svg>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-white">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                                        </svg>
+                                    </div>
                                 </div>
                                 <div>
-                                    <h3 className="font-extrabold text-slate-800 text-lg tracking-tight">Trợ lý AI Gemini</h3>
-                                    <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                                    <h3 className="font-extrabold text-slate-800 text-base sm:text-lg tracking-tight">Trợ lý AI của Gia Hân</h3>
+                                    <p className="text-[10px] sm:text-xs text-emerald-600 font-semibold flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
                                         Đang hoạt động
                                     </p>
                                 </div>
                             </div>
                         </div>
-                        <button onClick={toggleChat} className="p-2.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
+                        <button onClick={toggleChat} className={`p-2 sm:p-2.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors ${showSidebar ? 'hidden sm:block' : ''}`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                             </svg>
                         </button>
@@ -570,10 +815,14 @@ ${text}`;
                                 <div key={msg.id} className={`flex gap-3 sm:gap-4 ${isMe ? 'justify-end' : 'justify-start'}`}>
                                     {!isMe && (
                                         <div className="w-10 h-10 shrink-0 flex items-end">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md ring-2 ring-white">
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
-                                                </svg>
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md ring-2 ring-white overflow-hidden">
+                                                {avatarUrl ? (
+                                                    <img src={avatarUrl} alt="AI Avatar" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                                                    </svg>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -693,6 +942,43 @@ ${text}`;
                     </div>
                 </div>
             </div>
+            
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-scale-in">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-rose-100 text-rose-600 mb-4 mx-auto">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 text-center mb-2">Xác nhận xóa</h3>
+                        <p className="text-slate-600 text-center text-sm mb-6">
+                            {isDeletingMultiple 
+                                ? `Bạn có chắc chắn muốn xóa ${selectedSessions.size} cuộc trò chuyện đã chọn? Hành động này không thể hoàn tác.`
+                                : "Bạn có chắc chắn muốn xóa cuộc trò chuyện này? Hành động này không thể hoàn tác."
+                            }
+                        </p>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => {
+                                    setShowDeleteConfirm(false);
+                                    setSessionToDelete(null);
+                                }}
+                                className="flex-1 px-4 py-2.5 rounded-xl font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                            >
+                                Hủy
+                            </button>
+                            <button 
+                                onClick={executeDelete}
+                                className="flex-1 px-4 py-2.5 rounded-xl font-medium text-white bg-rose-600 hover:bg-rose-700 shadow-sm shadow-rose-200 transition-all active:scale-95"
+                            >
+                                Xóa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
       )}
     </>
