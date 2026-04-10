@@ -231,10 +231,10 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
                     let typeColor = "bg-blue-100 text-blue-600";
 
                     if (isCalculate) {
-                        displayLabel = "Mức lương";
+                        displayLabel = item.revenueDetails?.isSalesExecutive ? "Phí dịch vụ" : "Mức lương";
                         displayAmount = item.originalSalary || item.inputAmount;
-                        typeLabel = "Tính phí";
-                        typeColor = "bg-purple-100 text-purple-600";
+                        typeLabel = item.revenueDetails?.isSalesExecutive ? "NVKD" : "Tính phí";
+                        typeColor = item.revenueDetails?.isSalesExecutive ? "bg-orange-100 text-orange-600" : "bg-purple-100 text-purple-600";
                     } else if (isRevenue) {
                         displayLabel = "Mức lương";
                         displayAmount = item.inputAmount; // stored as salary for revenue
@@ -292,7 +292,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
                                     </div>
                                     
                                     {/* Sub details based on type */}
-                                    {isCalculate && (
+                                    {isCalculate && !item.revenueDetails?.isSalesExecutive && (
                                         <div className="flex items-center gap-1 mt-1 text-slate-500">
                                             <span className="text-[10px] uppercase font-bold bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">Phí dịch vụ</span>
                                             <span className="text-xs font-bold">{formatCurrency(item.inputAmount, item.fromCurrency.locale, item.fromCurrency.code)}</span>
