@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../firebase';
-import { collection, doc, setDoc, onSnapshot, query, where, orderBy, deleteDoc } from 'firebase/firestore';
 
 // Initialize Gemini API
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -71,65 +69,20 @@ export const ChatWidget: React.FC = () => {
     }
   };
 
-  // Fetch sessions from Firebase if user is logged in
+  // Fetch sessions from local storage
   useEffect(() => {
-    if (!user) {
-      const localSessions = localStorage.getItem('app_chat_sessions');
-      if (localSessions) {
-        try {
-          setSessions(JSON.parse(localSessions));
-        } catch (e) {
-          console.error("Failed to parse local chat sessions", e);
-          setSessions([]);
-        }
-      } else {
+    const localSessions = localStorage.getItem('app_chat_sessions');
+    if (localSessions) {
+      try {
+        setSessions(JSON.parse(localSessions));
+      } catch (e) {
+        console.error("Failed to parse local chat sessions", e);
         setSessions([]);
       }
-      return;
+    } else {
+      setSessions([]);
     }
-
-    // Sync local sessions to Firebase if any
-    const syncLocalSessions = async () => {
-      const localSessionsStr = localStorage.getItem('app_chat_sessions');
-      if (localSessionsStr) {
-        try {
-          const localSessions: ChatSession[] = JSON.parse(localSessionsStr);
-          if (localSessions.length > 0) {
-            for (const session of localSessions) {
-              const sessionRef = doc(db, 'chat_sessions', session.id);
-              await setDoc(sessionRef, {
-                ...session,
-                userId: user.uid
-              }, { merge: true });
-            }
-            localStorage.removeItem('app_chat_sessions');
-          }
-        } catch (e) {
-          console.error("Failed to sync local chat sessions", e);
-        }
-      }
-    };
-
-    syncLocalSessions();
-
-    const q = query(
-      collection(db, 'chat_sessions'),
-      where('userId', '==', user.uid),
-      orderBy('updatedAt', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedSessions: ChatSession[] = [];
-      snapshot.forEach((doc) => {
-        fetchedSessions.push({ id: doc.id, ...doc.data() } as ChatSession);
-      });
-      setSessions(fetchedSessions);
-    }, (error) => {
-      console.error("Error fetching chat sessions:", error);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
+  }, []);
 
   // Sync messages state when current session changes
   useEffect(() => {
@@ -203,36 +156,23 @@ export const ChatWidget: React.FC = () => {
       messages: newMessages
     };
 
-    if (!user) {
-      // Save to local storage
-      const updatedSessions = [...sessions];
-      const existingIndex = updatedSessions.findIndex(s => s.id === sessionId);
-      if (existingIndex >= 0) {
-        updatedSessions[existingIndex] = { ...updatedSessions[existingIndex], ...sessionData, userId: 'local' };
-      } else {
-        updatedSessions.push({ ...sessionData, userId: 'local' });
-      }
-      
-      // Sort by updatedAt desc
-      updatedSessions.sort((a, b) => b.updatedAt - a.updatedAt);
-      
-      // Keep only last 50 sessions to save memory
-      const trimmedSessions = updatedSessions.slice(0, 50);
-      
-      setSessions(trimmedSessions);
-      localStorage.setItem('app_chat_sessions', JSON.stringify(trimmedSessions));
-      return;
+    // Save to local storage
+    const updatedSessions = [...sessions];
+    const existingIndex = updatedSessions.findIndex(s => s.id === sessionId);
+    if (existingIndex >= 0) {
+      updatedSessions[existingIndex] = { ...updatedSessions[existingIndex], ...sessionData, userId: 'local' };
+    } else {
+      updatedSessions.push({ ...sessionData, userId: 'local' });
     }
-
-    try {
-      const sessionRef = doc(db, 'chat_sessions', sessionId);
-      await setDoc(sessionRef, {
-        ...sessionData,
-        userId: user.uid
-      }, { merge: true });
-    } catch (error) {
-      console.error("Error saving session:", error);
-    }
+    
+    // Sort by updatedAt desc
+    updatedSessions.sort((a, b) => b.updatedAt - a.updatedAt);
+    
+    // Keep only last 50 sessions to save memory
+    const trimmedSessions = updatedSessions.slice(0, 50);
+    
+    setSessions(trimmedSessions);
+    localStorage.setItem('app_chat_sessions', JSON.stringify(trimmedSessions));
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -280,14 +220,18 @@ export const ChatWidget: React.FC = () => {
 
       let promptText = text;
       if (chatMode === 'deep_translate') {
-          promptText = `[DỊCH THUẬT GIAO TIẾP KHÁCH HÀNG - HÃY KIỂM TRA LẠI KẾT QUẢ TRƯỚC KHI TRẢ VỀ]
-Em là một trợ lý dịch thuật chuyên hỗ trợ giao tiếp với khách hàng qua tin nhắn. Hãy xưng hô là 'em' và gọi người dùng là 'chị'.
-1. Nếu input là tiếng Việt: Dịch sang tiếng Trung. YÊU CẦU QUAN TRỌNG: Văn phong phải cực kỳ tự nhiên, giống như người bản xứ đang nhắn tin trò chuyện thực tế, KHÔNG dùng từ ngữ quá sách vở hay cứng nhắc. Tuy nhiên, vẫn phải giữ thái độ lịch sự, tôn trọng và chuyên nghiệp của người làm dịch vụ chăm sóc khách hàng.
-Định dạng đầu ra BẮT BUỘC khi dịch từ tiếng Việt sang tiếng Trung:
+          promptText = `[DỊCH THUẬT CHUYÊN SÂU - HEADHUNTER & KHÁCH HÀNG]
+Bạn là một chuyên gia dịch thuật. Hãy bỏ qua quy tắc xưng hô "em-chị" mặc định trong phần dịch này.
+YÊU CẦU QUAN TRỌNG: Bản dịch (cả tiếng Trung và tiếng Việt) phải sử dụng ngôi xưng hô và văn phong hợp lý theo đúng ngữ cảnh giao tiếp chuyên nghiệp nhưng gần gũi giữa một người Headhunter (chuyên viên tuyển dụng) và Khách hàng/Ứng viên. Đảm bảo các chức danh, vị trí tuyển dụng được dịch chuẩn xác theo cách dùng thực tế của người Trung và người Việt.
+
+1. Nếu input là tiếng Việt: Dịch sang tiếng Trung. Văn phong phải cực kỳ tự nhiên, giống như người bản xứ đang nhắn tin trò chuyện thực tế, KHÔNG dùng từ ngữ quá sách vở.
+Định dạng đầu ra BẮT BUỘC:
 [Câu dịch tiếng Trung]
 
 Nghĩa tiếng Việt: [Nghĩa tiếng Việt khi dịch ngược lại câu tiếng Trung vừa dịch]
-2. Nếu input là tiếng Trung: Dịch sang tiếng Việt một cách tự nhiên, đúng ngữ cảnh giao tiếp.
+
+2. Nếu input là tiếng Trung: Dịch sang tiếng Việt một cách tự nhiên, đúng ngữ cảnh giao tiếp Headhunter.
+
 3. TUYỆT ĐỐI KHÔNG giải thích, KHÔNG thêm chữ thừa. Chỉ trả về kết quả dịch theo đúng định dạng.
 
 Input cần dịch:
@@ -370,20 +314,11 @@ ${text}`;
 
   const togglePin = async (session: ChatSession, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!user) {
-      const updatedSessions = sessions.map(s => 
-        s.id === session.id ? { ...s, isPinned: !s.isPinned } : s
-      );
-      setSessions(updatedSessions);
-      localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
-      return;
-    }
-    try {
-      const sessionRef = doc(db, 'chat_sessions', session.id);
-      await setDoc(sessionRef, { isPinned: !session.isPinned }, { merge: true });
-    } catch (error) {
-      console.error("Error toggling pin:", error);
-    }
+    const updatedSessions = sessions.map(s => 
+      s.id === session.id ? { ...s, isPinned: !s.isPinned } : s
+    );
+    setSessions(updatedSessions);
+    localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
   };
 
   const handleSessionClick = (sessionId: string) => {
@@ -425,20 +360,12 @@ ${text}`;
         return;
     }
     
-    if (!user) {
-        const updatedSessions = sessions.map(s => 
-            s.id === sessionId ? { ...s, title: editingTitle.trim() } : s
-        );
-        setSessions(updatedSessions);
-        localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
-    } else {
-        try {
-            const sessionRef = doc(db, 'chat_sessions', sessionId);
-            await setDoc(sessionRef, { title: editingTitle.trim() }, { merge: true });
-        } catch (error) {
-            console.error("Error renaming session:", error);
-        }
-    }
+    const updatedSessions = sessions.map(s => 
+        s.id === sessionId ? { ...s, title: editingTitle.trim() } : s
+    );
+    setSessions(updatedSessions);
+    localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+    
     setEditingSessionId(null);
   };
 
@@ -456,45 +383,21 @@ ${text}`;
 
   const executeDelete = async () => {
     if (isDeletingMultiple) {
-        if (!user) {
-            const updatedSessions = sessions.filter(s => !selectedSessions.has(s.id));
-            setSessions(updatedSessions);
-            localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
-            if (currentSessionId && selectedSessions.has(currentSessionId)) {
-                createNewChat();
-            }
-        } else {
-            try {
-                for (const id of selectedSessions) {
-                    await deleteDoc(doc(db, 'chat_sessions', id));
-                }
-                if (currentSessionId && selectedSessions.has(currentSessionId)) {
-                    createNewChat();
-                }
-            } catch (error) {
-                console.error("Error deleting sessions:", error);
-            }
+        const updatedSessions = sessions.filter(s => !selectedSessions.has(s.id));
+        setSessions(updatedSessions);
+        localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+        if (currentSessionId && selectedSessions.has(currentSessionId)) {
+            createNewChat();
         }
         setIsSelectionMode(false);
         setSelectedSessions(new Set());
     } else if (sessionToDelete) {
-      if (!user) {
         const updatedSessions = sessions.filter(s => s.id !== sessionToDelete);
         setSessions(updatedSessions);
         localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
         if (currentSessionId === sessionToDelete) {
           createNewChat();
         }
-      } else {
-        try {
-          await deleteDoc(doc(db, 'chat_sessions', sessionToDelete));
-          if (currentSessionId === sessionToDelete) {
-            createNewChat();
-          }
-        } catch (error) {
-          console.error("Error deleting session:", error);
-        }
-      }
     }
     setShowDeleteConfirm(false);
     setSessionToDelete(null);
@@ -578,12 +481,6 @@ ${text}`;
                     </div>
                     
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4 w-full sm:w-72">
-                        {!user && (
-                            <div className="p-3 text-center text-xs text-slate-500 bg-indigo-50/50 rounded-xl border border-indigo-100/50 mb-2">
-                                Đăng nhập để đồng bộ lịch sử trò chuyện lên đám mây.
-                            </div>
-                        )}
-                        
                         <button 
                             onClick={createNewChat}
                             className="w-full flex items-center gap-2 p-3.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 font-medium text-sm"
