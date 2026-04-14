@@ -1,5 +1,5 @@
 {
   "name": "Currency Converter",
   "description": "A modern, AI-powered currency converter that translates amounts into words in both Vietnamese and the target language.",
-  "requestFramePermissions": []
+  "requestFramePermissions": ["microphone"]
 }
