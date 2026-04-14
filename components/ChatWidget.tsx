@@ -103,7 +103,9 @@ export const ChatWidget: React.FC = () => {
   const startRecording = (e?: React.MouseEvent | React.TouchEvent) => {
       // Prevent default touch behavior to avoid selecting text or triggering context menus
       if (e && e.type === 'touchstart') {
-          // e.preventDefault(); // Commented out to ensure button still receives focus if needed, but usually fine.
+          if (e.cancelable) {
+              e.preventDefault();
+          }
       }
       if (!recognitionRef.current) {
           alert("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói.");
@@ -120,7 +122,12 @@ export const ChatWidget: React.FC = () => {
       }
   };
 
-  const stopRecording = () => {
+  const stopRecording = (e?: React.MouseEvent | React.TouchEvent) => {
+      if (e && (e.type === 'touchend' || e.type === 'touchcancel')) {
+          if (e.cancelable) {
+              e.preventDefault();
+          }
+      }
       if (isRecording && recognitionRef.current) {
           try {
               recognitionRef.current.stop();
@@ -1010,6 +1017,7 @@ ${text}`;
                                     onMouseLeave={stopRecording}
                                     onTouchStart={startRecording}
                                     onTouchEnd={stopRecording}
+                                    onContextMenu={(e) => e.preventDefault()}
                                     className={`p-3 sm:p-4 rounded-2xl transition-colors border shrink-0 select-none
                                         ${isRecording ? 'bg-rose-100 text-rose-600 border-rose-200 animate-pulse' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200'}
                                     `}
