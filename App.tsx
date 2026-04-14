@@ -11,6 +11,7 @@ import { TabSelector } from './components/TabSelector';
 import { NotesManager } from './components/NotesManager';
 import { ChatWidget } from './components/ChatWidget'; // Import ChatWidget
 import { UserMenu } from './components/UserMenu';
+import { DocumentSection } from './components/DocumentSection';
 import { useCurrencyConverter } from './hooks/useCurrencyConverter';
 import { useRevenueTracker } from './hooks/useRevenueTracker';
 import { RevenueStatsSection } from './components/RevenueStatsSection';
@@ -116,7 +117,7 @@ const AppContent: React.FC = () => {
   
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'convert' | 'calculate'>('convert');
+  const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'document'>('convert');
   const [salaryAmount, setSalaryAmount] = useState<string>('');
   const [calcType, setCalcType] = useState<'probation' | 'official'>('official');
   
@@ -145,13 +146,7 @@ const AppContent: React.FC = () => {
       netIncome: number;
   } | null>(null);
 
-  // Footer Clock State
-  const [currentDate, setCurrentDate] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentDate(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Footer Clock State removed as per request to use static time
 
   // Sync temp rate when actual rate changes (e.g. from local storage load)
   useEffect(() => {
@@ -646,17 +641,25 @@ const AppContent: React.FC = () => {
                         theme={theme} 
                     />
                 </div>
-                
-                {activeTab === 'convert' && (
+
+                {activeTab === 'document' && (
                     <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
-                    <DenominationSelector 
-                        currency={fromCurrency} 
-                        onSelect={handleDenominationSelect} 
-                        currentAmount={amount}
-                        theme={theme}
-                    />
+                        <DocumentSection />
                     </div>
                 )}
+                
+                {activeTab !== 'document' && (
+                    <>
+                        {activeTab === 'convert' && (
+                            <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+                            <DenominationSelector 
+                                currency={fromCurrency} 
+                                onSelect={handleDenominationSelect} 
+                                currentAmount={amount}
+                                theme={theme}
+                            />
+                            </div>
+                        )}
 
                 {/* Job Translation Section */}
                 {activeTab === 'calculate' && (
@@ -1080,6 +1083,8 @@ const AppContent: React.FC = () => {
                         </div>
                      </>
                 )}
+                </>
+                )}
 
             </div>
             
@@ -1107,7 +1112,7 @@ const AppContent: React.FC = () => {
       <div className="relative z-20 pb-4 text-center">
           <p className={`text-xs font-bold uppercase tracking-widest ${hasBackground ? 'text-white/80 text-shadow-sm' : 'text-slate-400'}`}>Powered By ZiQi</p>
           <p className={`text-[10px] font-medium mt-0.5 ${hasBackground ? 'text-white/60 text-shadow-sm' : 'text-slate-300'}`}>
-              Last update: {currentDate.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
+              Last update: 0h 13 phút 14/04/2026
           </p>
       </div>
 
