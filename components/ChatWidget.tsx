@@ -172,18 +172,17 @@ export const ChatWidget: React.FC = () => {
 
   // Fetch sessions from local storage
   useEffect(() => {
-    const localSessions = localStorage.getItem('app_chat_sessions');
-    if (localSessions) {
-      try {
-        setSessions(JSON.parse(localSessions));
-      } catch (e) {
-        console.error("Failed to parse local chat sessions", e);
+    const loadSessions = () => {
+      const localSessions = localStorage.getItem('app_chat_sessions');
+      if (localSessions) {
+        const parsed = JSON.parse(localSessions);
+        setSessions(parsed);
+      } else {
         setSessions([]);
       }
-    } else {
-      setSessions([]);
-    }
-  }, []);
+    };
+    loadSessions();
+  }, [user]);
 
   // Sync messages state when current session changes
   useEffect(() => {
@@ -499,13 +498,17 @@ ${text}`;
     if (window.innerWidth < 640) setShowSidebar(false);
   };
 
+  const persistSessions = (updatedSessions: ChatSession[]) => {
+    setSessions(updatedSessions);
+    localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+  };
+
   const togglePin = async (session: ChatSession, e: React.MouseEvent) => {
     e.stopPropagation();
     const updatedSessions = sessions.map(s => 
       s.id === session.id ? { ...s, isPinned: !s.isPinned } : s
     );
-    setSessions(updatedSessions);
-    localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+    persistSessions(updatedSessions);
   };
 
   const handleSessionClick = (sessionId: string) => {
@@ -550,8 +553,7 @@ ${text}`;
     const updatedSessions = sessions.map(s => 
         s.id === sessionId ? { ...s, title: editingTitle.trim() } : s
     );
-    setSessions(updatedSessions);
-    localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+    persistSessions(updatedSessions);
     
     setEditingSessionId(null);
   };
@@ -571,8 +573,7 @@ ${text}`;
   const executeDelete = async () => {
     if (isDeletingMultiple) {
         const updatedSessions = sessions.filter(s => !selectedSessions.has(s.id));
-        setSessions(updatedSessions);
-        localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+        persistSessions(updatedSessions);
         if (currentSessionId && selectedSessions.has(currentSessionId)) {
             createNewChat();
         }
@@ -580,8 +581,7 @@ ${text}`;
         setSelectedSessions(new Set());
     } else if (sessionToDelete) {
         const updatedSessions = sessions.filter(s => s.id !== sessionToDelete);
-        setSessions(updatedSessions);
-        localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+        persistSessions(updatedSessions);
         if (currentSessionId === sessionToDelete) {
           createNewChat();
         }
