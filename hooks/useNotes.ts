@@ -2,8 +2,6 @@
 import { useState, useEffect } from 'react';
 import { Note, NoteTag, NoteStatus } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const DEFAULT_TAGS: NoteTag[] = [
   { id: 'personal', name: 'Cá nhân', color: '#3b82f6', isPinned: false },
@@ -20,58 +18,33 @@ export const useNotes = () => {
 
   // Load Data
   useEffect(() => {
-    const loadData = async () => {
+    const loadData = () => {
       setIsLoading(true);
-      if (user) {
-        try {
-          const docRef = doc(db, "users", user.uid);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-             const data = docSnap.data();
-             if (data.notes) setNotes(data.notes);
-             if (data.tags) setTags(data.tags);
-          } else {
-              setTags(DEFAULT_TAGS);
-          }
-        } catch (e) {
-          console.error("Failed to load notes from Firestore", e);
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        try {
-          // Simulate a small delay for smoother UX or remove setTimeout for instant load
-          await new Promise(resolve => setTimeout(resolve, 300));
-          
-          const savedNotes = localStorage.getItem('app_notes');
-          const savedTags = localStorage.getItem('app_note_tags');
-          
-          if (savedNotes) setNotes(JSON.parse(savedNotes));
-          if (savedTags) setTags(JSON.parse(savedTags));
-          else setTags(DEFAULT_TAGS);
-        } catch (e) {
-          console.error("Failed to load notes from LocalStorage", e);
-        } finally {
-          setIsLoading(false);
-        }
+      try {
+        const savedNotes = localStorage.getItem('app_notes');
+        const savedTags = localStorage.getItem('app_note_tags');
+        
+        let parsedNotes = [];
+        let parsedTags = DEFAULT_TAGS;
+
+        if (savedNotes) parsedNotes = JSON.parse(savedNotes);
+        if (savedTags) parsedTags = JSON.parse(savedTags);
+        
+        setNotes(parsedNotes);
+        setTags(parsedTags);
+      } catch (e) {
+        console.error("Failed to load notes", e);
+      } finally {
+        setIsLoading(false);
       }
     };
     loadData();
   }, [user]);
 
-  // Helper to save everything to Firestore or LocalStorage
-  const persistData = async (newNotes: Note[], newTags: NoteTag[]) => {
-    if (user) {
-      try {
-        const docRef = doc(db, "users", user.uid);
-        await setDoc(docRef, { notes: newNotes, tags: newTags }, { merge: true });
-      } catch (e) {
-        console.error("Failed to save notes/tags to Firestore", e);
-      }
-    } else {
-      localStorage.setItem('app_notes', JSON.stringify(newNotes));
-      localStorage.setItem('app_note_tags', JSON.stringify(newTags));
-    }
+  // Helper to save everything to LocalStorage
+  const persistData = (newNotes: Note[], newTags: NoteTag[]) => {
+    localStorage.setItem('app_notes', JSON.stringify(newNotes));
+    localStorage.setItem('app_note_tags', JSON.stringify(newTags));
   };
 
   const saveNotes = (newNotes: Note[]) => {

@@ -4,8 +4,6 @@ import { Currency, ConversionResult, LoadingState, ConversionHistoryItem } from 
 import { DEFAULT_SOURCE_CURRENCY, DEFAULT_TARGET_CURRENCY } from '../constants';
 import { convertCurrencyApi } from '../services/geminiService';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export const useCurrencyConverter = () => {
   const [amount, setAmount] = useState<string>('100000');
@@ -33,31 +31,15 @@ export const useCurrencyConverter = () => {
     };
     loadSettings();
 
-    const loadHistory = async () => {
-      if (user) {
-        try {
-          const docRef = doc(db, "users", user.uid);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists() && docSnap.data().history) {
-             setHistory(docSnap.data().history);
-          }
-        } catch (e) {
-          console.error("Failed to load history from Firestore", e);
-        }
-      } else {
-        try {
-          const savedHistory = localStorage.getItem('conversion_history');
-          if (savedHistory) {
-            const parsed = JSON.parse(savedHistory);
-            const migrated = parsed.map((item: any) => ({
-                ...item,
-                type: item.type || 'convert'
-            }));
-            setHistory(migrated);
-          }
-        } catch (e) {
-          console.error("Failed to load history from LocalStorage", e);
-        }
+    const loadHistory = () => {
+      const savedHistory = localStorage.getItem('conversion_history');
+      if (savedHistory) {
+        const parsed = JSON.parse(savedHistory);
+        const migrated = parsed.map((item: any) => ({
+            ...item,
+            type: item.type || 'convert'
+        }));
+        setHistory(migrated);
       }
     };
     loadHistory();
@@ -73,18 +55,9 @@ export const useCurrencyConverter = () => {
       localStorage.setItem('cny_use_custom_mode', String(useCustom));
   };
 
-  const saveHistory = async (newHistory: ConversionHistoryItem[]) => {
+  const saveHistory = (newHistory: ConversionHistoryItem[]) => {
     setHistory(newHistory);
-    if (user) {
-      try {
-        const docRef = doc(db, "users", user.uid);
-        await setDoc(docRef, { history: newHistory }, { merge: true });
-      } catch (e) {
-        console.error("Failed to save history to Firestore", e);
-      }
-    } else {
-      localStorage.setItem('conversion_history', JSON.stringify(newHistory));
-    }
+    localStorage.setItem('conversion_history', JSON.stringify(newHistory));
   };
 
   const addToHistory = (
