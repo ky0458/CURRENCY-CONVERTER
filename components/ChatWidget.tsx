@@ -6,6 +6,16 @@ import { useAuth } from '../contexts/AuthContext';
 // Initialize Gemini API
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+const FALLBACK_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-3-flash-preview",
+  "gemini-3.1-flash-lite-preview",
+  "gemma-3-12b-it"
+];
+
+const SYSTEM_INSTRUCTION = `Bạn là trợ lý AI của Gia Hân, một trợ lý thân thiện, thông minh và hữu ích. Hãy xưng hô là 'em' và gọi người dùng là 'chị' trong giao tiếp thông thường.
+LƯU Ý QUAN TRỌNG: Khi nhận prompt yêu cầu dịch thuật, phần nội dung bản dịch trả về PHẢI được đổi ngôi xưng hô sao cho phù hợp với ngữ cảnh của văn bản gốc (ví dụ: giao tiếp chuyên nghiệp giữa Headhunter và Khách hàng/Ứng viên). Tuyệt đối không áp dụng quy tắc xưng hô 'em-chị' vào bên trong nội dung của bản dịch. LUÔN LUÔN tự kiểm tra lại câu trả lời để đảm bảo tính chính xác.`;
+
 interface ChatMessage {
   id: string;
   text: string;
@@ -44,17 +54,108 @@ export const ChatWidget: React.FC = () => {
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [isDeletingMultiple, setIsDeletingMultiple] = useState(false);
   
+  // Voice and Attachment states
+  const [attachment, setAttachment] = useState<{data: string, mimeType: string, name: string} | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const chatSessionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const currentModelIndexRef = useRef(0);
+  const activeModelRef = useRef(FALLBACK_MODELS[0]);
 
   useEffect(() => {
     const savedAvatar = localStorage.getItem('ai_avatar');
     if (savedAvatar) {
       setAvatarUrl(savedAvatar);
     }
+
+    // Initialize Speech Recognition
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        recognitionRef.current.lang = 'vi-VN';
+
+        recognitionRef.current.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript;
+            setNewMessage(prev => prev ? `${prev} ${transcript}` : transcript);
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+            console.error("Speech recognition error", event.error);
+            setIsRecording(false);
+            if (event.error === 'not-allowed') {
+                alert("Không thể truy cập Micro. Vui lòng cấp quyền sử dụng Micro cho trình duyệt.");
+            }
+        };
+
+        recognitionRef.current.onend = () => {
+            setIsRecording(false);
+        };
+    }
   }, []);
+
+  const startRecording = (e?: React.MouseEvent | React.TouchEvent) => {
+      // Prevent default touch behavior to avoid selecting text or triggering context menus
+      if (e && e.type === 'touchstart') {
+          // e.preventDefault(); // Commented out to ensure button still receives focus if needed, but usually fine.
+      }
+      if (!recognitionRef.current) {
+          alert("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói.");
+          return;
+      }
+      if (!isRecording) {
+          try {
+              recognitionRef.current.start();
+              setIsRecording(true);
+          } catch (e) {
+              console.error("Failed to start recording:", e);
+              setIsRecording(false);
+          }
+      }
+  };
+
+  const stopRecording = () => {
+      if (isRecording && recognitionRef.current) {
+          try {
+              recognitionRef.current.stop();
+          } catch (e) {
+              console.error(e);
+          }
+          setIsRecording(false);
+      }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (file.size > 5 * 1024 * 1024) {
+          alert("Vui lòng chọn file nhỏ hơn 5MB.");
+          return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+          const base64String = reader.result as string;
+          const base64Data = base64String.split(',')[1];
+          setAttachment({
+              data: base64Data,
+              mimeType: file.type,
+              name: file.name
+          });
+      };
+      reader.readAsDataURL(file);
+      
+      if (chatFileInputRef.current) {
+          chatFileInputRef.current.value = '';
+      }
+  };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -91,18 +192,31 @@ export const ChatWidget: React.FC = () => {
       if (session) {
         setMessages(session.messages || []);
         // Re-initialize AI chat with history
-        const history = (session.messages || []).map(msg => ({
+        const rawHistory = (session.messages || []).map(msg => ({
           role: msg.sender === 'user' ? 'user' : 'model',
           parts: [{ text: msg.text }]
         }));
         
+        let validHistory: any[] = [];
+        let expectedRole = 'model';
+        for (let i = rawHistory.length - 1; i >= 0; i--) {
+          if (rawHistory[i].role === expectedRole) {
+            validHistory.unshift(rawHistory[i]);
+            expectedRole = expectedRole === 'model' ? 'user' : 'model';
+          }
+        }
+        if (validHistory.length > 0 && validHistory[0].role === 'model') {
+          validHistory.shift();
+        }
+        
         chatSessionRef.current = ai.chats.create({
-          model: "gemini-2.5-flash",
+          model: FALLBACK_MODELS[currentModelIndexRef.current],
           config: {
-            systemInstruction: "Bạn là trợ lý AI của Gia Hân, một trợ lý thân thiện, thông minh và hữu ích. Hãy xưng hô là 'em' và gọi người dùng là 'chị'. Hãy trả lời một cách tự nhiên như đang nhắn tin trò chuyện, ngắn gọn, súc tích, chính xác và dễ hiểu bằng tiếng Việt. LUÔN LUÔN tự kiểm tra lại câu trả lời của mình trước khi xuất ra kết quả cuối cùng để đảm bảo tính chính xác và đúng yêu cầu.",
+            systemInstruction: SYSTEM_INSTRUCTION,
           },
-          history: history.length > 0 ? history : undefined
+          history: validHistory.length > 0 ? validHistory : undefined
         });
+        activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
       }
     } else {
       setMessages([{
@@ -112,11 +226,12 @@ export const ChatWidget: React.FC = () => {
         timestamp: Date.now()
       }]);
       chatSessionRef.current = ai.chats.create({
-        model: "gemini-2.5-flash",
+        model: FALLBACK_MODELS[currentModelIndexRef.current],
         config: {
-          systemInstruction: "Bạn là trợ lý AI của Gia Hân, một trợ lý thân thiện, thông minh và hữu ích. Hãy xưng hô là 'em' và gọi người dùng là 'chị'. Hãy trả lời một cách tự nhiên như đang nhắn tin trò chuyện, ngắn gọn, súc tích, chính xác và dễ hiểu bằng tiếng Việt. LUÔN LUÔN tự kiểm tra lại câu trả lời của mình trước khi xuất ra kết quả cuối cùng để đảm bảo tính chính xác và đúng yêu cầu.",
+          systemInstruction: SYSTEM_INSTRUCTION,
         },
       });
+      activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
     }
   }, [currentSessionId, sessions.length === 0]);
 
@@ -177,14 +292,22 @@ export const ChatWidget: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || isLoading) return;
+    if ((!newMessage.trim() && !attachment) || isLoading) return;
     
     const text = newMessage.trim();
+    const currentAttachment = attachment;
+    
     setNewMessage('');
+    setAttachment(null);
+    
+    let uiText = text;
+    if (currentAttachment) {
+        uiText = `[Đã đính kèm tệp: ${currentAttachment.name}]\n${text}`;
+    }
     
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
-      text,
+      text: uiText,
       sender: 'user',
       timestamp: Date.now()
     };
@@ -199,7 +322,7 @@ export const ChatWidget: React.FC = () => {
     if (!sessionId) {
       sessionId = Date.now().toString();
       setCurrentSessionId(sessionId);
-      sessionTitle = text.length > 30 ? text.substring(0, 30) + '...' : text;
+      sessionTitle = text.length > 30 ? text.substring(0, 30) + '...' : text || "Tệp đính kèm";
     } else {
       const existingSession = sessions.find(s => s.id === sessionId);
       if (existingSession) sessionTitle = existingSession.title;
@@ -208,19 +331,15 @@ export const ChatWidget: React.FC = () => {
     // Save user message immediately
     saveSession(sessionId, sessionTitle, currentMessages, sessions.find(s => s.id === sessionId)?.isPinned || false);
 
-    try {
-      if (!chatSessionRef.current) {
-        chatSessionRef.current = ai.chats.create({
-          model: "gemini-2.5-flash",
-          config: {
-            systemInstruction: "Bạn là trợ lý AI của Gia Hân, một trợ lý thân thiện, thông minh và hữu ích. Hãy xưng hô là 'em' và gọi người dùng là 'chị'. Hãy trả lời một cách tự nhiên như đang nhắn tin trò chuyện, ngắn gọn, súc tích, chính xác và dễ hiểu bằng tiếng Việt. LUÔN LUÔN tự kiểm tra lại câu trả lời của mình trước khi xuất ra kết quả cuối cùng để đảm bảo tính chính xác và đúng yêu cầu.",
-          },
-        });
-      }
+    let resultStream: any;
+    let success = false;
+    let attempts = 0;
+    let fullResponse = "";
+    const aiMsgId = (Date.now() + 1).toString();
 
-      let promptText = text;
-      if (chatMode === 'deep_translate') {
-          promptText = `[DỊCH THUẬT CHUYÊN SÂU - HEADHUNTER & KHÁCH HÀNG]
+    let promptText = text;
+    if (chatMode === 'deep_translate') {
+        promptText = `[DỊCH THUẬT CHUYÊN SÂU - HEADHUNTER & KHÁCH HÀNG]
 Bạn là một chuyên gia dịch thuật. Hãy bỏ qua quy tắc xưng hô "em-chị" mặc định trong phần dịch này.
 YÊU CẦU QUAN TRỌNG: Bản dịch (cả tiếng Trung và tiếng Việt) phải sử dụng ngôi xưng hô và văn phong hợp lý theo đúng ngữ cảnh giao tiếp chuyên nghiệp nhưng gần gũi giữa một người Headhunter (chuyên viên tuyển dụng) và Khách hàng/Ứng viên. Đảm bảo các chức danh, vị trí tuyển dụng được dịch chuẩn xác theo cách dùng thực tế của người Trung và người Việt.
 
@@ -236,57 +355,124 @@ Nghĩa tiếng Việt: [Nghĩa tiếng Việt khi dịch ngược lại câu ti�
 
 Input cần dịch:
 ${text}`;
-      } else {
-          promptText = `[HÃY KIỂM TRA KỸ LẠI CÂU TRẢ LỜI CỦA BẠN TRƯỚC KHI XUẤT KẾT QUẢ. TRẢ LỜI TỰ NHIÊN, NGẮN GỌN VÀ ĐÚNG TRỌNG TÂM]
+    } else {
+        promptText = `[HÃY KIỂM TRA KỸ LẠI CÂU TRẢ LỜI CỦA BẠN TRƯỚC KHI XUẤT KẾT QUẢ. TRẢ LỜI TỰ NHIÊN, NGẮN GỌN VÀ ĐÚNG TRỌNG TÂM]
 ${text}`;
-      }
-
-      // Use streaming for faster perceived response
-      const resultStream = await chatSessionRef.current.sendMessageStream({ message: promptText });
-      
-      const aiMsgId = (Date.now() + 1).toString();
-      let fullResponse = "";
-      
-      // Add empty AI message first
-      const aiMsg: ChatMessage = {
-        id: aiMsgId,
-        text: "",
-        sender: 'ai',
-        timestamp: Date.now()
-      };
-      currentMessages = [...currentMessages, aiMsg];
-      setMessages(currentMessages);
-      setIsLoading(false); // Stop loading animation as stream starts
-
-      for await (const chunk of resultStream) {
-        fullResponse += chunk.text;
-        setMessages(prev => prev.map(msg => 
-          msg.id === aiMsgId ? { ...msg, text: fullResponse } : msg
-        ));
-      }
-
-      // Save final AI message
-      const finalMessages = currentMessages.map(msg => 
-        msg.id === aiMsgId ? { ...msg, text: fullResponse } : msg
-      );
-      saveSession(sessionId, sessionTitle, finalMessages, sessions.find(s => s.id === sessionId)?.isPinned || false);
-
-    } catch (error) {
-      console.error("AI Chat error:", error);
-      const errorMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        text: "Đã có lỗi xảy ra khi kết nối với AI. Vui lòng thử lại sau.",
-        sender: 'ai',
-        timestamp: Date.now()
-      };
-      currentMessages = [...currentMessages, errorMsg];
-      setMessages(currentMessages);
-      if (sessionId) {
-         saveSession(sessionId, sessionTitle, currentMessages, sessions.find(s => s.id === sessionId)?.isPinned || false);
-      }
-    } finally {
-      setIsLoading(false);
     }
+
+    let messageToSend: any = promptText;
+    if (currentAttachment) {
+        messageToSend = [
+            { text: promptText || "Hãy phân tích tệp đính kèm này." },
+            {
+                inlineData: {
+                    data: currentAttachment.data,
+                    mimeType: currentAttachment.mimeType
+                }
+            }
+        ];
+    }
+
+    while (!success && attempts < FALLBACK_MODELS.length) {
+      try {
+        const modelToUse = FALLBACK_MODELS[(currentModelIndexRef.current + attempts) % FALLBACK_MODELS.length];
+        
+        if (!chatSessionRef.current || activeModelRef.current !== modelToUse) {
+          const rawHistory = currentMessages.slice(0, -1).map(msg => ({
+            role: msg.sender === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.text }]
+          }));
+          
+          let validHistory: any[] = [];
+          let expectedRole = 'model';
+          for (let i = rawHistory.length - 1; i >= 0; i--) {
+            if (rawHistory[i].role === expectedRole) {
+              validHistory.unshift(rawHistory[i]);
+              expectedRole = expectedRole === 'model' ? 'user' : 'model';
+            }
+          }
+          if (validHistory.length > 0 && validHistory[0].role === 'model') {
+            validHistory.shift();
+          }
+          
+          chatSessionRef.current = ai.chats.create({
+            model: modelToUse,
+            config: {
+              systemInstruction: SYSTEM_INSTRUCTION,
+            },
+            history: validHistory.length > 0 ? validHistory : undefined
+          });
+          activeModelRef.current = modelToUse;
+        }
+
+        // Use streaming for faster perceived response
+        resultStream = await chatSessionRef.current.sendMessageStream({ message: messageToSend });
+        
+        let isFirstChunk = true;
+
+        for await (const chunk of resultStream) {
+          fullResponse += chunk.text;
+          if (isFirstChunk) {
+             setIsLoading(false); // Stop loading animation as stream starts
+             isFirstChunk = false;
+             currentMessages = [...currentMessages, {
+                id: aiMsgId,
+                text: fullResponse,
+                sender: 'ai',
+                timestamp: Date.now()
+             }];
+             setMessages(currentMessages);
+          } else {
+             setMessages(prev => prev.map(msg => 
+               msg.id === aiMsgId ? { ...msg, text: fullResponse } : msg
+             ));
+          }
+        }
+
+        if (isFirstChunk) {
+           // Stream was empty but didn't throw
+           setIsLoading(false);
+           currentMessages = [...currentMessages, {
+                id: aiMsgId,
+                text: fullResponse,
+                sender: 'ai',
+                timestamp: Date.now()
+           }];
+           setMessages(currentMessages);
+        }
+
+        success = true;
+        currentModelIndexRef.current = (currentModelIndexRef.current + attempts) % FALLBACK_MODELS.length;
+
+        // Save final AI message
+        const finalMessages = currentMessages.map(msg => 
+          msg.id === aiMsgId ? { ...msg, text: fullResponse } : msg
+        );
+        saveSession(sessionId, sessionTitle, finalMessages, sessions.find(s => s.id === sessionId)?.isPinned || false);
+
+      } catch (error) {
+        console.warn(`AI Chat error with model ${activeModelRef.current}:`, error);
+        attempts++;
+        if (attempts >= FALLBACK_MODELS.length) {
+          setIsLoading(false);
+          const errorMsg: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            text: "Đã có lỗi xảy ra khi kết nối với AI (vượt quá giới hạn). Vui lòng thử lại sau.",
+            sender: 'ai',
+            timestamp: Date.now()
+          };
+          currentMessages = [...currentMessages, errorMsg];
+          setMessages(currentMessages);
+          if (sessionId) {
+             saveSession(sessionId, sessionTitle, currentMessages, sessions.find(s => s.id === sessionId)?.isPinned || false);
+          }
+        }
+        // Force recreation on next iteration
+        chatSessionRef.current = null;
+      }
+    }
+    
+    setIsLoading(false);
   };
 
   const handleCopy = (text: string, id: string) => {
@@ -304,11 +490,12 @@ ${text}`;
       timestamp: Date.now()
     }]);
     chatSessionRef.current = ai.chats.create({
-      model: "gemini-2.5-flash",
+      model: FALLBACK_MODELS[currentModelIndexRef.current],
       config: {
-        systemInstruction: "Bạn là trợ lý AI của Gia Hân, một trợ lý thân thiện, thông minh và hữu ích. Hãy xưng hô là 'em' và gọi người dùng là 'bạn' hoặc 'anh/chị'. Hãy trả lời một cách tự nhiên như đang nhắn tin trò chuyện, ngắn gọn, súc tích, chính xác và dễ hiểu bằng tiếng Việt. LUÔN LUÔN tự kiểm tra lại câu trả lời của mình trước khi xuất ra kết quả cuối cùng để đảm bảo tính chính xác và đúng yêu cầu.",
+        systemInstruction: SYSTEM_INSTRUCTION,
       },
     });
+    activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
     if (window.innerWidth < 640) setShowSidebar(false);
   };
 
@@ -814,27 +1001,56 @@ ${text}`;
                                 </button>
                             </div>
                         </div>
-                        <form onSubmit={handleSendMessage} className="flex items-center gap-3 max-w-4xl mx-auto">
-                            <input 
-                                type="text" 
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder="Hỏi AI bất cứ điều gì..." 
-                                className="flex-1 bg-slate-50 border border-slate-200 outline-none px-5 py-4 rounded-2xl text-[15px] font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-300 transition-all text-slate-800 placeholder:text-slate-400 shadow-inner"
-                                disabled={isLoading}
-                            />
-                            
-                            <button 
-                                type="submit" 
-                                disabled={!newMessage.trim() || isLoading}
-                                className={`p-4 rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-center
-                                    ${newMessage.trim() && !isLoading ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}
-                                `}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                                    <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
-                                </svg>
-                            </button>
+                        <form onSubmit={handleSendMessage} className="flex flex-col gap-2 max-w-4xl mx-auto relative">
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    type="button"
+                                    onMouseDown={startRecording}
+                                    onMouseUp={stopRecording}
+                                    onMouseLeave={stopRecording}
+                                    onTouchStart={startRecording}
+                                    onTouchEnd={stopRecording}
+                                    className={`p-3 sm:p-4 rounded-2xl transition-colors border shrink-0 select-none
+                                        ${isRecording ? 'bg-rose-100 text-rose-600 border-rose-200 animate-pulse' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200'}
+                                    `}
+                                    title="Nhấn giữ để nói"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                    </svg>
+                                </button>
+
+                                {isRecording ? (
+                                    <div className="flex-1 bg-rose-50 border border-rose-200 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl flex items-center gap-3 shadow-inner min-w-0">
+                                        <span className="relative flex h-3 w-3 shrink-0">
+                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                          <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                                        </span>
+                                        <span className="text-rose-600 font-medium text-[15px] animate-pulse truncate">Đang thu âm... Hãy nói gì đó</span>
+                                    </div>
+                                ) : (
+                                    <input 
+                                        type="text" 
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        placeholder="Hỏi AI bất cứ điều gì..." 
+                                        className="flex-1 bg-slate-50 border border-slate-200 outline-none px-4 sm:px-5 py-3 sm:py-4 rounded-2xl text-[15px] font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-300 transition-all text-slate-800 placeholder:text-slate-400 shadow-inner min-w-0"
+                                        disabled={isLoading}
+                                    />
+                                )}
+                                
+                                <button 
+                                    type="submit" 
+                                    disabled={!newMessage.trim() || isLoading}
+                                    className={`p-3 sm:p-4 rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-center shrink-0
+                                        ${newMessage.trim() && !isLoading ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}
+                                    `}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
+                                        <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+                                    </svg>
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
