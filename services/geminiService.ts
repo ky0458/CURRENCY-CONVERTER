@@ -55,20 +55,41 @@ export const convertCurrencyApi = async (
   }
 };
 
+const FALLBACK_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-3-flash-preview",
+  "gemini-3.1-flash-lite-preview",
+  "gemma-3-12b-it"
+];
+
+let currentModelIndex = 0;
+
 export const translateJobTitle = async (text: string): Promise<string> => {
   if (!text || !text.trim()) return "";
   
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `Dịch tên vị trí tuyển dụng sau từ tiếng Việt sang tiếng Trung. Hãy trả về đúng tên vị trí tuyển dụng khớp trong tiếng Trung thường được người Trung và người Việt sử dụng trong công việc thực tế. Chỉ trả về kết quả dịch, tuyệt đối không giải thích hay thêm bất kỳ chữ nào khác.
-      
+  let attempts = 0;
+  
+  while (attempts < FALLBACK_MODELS.length) {
+    const modelToUse = FALLBACK_MODELS[(currentModelIndex + attempts) % FALLBACK_MODELS.length];
+    try {
+      const response = await ai.models.generateContent({
+        model: modelToUse,
+        contents: {
+          parts: [{
+            text: `Dịch tên vị trí tuyển dụng sau từ tiếng Việt sang tiếng Trung. Hãy trả về đúng tên vị trí tuyển dụng khớp trong tiếng Trung thường được người Trung và người Việt sử dụng trong công việc thực tế. Chỉ trả về kết quả dịch, tuyệt đối không giải thích hay thêm bất kỳ chữ nào khác.
+        
 Tên vị trí: ${text.trim()}`
-    });
-    
-    return response.text?.trim() || "Không tìm thấy";
-  } catch (error: any) {
-    console.error("Gemini translation error:", error);
-    return "Lỗi dịch vụ AI";
+          }]
+        }
+      });
+      
+      currentModelIndex = (currentModelIndex + attempts) % FALLBACK_MODELS.length;
+      return response.text?.trim() || "Không tìm thấy";
+    } catch (error: any) {
+      console.warn(`Gemini translation error with model ${modelToUse}:`, error);
+      attempts++;
+    }
   }
+  
+  return "Lỗi dịch vụ AI";
 };
