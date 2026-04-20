@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import * as pdfjsLibModule from 'pdfjs-dist';
 
 const pdfjsLib = (pdfjsLibModule as any).default || pdfjsLibModule;
@@ -27,37 +27,50 @@ interface PageData {
 
 const PdfBlock = React.memo(({ 
     block, 
-    action, 
-    onToggle 
+    onActionChange 
 }: { 
     block: TextBlock; 
-    action: ActionType; 
-    onToggle: (id: string) => void;
+    onActionChange: (id: string, action: ActionType) => void;
 }) => {
+    const [action, setAction] = useState<ActionType>('none');
+
+    const handleToggle = useCallback(() => {
+        setAction(prev => {
+            let next: ActionType = 'none';
+            if (prev === 'none') next = 'redact';
+            else if (prev === 'redact') next = 'delete';
+            
+            // Notify parent without triggering global re-render
+            onActionChange(block.id, next);
+            return next;
+        });
+    }, [block.id, onActionChange]);
+
+    let actionClasses = '';
+    if (action === 'redact') {
+        actionClasses = 'bg-slate-900 border-transparent opacity-100';
+    } else if (action === 'delete') {
+        actionClasses = 'bg-white border-white opacity-100';
+    } else {
+        actionClasses = 'border-dashed border-indigo-400/60 hover:bg-slate-900/10 hover:border-indigo-600 opacity-60 hover:opacity-100';
+    }
+
     return (
         <div
             data-action={action}
-            className={`absolute cursor-pointer transition-all ${
-                action === 'redact' 
-                    ? 'bg-slate-900 border border-slate-900 shadow-md' 
-                    : action === 'delete'
-                        ? 'bg-white border border-slate-200/50'
-                        : 'border border-dashed border-indigo-400/70 hover:bg-indigo-400/10 hover:border-indigo-600 backdrop-blur-[1px]'
-            }`}
+            className={`absolute cursor-pointer border rounded-sm touch-manipulation ${actionClasses}`}
             style={{
                 left: `${block.xPct}%`,
                 top: `${block.yPct}%`,
                 width: `${block.widthPct}%`,
                 height: `${block.heightPct}%`,
-                opacity: action === 'none' ? 0.8 : 1,
-                zIndex: 10,
-                borderRadius: '2px'
+                zIndex: 10
             }}
-            onClick={() => onToggle(block.id)}
+            onClick={handleToggle}
             title={action === 'none' ? 'Chạm để Che (Đen)' : action === 'redact' ? 'Chạm để Xóa (Trắng)' : 'Chạm để Hủy'}
         >
             {action === 'none' && (
-                <span className="opacity-0 hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap pointer-events-none z-20">
+                <span className="hidden md:block opacity-0 hover:opacity-100 absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-800/90 text-white text-[10px] px-2 py-0.5 rounded shadow whitespace-nowrap pointer-events-none z-20">
                     {block.text}
                 </span>
             )}
@@ -70,7 +83,9 @@ export const PdfRedactor: React.FC = () => {
     const [fileName, setFileName] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [originalPdfBytes, setOriginalPdfBytes] = useState<Uint8Array | null>(null);
-    const [blockActions, setBlockActions] = useState<Record<string, ActionType>>({});
+    
+    // Instead of state that triggers global re-render, we track actions in a mutable ref
+    const blockActionsRef = useRef<Record<string, ActionType>>({});
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -79,7 +94,7 @@ export const PdfRedactor: React.FC = () => {
         setFileName(file.name);
         setIsProcessing(true);
         setPages([]);
-        setBlockActions({});
+        blockActionsRef.current = {};
 
         try {
             const arrayBuffer = await file.arrayBuffer();
@@ -118,19 +133,25 @@ export const PdfRedactor: React.FC = () => {
                     const ty = item.transform[5];
                     const fontHeight = Math.abs(item.transform[3]);
                     const width = item.width || (item.str.length * fontHeight * 0.5);
-                    const height = item.height || fontHeight;
 
                     const [px, py] = viewport.convertToViewportPoint(tx, ty);
-                    const topY = py - height;
                     
-                    // Add sensible padding in canvas pixels
-                    const paddingX = 4;
-                    const paddingY = 4;
+                    // Transform width/height from points to scaled pixels
+                    const scaledWidth = width * viewport.scale;
+                    const scaledHeight = fontHeight * viewport.scale;
+                    
+                    // In PDF coordinates, 'py' denotes the baseline of the text.
+                    // We must offset it upwards by mostly the font height to reach the visual top.
+                    const topY = py - (scaledHeight * 0.85); 
+                    
+                    // Sensible padding in canvas pixels to tightly but fully wrap text
+                    const paddingX = 3;
+                    const paddingY = 3;
 
                     const finalX = px - paddingX;
                     const finalY = topY - paddingY;
-                    const finalW = (width * viewport.scale) + (paddingX * 2);
-                    const finalH = (height * viewport.scale * 1.5) + (paddingY * 2);
+                    const finalW = scaledWidth + (paddingX * 2);
+                    const finalH = (scaledHeight * 1.2) + (paddingY * 2); // 1.2 to cover descenders (g, y, p)
 
                     // Convert to percentages for robust responsiveness
                     blocks.push({
@@ -161,14 +182,8 @@ export const PdfRedactor: React.FC = () => {
         }
     };
 
-    const toggleAction = useCallback((blockId: string) => {
-        setBlockActions(prev => {
-            const currentAction = prev[blockId] || 'none';
-            let nextAction: ActionType = 'none';
-            if (currentAction === 'none') nextAction = 'redact';
-            else if (currentAction === 'redact') nextAction = 'delete';
-            return { ...prev, [blockId]: nextAction };
-        });
+    const handleActionChange = useCallback((blockId: string, action: ActionType) => {
+        blockActionsRef.current[blockId] = action;
     }, []);
 
     const handleExport = async () => {
@@ -187,7 +202,7 @@ export const PdfRedactor: React.FC = () => {
                 const { width, height } = pdfPage.getSize();
 
                 pageData.blocks.forEach(block => {
-                    const action = blockActions[block.id] || 'none';
+                    const action = blockActionsRef.current[block.id] || 'none';
                     if (action !== 'none') {
                         const isRedact = action === 'redact';
                         
@@ -230,37 +245,58 @@ export const PdfRedactor: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-4 w-full">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                    <label className="px-5 py-2.5 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors cursor-pointer flex items-center gap-2 shadow-sm border border-indigo-100 w-full sm:w-auto justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                        </svg>
-                        Tải lên PDF CV
-                        <input 
-                            type="file" 
-                            onChange={handleFileUpload} 
-                            accept=".pdf" 
-                            className="hidden" 
-                        />
-                    </label>
-                    {fileName && <span className="text-sm text-slate-600 font-medium truncate max-w-[150px]">{fileName}</span>}
-                </div>
-                
-                {pages.length > 0 && !isProcessing && (
-                    <div className="flex items-center gap-4 w-full sm:w-auto">
-                        <span className="text-sm text-slate-500 hidden lg:block">
-                            💡 Chạm vào khối đứt nét để <strong>Che (Đen)</strong> hoặc <strong>Xóa (Trắng)</strong>
-                        </span>
+            <div className="flex flex-col gap-3 w-full">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white p-2 sm:p-2.5 rounded-2xl border border-slate-200/80 shadow-sm w-full">
+                    {/* Left Box: Upload & File Name */}
+                    <div className="flex flex-row items-center gap-2 min-w-0 w-full lg:w-auto">
+                        <label className="shrink-0 px-4 py-2.5 bg-indigo-50 text-indigo-700 rounded-xl text-sm font-semibold hover:bg-indigo-100 transition-colors cursor-pointer text-center flex items-center justify-center gap-2 border border-indigo-100/50 shadow-sm flex-1 sm:flex-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                            </svg>
+                            <span className="hidden sm:inline">Tải lên PDF CV</span>
+                            <span className="sm:hidden">Tải tệp PDF</span>
+                            <input 
+                                type="file" 
+                                onChange={handleFileUpload} 
+                                accept=".pdf" 
+                                className="hidden" 
+                            />
+                        </label>
+                        {fileName && (
+                            <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-50/80 text-slate-700 rounded-xl border border-slate-100/80 text-sm font-medium w-full sm:w-auto min-w-0 shadow-inner flex-1 sm:flex-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-slate-400 shrink-0">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3 12h9m-9-3h9m-9-3h9m-9-3h9" />
+                                </svg>
+                                <span className="truncate max-w-[120px] sm:max-w-[180px] lg:max-w-[250px]" title={fileName}>{fileName}</span>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Right Box: Action */}
+                    {pages.length > 0 && !isProcessing && (
                         <button
                             onClick={handleExport}
-                            className="px-5 py-2.5 bg-rose-50 text-rose-600 rounded-xl font-bold hover:bg-rose-100 transition-colors flex items-center gap-2 shadow-sm border border-rose-100 w-full sm:w-auto justify-center"
+                            className="w-full lg:w-auto px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 shadow-md sm:ml-auto"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                             </svg>
                             Tải CV Đã Che
                         </button>
+                    )}
+                </div>
+
+                {/* Instructions Box - Always visible across platforms nicely */}
+                {pages.length > 0 && !isProcessing && (
+                    <div className="flex items-start sm:items-center gap-3 bg-emerald-50/70 border border-emerald-100/70 p-3.5 rounded-2xl text-emerald-900 text-sm w-full">
+                        <div className="bg-white text-emerald-500 p-2 rounded-full shrink-0 shadow-sm border border-emerald-100/50">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.82 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.496 1.509 1.333 1.509 2.316V18" />
+                            </svg>
+                        </div>
+                        <div className="leading-relaxed">
+                            <strong>Hướng dẫn:</strong> Chạm một lần vào văn bản để <strong>Che (Bôi Đen)</strong>. Chạm lần 2 để <strong>Xóa (Bôi Trắng)</strong>. Chạm lần 3 để hủy.
+                        </div>
                     </div>
                 )}
             </div>
@@ -290,8 +326,7 @@ export const PdfRedactor: React.FC = () => {
                                     <PdfBlock
                                         key={block.id}
                                         block={block}
-                                        action={blockActions[block.id] || 'none'}
-                                        onToggle={toggleAction}
+                                        onActionChange={handleActionChange}
                                     />
                                 ))}
                             </div>
