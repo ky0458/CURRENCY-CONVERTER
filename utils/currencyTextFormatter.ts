@@ -182,7 +182,13 @@ export const getReadFunction = (currencyCode: string, amount: number): string =>
             // For VND: If amount has non-zero remainder when divided by 1000 (lẻ 3 chữ số), use 'đồng'.
             // Otherwise (round thousands/millions), use 'Việt Nam Đồng'.
             const suffix = (amount % 1000 !== 0) ? 'đồng' : 'Việt Nam Đồng';
-            return readNumberVietnamese(amount, suffix);
+            const viText = readNumberVietnamese(amount, suffix);
+            const daxieVND = readCJK(amount, '越南盾', { 
+                digits: ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'], 
+                units: ['拾', '佰', '仟'], 
+                groups: ['万', '亿', '兆'] 
+            }, 'CN');
+            return `${viText}\n大写: ${daxieVND}`;
         case 'JPY': return readCJK(amount, '円 (Yen)', { digits: ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'], units: ['十', '百', '千'], groups: ['万', '億', '兆'] }, 'JP');
         case 'KRW': return readCJK(amount, '원 (Won)', { digits: ['영', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'], units: ['십', '백', '천'], groups: ['만', '억', '조'] }, 'KR');
         case 'CNY': return readCJK(amount, '圆', { 
