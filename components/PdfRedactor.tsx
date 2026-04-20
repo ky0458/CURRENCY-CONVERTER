@@ -15,6 +15,10 @@ interface TextBlock {
     yPct: number;
     widthPct: number;
     heightPct: number;
+    rawX: number;
+    rawY: number;
+    rawW: number;
+    rawH: number;
 }
 
 interface PageData {
@@ -134,33 +138,43 @@ export const PdfRedactor: React.FC = () => {
                     const fontHeight = Math.abs(item.transform[3]);
                     const width = item.width || (item.str.length * fontHeight * 0.5);
 
-                    const [px, py] = viewport.convertToViewportPoint(tx, ty);
-                    
-                    // Transform width/height from points to scaled pixels
-                    const scaledWidth = width * viewport.scale;
-                    const scaledHeight = fontHeight * viewport.scale;
-                    
-                    // In PDF coordinates, 'py' denotes the baseline of the text.
-                    // We must offset it upwards by mostly the font height to reach the visual top.
-                    const topY = py - (scaledHeight * 0.85); 
-                    
-                    // Sensible padding in canvas pixels to tightly but fully wrap text
-                    const paddingX = 3;
-                    const paddingY = 3;
+                    // Provide exact mapping to PDF space natively. PDF space uses bottom-left origin.
+                    // 'ty' is the text baseline.
+                    const paddingX = 2;
+                    const paddingY = 2;
 
-                    const finalX = px - paddingX;
-                    const finalY = topY - paddingY;
-                    const finalW = scaledWidth + (paddingX * 2);
-                    const finalH = (scaledHeight * 1.2) + (paddingY * 2); // 1.2 to cover descenders (g, y, p)
+                    const rawX = tx - paddingX;
+                    const rawY = ty - (fontHeight * 0.25) - paddingY; // Adjusting for descender
+                    const rawW = width + (paddingX * 2);
+                    const rawH = (fontHeight * 1.25) + (paddingY * 2); // Expanding to cover high ascenders
 
-                    // Convert to percentages for robust responsiveness
+                    // Using the raw corner coordinates to calculate the viewport mapping 
+                    // makes it safe against document viewport rotations and CropBoxes.
+                    const pt1 = viewport.convertToViewportPoint(rawX, rawY);
+                    const pt2 = viewport.convertToViewportPoint(rawX + rawW, rawY);
+                    const pt3 = viewport.convertToViewportPoint(rawX + rawW, rawY + rawH);
+                    const pt4 = viewport.convertToViewportPoint(rawX, rawY + rawH);
+
+                    const xs = [pt1[0], pt2[0], pt3[0], pt4[0]];
+                    const ys = [pt1[1], pt2[1], pt3[1], pt4[1]];
+
+                    const minX = Math.min(...xs);
+                    const maxX = Math.max(...xs);
+                    const minY = Math.min(...ys);
+                    const maxY = Math.max(...ys);
+
+                    // Convert to percentages for robust responsiveness in web UI
                     blocks.push({
                         id: `p${i}_b${index}`,
                         text: item.str,
-                        xPct: (finalX / viewport.width) * 100,
-                        yPct: (finalY / viewport.height) * 100,
-                        widthPct: (finalW / viewport.width) * 100,
-                        heightPct: (finalH / viewport.height) * 100
+                        xPct: (minX / viewport.width) * 100,
+                        yPct: (minY / viewport.height) * 100,
+                        widthPct: ((maxX - minX) / viewport.width) * 100,
+                        heightPct: ((maxY - minY) / viewport.height) * 100,
+                        rawX,
+                        rawY,
+                        rawW,
+                        rawH
                     });
                 });
 
@@ -192,34 +206,81 @@ export const PdfRedactor: React.FC = () => {
         try {
             setIsProcessing(true);
             // Dynamic import to keep initial bundle size smaller
-            const { PDFDocument, rgb } = await import('pdf-lib');
+            const { PDFDocument, rgb, PDFName } = await import('pdf-lib');
             
             const pdfDoc = await PDFDocument.load(originalPdfBytes);
             const pdfPages = pdfDoc.getPages();
 
             pages.forEach((pageData) => {
                 const pdfPage = pdfPages[pageData.pageIndex - 1]; // 0-indexed
-                const { width, height } = pdfPage.getSize();
 
+                // 1. Process annotations to remove clickable links under redacted blocks
+                const activeBlocks = pageData.blocks.filter(block => (blockActionsRef.current[block.id] || 'none') !== 'none');
+                
+                if (activeBlocks.length > 0) {
+                    const annots = (pdfPage.node as any).Annots();
+                    if (annots && typeof annots.size === 'function' && typeof annots.remove === 'function') {
+                        // Iterate backwards to safely remove array items
+                        for (let i = annots.size() - 1; i >= 0; i--) {
+                            try {
+                                const annot = annots.lookup(i);
+                                if (annot && typeof annot.lookup === 'function') {
+                                    const subtype = annot.lookup(PDFName.of('Subtype'));
+                                    if (subtype && typeof subtype.asString === 'function' && subtype.asString() === '/Link') {
+                                        const rect = annot.lookup(PDFName.of('Rect'));
+                                        if (rect && typeof rect.size === 'function' && rect.size() === 4) {
+                                            const getNum = (idx: number) => {
+                                                const val = rect.lookup(idx);
+                                                return (val && typeof val.asNumber === 'function') ? val.asNumber() : null;
+                                            };
+                                            const llx = getNum(0);
+                                            const lly = getNum(1);
+                                            const urx = getNum(2);
+                                            const ury = getNum(3);
+
+                                            if (llx !== null && lly !== null && urx !== null && ury !== null) {
+                                                let shouldRemove = false;
+                                                for (const block of activeBlocks) {
+                                                    const b_llx = block.rawX;
+                                                    const b_lly = block.rawY;
+                                                    const b_urx = block.rawX + block.rawW;
+                                                    const b_ury = block.rawY + block.rawH;
+
+                                                    const overlapX = Math.max(llx, b_llx) < Math.min(urx, b_urx);
+                                                    const overlapY = Math.max(lly, b_lly) < Math.min(ury, b_ury);
+
+                                                    if (overlapX && overlapY) {
+                                                        shouldRemove = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (shouldRemove) {
+                                                    annots.remove(i);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn("Quietly skipping annotation processing for index", i);
+                            }
+                        }
+                    }
+                }
+
+                // 2. Draw visual rectangles
                 pageData.blocks.forEach(block => {
                     const action = blockActionsRef.current[block.id] || 'none';
                     if (action !== 'none') {
                         const isRedact = action === 'redact';
                         
-                        // Calculate native PDF coordinates from percentages
-                        const rectW = (block.widthPct / 100) * width;
-                        const rectH = (block.heightPct / 100) * height;
-                        const rectX = (block.xPct / 100) * width;
-                        const rectTop = (block.yPct / 100) * height;
-                        
-                        // pdf-lib's Y coordinate starts from the bottom-left
-                        const rectY = height - rectTop - rectH;
-
+                        // Instead of trying to guess coordinates from viewport percentages interacting with PDF Rotation and CropBox,
+                        // we directly use the raw PDF device space coordinates that perfectly map to pdf-lib's system.
                         pdfPage.drawRectangle({
-                            x: rectX,
-                            y: rectY,
-                            width: rectW,
-                            height: rectH,
+                            x: block.rawX,
+                            y: block.rawY,
+                            width: block.rawW,
+                            height: block.rawH,
                             color: isRedact ? rgb(0, 0, 0) : rgb(1, 1, 1),
                         });
                     }
