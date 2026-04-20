@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as docx from 'docx-preview';
 import html2pdf from 'html2pdf.js';
+import { PdfRedactor } from './PdfRedactor';
 
-type DocMode = 'upload' | 'contract' | 'receipt';
+type DocMode = 'upload' | 'contract' | 'receipt' | 'redact_cv';
 
 export const DocumentSection: React.FC = () => {
     const [mode, setMode] = useState<DocMode>('upload');
@@ -243,6 +244,15 @@ export const DocumentSection: React.FC = () => {
 
     return (
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-xl border border-white/50 animate-fade-in">
+            <div className="mb-6 p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-rose-500 shrink-0 mt-0.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p className="text-sm text-rose-700 font-medium leading-relaxed">
+                    <strong>Chú ý:</strong> Tính năng đang trong quá trình phát triển chưa hoàn thiện, vẫn đang còn lỗi khi sử dụng, hãy chú ý khi sử dụng.
+                </p>
+            </div>
+
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <div>
                     <h2 className="text-xl font-bold text-slate-800">Trình Chỉnh Sửa Tài Liệu</h2>
@@ -277,6 +287,18 @@ export const DocumentSection: React.FC = () => {
                         </svg>
                         Tải lên
                     </button>
+                    <button
+                        onClick={() => {
+                            setMode('redact_cv');
+                            setIsEditing(false);
+                        }}
+                        className="px-4 py-2 bg-purple-50 text-purple-600 rounded-xl font-medium hover:bg-purple-100 transition-colors flex items-center gap-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V8.25ZM6.75 8.25h.75m-.75 3h.75m-.75 3h.75m-.75 3h.75" />
+                        </svg>
+                        Che CV PDF
+                    </button>
                     <input 
                         type="file" 
                         ref={fileInputRef} 
@@ -285,7 +307,7 @@ export const DocumentSection: React.FC = () => {
                         className="hidden" 
                     />
 
-                    {isEditing && (
+                    {isEditing && mode !== 'redact_cv' && (
                         <>
                             <button
                                 onClick={handleExportPDF}
@@ -310,7 +332,9 @@ export const DocumentSection: React.FC = () => {
                 </div>
             </div>
 
-            {isEditing ? (
+            {mode === 'redact_cv' ? (
+                <PdfRedactor />
+            ) : isEditing ? (
                 <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex flex-col">
                     <div className="p-3 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-4">
                         <div className="flex flex-wrap items-center gap-4">

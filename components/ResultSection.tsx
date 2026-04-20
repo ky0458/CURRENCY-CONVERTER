@@ -80,14 +80,23 @@ export const ResultSection: React.FC<ResultSectionProps> = ({
                     </div>
                     </div>
                     <div className="mt-4 pt-4 border-t border-slate-200/50">
-                        <div className="flex items-center justify-between mb-2">
-                            <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase">Bằng chữ</p>
-                            <CopyButton 
-                                text={textSource} 
-                                className="bg-white/80 border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300"
-                            />
-                        </div>
-                        <p className="text-sm italic font-medium text-slate-600 leading-relaxed min-h-[1.5rem]">{textSource}</p>
+                        {textSource.split('\n大写: ').map((part, index) => {
+                            const isDaxie = index === 1;
+                            const text = part;
+                            const label = isDaxie ? 'Ghi bằng chữ Hán (大写)' : 'Bằng chữ';
+                            return (
+                                <div key={index} className={index > 0 ? "mt-3 pt-3 border-t border-slate-200/50" : ""}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-[10px] sm:text-xs font-semibold text-slate-400 uppercase">{label}</p>
+                                        <CopyButton 
+                                            text={text} 
+                                            className="bg-white/80 border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300"
+                                        />
+                                    </div>
+                                    <p className="text-sm italic font-medium text-slate-600 leading-relaxed min-h-[1.5rem] whitespace-pre-line">{text}</p>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -112,14 +121,23 @@ export const ResultSection: React.FC<ResultSectionProps> = ({
                     </div>
                     </div>
                     <div className={`mt-4 pt-4 border-t border-primary-200/50 relative z-10`}>
-                        <div className="flex items-center justify-between mb-2">
-                            <p className={`text-[10px] sm:text-xs font-semibold text-primary-400 uppercase`}>Bằng chữ</p>
-                            <CopyButton 
-                            text={textTarget}
-                            className="bg-white/80 border-primary-100 text-primary-400 hover:text-primary-600 hover:border-primary-200"
-                            />
-                        </div>
-                        <p className={`text-base italic font-bold text-primary-800 leading-relaxed min-h-[1.5rem]`}>{textTarget}</p>
+                        {textTarget.split('\n大写: ').map((part, index) => {
+                            const isDaxie = index === 1;
+                            const text = part;
+                            const label = isDaxie ? 'Ghi bằng chữ Hán (大写)' : 'Bằng chữ';
+                            return (
+                                <div key={index} className={index > 0 ? "mt-3 pt-3 border-t border-primary-200/50" : ""}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className={`text-[10px] sm:text-xs font-semibold text-primary-400 uppercase`}>{label}</p>
+                                        <CopyButton 
+                                        text={text}
+                                        className="bg-white/80 border-primary-100 text-primary-400 hover:text-primary-600 hover:border-primary-200"
+                                        />
+                                    </div>
+                                    <p className={`text-base italic font-bold text-primary-800 leading-relaxed min-h-[1.5rem] whitespace-pre-line`}>{text}</p>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>
