@@ -1,10 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import * as pdfjsLibModule from 'pdfjs-dist';
 
 const pdfjsLib = (pdfjsLibModule as any).default || pdfjsLibModule;
 if (pdfjsLib.GlobalWorkerOptions) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
 }
+
+type ActionType = 'none' | 'redact' | 'delete';
 
 interface TextBlock {
     id: string;
@@ -13,7 +15,6 @@ interface TextBlock {
     yPct: number;
     widthPct: number;
     heightPct: number;
-    action: 'none' | 'redact' | 'delete';
 }
 
 interface PageData {
@@ -24,11 +25,52 @@ interface PageData {
     blocks: TextBlock[];
 }
 
+const PdfBlock = React.memo(({ 
+    block, 
+    action, 
+    onToggle 
+}: { 
+    block: TextBlock; 
+    action: ActionType; 
+    onToggle: (id: string) => void;
+}) => {
+    return (
+        <div
+            data-action={action}
+            className={`absolute cursor-pointer transition-all ${
+                action === 'redact' 
+                    ? 'bg-slate-900 border border-slate-900 shadow-md' 
+                    : action === 'delete'
+                        ? 'bg-white border border-slate-200/50'
+                        : 'border border-dashed border-indigo-400/70 hover:bg-indigo-400/10 hover:border-indigo-600 backdrop-blur-[1px]'
+            }`}
+            style={{
+                left: `${block.xPct}%`,
+                top: `${block.yPct}%`,
+                width: `${block.widthPct}%`,
+                height: `${block.heightPct}%`,
+                opacity: action === 'none' ? 0.8 : 1,
+                zIndex: 10,
+                borderRadius: '2px'
+            }}
+            onClick={() => onToggle(block.id)}
+            title={action === 'none' ? 'Chạm để Che (Đen)' : action === 'redact' ? 'Chạm để Xóa (Trắng)' : 'Chạm để Hủy'}
+        >
+            {action === 'none' && (
+                <span className="opacity-0 hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap pointer-events-none z-20">
+                    {block.text}
+                </span>
+            )}
+        </div>
+    );
+});
+
 export const PdfRedactor: React.FC = () => {
     const [pages, setPages] = useState<PageData[]>([]);
     const [fileName, setFileName] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [originalPdfBytes, setOriginalPdfBytes] = useState<Uint8Array | null>(null);
+    const [blockActions, setBlockActions] = useState<Record<string, ActionType>>({});
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -37,6 +79,7 @@ export const PdfRedactor: React.FC = () => {
         setFileName(file.name);
         setIsProcessing(true);
         setPages([]);
+        setBlockActions({});
 
         try {
             const arrayBuffer = await file.arrayBuffer();
@@ -96,8 +139,7 @@ export const PdfRedactor: React.FC = () => {
                         xPct: (finalX / viewport.width) * 100,
                         yPct: (finalY / viewport.height) * 100,
                         widthPct: (finalW / viewport.width) * 100,
-                        heightPct: (finalH / viewport.height) * 100,
-                        action: 'none'
+                        heightPct: (finalH / viewport.height) * 100
                     });
                 });
 
@@ -119,27 +161,22 @@ export const PdfRedactor: React.FC = () => {
         }
     };
 
-    const toggleAction = (pageIndex: number, blockId: string) => {
-        setPages(prev => prev.map(page => {
-            if (page.pageIndex !== pageIndex) return page;
-            return {
-                ...page,
-                blocks: page.blocks.map(b => {
-                    if (b.id !== blockId) return b;
-                    let nextAction: 'none' | 'redact' | 'delete' = 'none';
-                    if (b.action === 'none') nextAction = 'redact';
-                    else if (b.action === 'redact') nextAction = 'delete';
-                    return { ...b, action: nextAction };
-                })
-            };
-        }));
-    };
+    const toggleAction = useCallback((blockId: string) => {
+        setBlockActions(prev => {
+            const currentAction = prev[blockId] || 'none';
+            let nextAction: ActionType = 'none';
+            if (currentAction === 'none') nextAction = 'redact';
+            else if (currentAction === 'redact') nextAction = 'delete';
+            return { ...prev, [blockId]: nextAction };
+        });
+    }, []);
 
     const handleExport = async () => {
         if (!originalPdfBytes || pages.length === 0) return;
         
         try {
             setIsProcessing(true);
+            // Dynamic import to keep initial bundle size smaller
             const { PDFDocument, rgb } = await import('pdf-lib');
             
             const pdfDoc = await PDFDocument.load(originalPdfBytes);
@@ -150,8 +187,9 @@ export const PdfRedactor: React.FC = () => {
                 const { width, height } = pdfPage.getSize();
 
                 pageData.blocks.forEach(block => {
-                    if (block.action !== 'none') {
-                        const isRedact = block.action === 'redact';
+                    const action = blockActions[block.id] || 'none';
+                    if (action !== 'none') {
+                        const isRedact = action === 'redact';
                         
                         // Calculate native PDF coordinates from percentages
                         const rectW = (block.widthPct / 100) * width;
@@ -249,34 +287,12 @@ export const PdfRedactor: React.FC = () => {
                                 <img src={page.canvasUrl} alt={`Page ${idx + 1}`} className="absolute top-0 left-0 w-full h-full object-contain pointer-events-none" />
                                 
                                 {page.blocks.map(block => (
-                                    <div
+                                    <PdfBlock
                                         key={block.id}
-                                        data-action={block.action}
-                                        className={`absolute cursor-pointer transition-all ${
-                                            block.action === 'redact' 
-                                                ? 'bg-slate-900 border border-slate-900 shadow-md' 
-                                                : block.action === 'delete'
-                                                    ? 'bg-white border border-slate-200/50'
-                                                    : 'border border-dashed border-indigo-400/70 hover:bg-indigo-400/10 hover:border-indigo-600 backdrop-blur-[1px]'
-                                        }`}
-                                        style={{
-                                            left: `${block.xPct}%`,
-                                            top: `${block.yPct}%`,
-                                            width: `${block.widthPct}%`,
-                                            height: `${block.heightPct}%`,
-                                            opacity: block.action === 'none' ? 0.8 : 1,
-                                            zIndex: 10,
-                                            borderRadius: '2px' // slight rounding for aesthetics
-                                        }}
-                                        onClick={() => toggleAction(page.pageIndex, block.id)}
-                                        title={block.action === 'none' ? 'Chạm để Che (Đen)' : block.action === 'redact' ? 'Chạm để Xóa (Trắng)' : 'Chạm để Hủy'}
-                                    >
-                                        {block.action === 'none' && (
-                                            <span className="opacity-0 hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap pointer-events-none z-20">
-                                                {block.text}
-                                            </span>
-                                        )}
-                                    </div>
+                                        block={block}
+                                        action={blockActions[block.id] || 'none'}
+                                        onToggle={toggleAction}
+                                    />
                                 ))}
                             </div>
                         ))}
