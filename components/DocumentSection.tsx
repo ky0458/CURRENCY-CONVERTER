@@ -36,9 +36,12 @@ export const DocumentSection: React.FC = () => {
                 ignoreFonts: false,
                 breakPages: true,
                 ignoreLastRenderedPageBreak: false,
-                experimental: true,
+                experimental: false,
                 trimXmlDeclaration: true,
                 debug: false,
+                useBase64URL: true,
+                renderHeaders: true,
+                renderFooters: true,
             }).then(() => {
                 console.log("docx rendered");
             }).catch(err => {
@@ -129,25 +132,36 @@ export const DocumentSection: React.FC = () => {
         const wrapper = containerRef.current.querySelector('.docx-wrapper') as HTMLElement;
         const originalBg = wrapper ? wrapper.style.background : '';
         const originalPadding = wrapper ? wrapper.style.padding : '';
+        const originalWidth = wrapper ? wrapper.style.width : '';
         
         if (wrapper) {
             wrapper.style.background = 'white';
             wrapper.style.padding = '0';
+            // Force strict A4 pixel width (794px at 96DPI) so html2canvas captures exact proportions regardless of responsive screen size
+            wrapper.style.width = '794px';
+            wrapper.style.margin = '0 auto';
         }
 
         const opt = {
             margin:       0,
             filename:     `${fileName}.pdf`,
-            image:        { type: 'jpeg' as const, quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true, logging: false },
+            image:        { type: 'jpeg' as const, quality: 1 },
+            html2canvas:  { 
+                scale: 2, 
+                useCORS: true, 
+                logging: false,
+                windowWidth: 794 // Ensures html2canvas renders at A4 width
+            },
             jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' as const },
-            pagebreak:    { mode: ['css', 'legacy'], elements: '.docx-page' }
+            pagebreak:    { mode: ['css', 'legacy'] }
         };
 
         html2pdf().set(opt).from(containerRef.current).save().then(() => {
             if (wrapper) {
                 wrapper.style.background = originalBg;
                 wrapper.style.padding = originalPadding;
+                wrapper.style.width = originalWidth;
+                wrapper.style.margin = '';
             }
         });
     };
@@ -170,7 +184,7 @@ export const DocumentSection: React.FC = () => {
                 
                 pageCSS = `
                     @page WordSection1 {
-                        size: ${width} ${minHeight};
+                        size: 595.3pt 841.9pt; /* Fix to A4 Standard size */
                         margin: ${paddingTop} ${paddingRight} ${paddingBottom} ${paddingLeft};
                         mso-header-margin: 35.4pt;
                         mso-footer-margin: 35.4pt;
@@ -243,7 +257,28 @@ export const DocumentSection: React.FC = () => {
     };
 
     return (
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-xl border border-white/50 animate-fade-in">
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-xl border border-white/50 animate-fade-in relative">
+            <style>{`
+                /* Tách biệt hoàn toàn khung render Word khỏi TailwindCSS Preflight để giữ độ chính xác tuyệt đối (Pixel-Perfect) 100% với file gốc */
+                .docx-content-reset * {
+                    all: revert;
+                }
+                .docx-content-reset *::before,
+                .docx-content-reset *::after {
+                    all: revert;
+                }
+                .docx-content-reset {
+                    background: transparent;
+                }
+                .docx-content-reset p {
+                    margin: 0;
+                    padding: 0;
+                }
+                /* Khôi phục List styles và Tables bị Tailwind xóa bỏ */
+                .docx-content-reset ul { list-style-type: disc; }
+                .docx-content-reset ol { list-style-type: decimal; }
+                .docx-content-reset table { border-collapse: collapse; }
+            `}</style>
             <div className="mb-6 p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-rose-500 shrink-0 mt-0.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -410,8 +445,8 @@ export const DocumentSection: React.FC = () => {
                         )}
                     </div>
                     
-                    <div className="bg-gray-100 overflow-y-auto w-full" style={{ height: '85vh' }}>
-                        <div ref={containerRef} style={{ minHeight: '100%', position: 'relative' }}>
+                    <div className="bg-gray-100 overflow-y-auto w-full rounded-b-xl border-x border-b border-slate-200" style={{ height: '85vh' }}>
+                        <div ref={containerRef} className="docx-content-reset" style={{ minHeight: '100%', position: 'relative' }}>
                             <div ref={styleRef}></div>
                             
                             <div 

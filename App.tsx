@@ -24,6 +24,7 @@ import { CopyButton } from './components/CopyButton';
 import { useAuth, AuthProvider } from './contexts/AuthContext';
 import { translateJobTitle } from './services/geminiService';
 import { Tooltip } from './components/Tooltip';
+import { Analytics } from '@vercel/analytics/react';
 
 const ToastNotification = () => {
     const { notification, closeNotification } = useAuth();
@@ -1128,6 +1129,7 @@ const App = () => {
     return (
         <AuthProvider>
             <AppContent />
+            <Analytics />
         </AuthProvider>
     );
 };
