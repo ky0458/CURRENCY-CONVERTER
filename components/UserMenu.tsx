@@ -2,7 +2,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Tooltip } from './Tooltip';
 import { ThemeColor } from '../types';
 
 interface UserMenuProps {
@@ -48,7 +47,6 @@ export const UserMenu: React.FC<UserMenuProps> = ({ hasBackgroundImage = false, 
       <div className="relative" ref={containerRef}>
         {!user ? (
           <>
-            <Tooltip content="Đăng nhập để đồng bộ dữ liệu" position="bottom">
               <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`h-10 pl-1.5 pr-4 rounded-full font-bold text-xs sm:text-sm transition-all duration-300 flex items-center gap-2 group active:scale-95 border ${buttonClass}`}
@@ -60,10 +58,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({ hasBackgroundImage = false, 
                 </div>
                 <span className="hidden sm:inline tracking-wide font-extrabold text-shadow-sm">Đăng nhập</span>
               </button>
-            </Tooltip>
 
             {isOpen && (
-              <div className="absolute right-0 top-[calc(100%+12px)] bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-white/60 p-2 w-[240px] z-[100] animate-fade-in-up origin-top-right ring-1 ring-black/5">
+              <div className="fixed right-3 top-[70px] sm:absolute sm:right-0 sm:top-[calc(100%+12px)] bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-white/60 p-2 w-[240px] z-[100] animate-fade-in-up sm:origin-top-right ring-1 ring-black/5">
                 
                 {/* Title Section */}
                 <div className="px-3 py-2 border-b border-slate-100 mb-1">
@@ -106,7 +103,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ hasBackgroundImage = false, 
             </button>
 
             {isOpen && (
-              <div className="absolute right-0 top-[calc(100%+12px)] bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-white/60 p-2 w-[240px] z-[100] animate-fade-in-up origin-top-right ring-1 ring-black/5">
+              <div className="fixed right-3 top-[70px] sm:absolute sm:right-0 sm:top-[calc(100%+12px)] bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-white/60 p-2 w-[240px] z-[100] animate-fade-in-up sm:origin-top-right ring-1 ring-black/5">
                 <div className="px-3 py-3 border-b border-slate-100 mb-1">
                     <p className="text-sm font-bold text-slate-800 truncate">{user.displayName || "Người dùng"}</p>
                     <p className="text-xs text-slate-400 truncate">{user.email}</p>

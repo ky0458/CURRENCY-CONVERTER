@@ -23,7 +23,6 @@ import { CopyButton } from './components/CopyButton';
 // Import useAuth to access notification state
 import { useAuth, AuthProvider } from './contexts/AuthContext';
 import { translateJobTitle } from './services/geminiService';
-import { Tooltip } from './components/Tooltip';
 import { Analytics } from '@vercel/analytics/react';
 
 const ToastNotification = () => {
@@ -497,25 +496,23 @@ const AppContent: React.FC = () => {
       <ToastNotification />
 
       {/* GLOBAL FIXED CONTROLS */}
-      <div className="fixed top-3 right-3 sm:top-5 sm:right-6 z-[100] flex items-center gap-3 animate-fade-in-up">
-        {/* CNY Rate Configuration Button (Fixed Position) */}
+      <div className="absolute top-3 right-3 sm:top-5 sm:right-6 z-[100] flex items-center gap-3 animate-fade-in-up">
+            {/* CNY Rate Configuration Button (Absolute Position) */}
         <div className="relative" ref={rateConfigRef}>
-            <Tooltip content="Cấu hình tỷ giá CNY" position="bottom">
-                <button
-                    onClick={() => setShowRateConfig(!showRateConfig)}
-                    className={`
-                        w-10 h-10 rounded-full backdrop-blur-md transition-all duration-300 flex items-center justify-center group border font-bold text-sm
-                        ${hasBackground 
-                            ? 'bg-white/20 hover:bg-white/30 text-white shadow-lg shadow-black/5 border-white/20' 
-                            : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-primary-600 shadow-md hover:shadow-xl hover:-translate-y-0.5 border-transparent'}
-                    `}
-                >
-                    ¥
-                </button>
-            </Tooltip>
+            <button
+                onClick={() => setShowRateConfig(!showRateConfig)}
+                className={`
+                    w-10 h-10 rounded-full backdrop-blur-md transition-all duration-300 flex items-center justify-center group border font-bold text-sm
+                    ${hasBackground 
+                        ? 'bg-white/20 hover:bg-white/30 text-white shadow-lg shadow-black/5 border-white/20' 
+                        : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-primary-600 shadow-md hover:shadow-xl hover:-translate-y-0.5 border-transparent'}
+                `}
+            >
+                ¥
+            </button>
 
             {showRateConfig && (
-                <div className="absolute right-0 top-[calc(100%+12px)] bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-white/60 p-4 w-[280px] sm:w-[320px] z-[100] animate-fade-in-up origin-top-right ring-1 ring-black/5">
+                <div className="fixed right-3 top-[70px] sm:absolute sm:right-0 sm:top-[calc(100%+12px)] bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-white/60 p-4 w-[280px] sm:w-[320px] z-[100] animate-fade-in-up sm:origin-top-right ring-1 ring-black/5">
                     <div className="flex items-center justify-between mb-3 px-1">
                         <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                             <img src="https://flagcdn.com/w40/cn.png" className="w-4 h-3 rounded-[2px] object-cover" alt="CNY" />
@@ -1113,7 +1110,7 @@ const AppContent: React.FC = () => {
       <div className="relative z-20 pb-4 text-center">
           <p className={`text-xs font-bold uppercase tracking-widest ${hasBackground ? 'text-white/80 text-shadow-sm' : 'text-slate-400'}`}>Powered By ZiQi</p>
           <p className={`text-[10px] font-medium mt-0.5 ${hasBackground ? 'text-white/60 text-shadow-sm' : 'text-slate-300'}`}>
-              Last update: 12:25 20/04/2026
+              Lastest update: 11:17 22/04/2026
           </p>
       </div>
 

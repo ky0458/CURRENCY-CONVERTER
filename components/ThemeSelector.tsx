@@ -2,7 +2,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ThemeColor } from '../types';
 import { THEME_COLORS } from '../constants';
-import { Tooltip } from './Tooltip';
 
 interface ThemeSelectorProps {
   currentTheme: ThemeColor;
@@ -47,7 +46,6 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
 
   return (
     <div className="relative" ref={containerRef}>
-      <Tooltip content="Giao diện & Hình nền" position="left">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={`
@@ -70,10 +68,9 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
              )}
           </div>
         </button>
-      </Tooltip>
 
       {isOpen && (
-        <div className="absolute right-0 top-[calc(100%+12px)] bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-white/60 p-4 w-[280px] sm:w-[320px] z-[100] animate-fade-in-up origin-top-right ring-1 ring-black/5">
+        <div className="fixed right-3 top-[70px] sm:absolute sm:right-0 sm:top-[calc(100%+12px)] bg-white/95 backdrop-blur-2xl rounded-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-white/60 p-4 w-[280px] sm:w-[320px] z-[100] animate-fade-in-up sm:origin-top-right ring-1 ring-black/5">
           
           {/* Section 1: Colors */}
           <div className="mb-5">
