@@ -31,12 +31,14 @@ interface PageData {
 
 const PdfBlock = React.memo(({ 
     block, 
+    initialAction = 'none',
     onActionChange 
 }: { 
     block: TextBlock; 
+    initialAction?: ActionType;
     onActionChange: (id: string, action: ActionType) => void;
 }) => {
-    const [action, setAction] = useState<ActionType>('none');
+    const [action, setAction] = useState<ActionType>(initialAction);
 
     const handleToggle = useCallback(() => {
         setAction(prev => {
@@ -81,6 +83,23 @@ const PdfBlock = React.memo(({
         </div>
     );
 });
+
+const isSensitiveData = (text: string): boolean => {
+    const str = text.trim();
+    // 1. Valid Email 
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i;
+    if (emailRegex.test(str)) return true;
+    
+    // 2. Vietnam Phone Number Standard (+84, 84, or 0 followed by 9 mobile digits)
+    const phoneRegex = /(?:(?:\+|00)84|84|0)[35789](?:[\s.-]*\d){8}\b/;
+    if (phoneRegex.test(str)) return true;
+    
+    // 3. Social & Career links (LinkedIn, Github)
+    const linkRegex = /(?:linkedin\.com\/in\/|github\.com\/)[a-zA-Z0-9_-]+/i;
+    if (linkRegex.test(str)) return true;
+    
+    return false;
+};
 
 export const PdfRedactor: React.FC = () => {
     const [pages, setPages] = useState<PageData[]>([]);
@@ -163,9 +182,14 @@ export const PdfRedactor: React.FC = () => {
                     const minY = Math.min(...ys);
                     const maxY = Math.max(...ys);
 
+                    const blockId = `p${i}_b${index}`;
+                    if (isSensitiveData(item.str)) {
+                        blockActionsRef.current[blockId] = 'redact';
+                    }
+
                     // Convert to percentages for robust responsiveness in web UI
                     blocks.push({
-                        id: `p${i}_b${index}`,
+                        id: blockId,
                         text: item.str,
                         xPct: (minX / viewport.width) * 100,
                         yPct: (minY / viewport.height) * 100,
@@ -356,7 +380,7 @@ export const PdfRedactor: React.FC = () => {
                             </svg>
                         </div>
                         <div className="leading-relaxed">
-                            <strong>Hướng dẫn:</strong> Chạm một lần vào văn bản để <strong>Che (Bôi Đen)</strong>. Chạm lần 2 để <strong>Xóa (Bôi Trắng)</strong>. Chạm lần 3 để hủy.
+                            <strong>Tự động (AI):</strong> Hệ thống đã tự nhận diện và bôi đen sẵn <strong>SĐT, Email, Link</strong>! Chạm 1 lần vào đoạn bất kỳ khác để <strong>Che (Đen)</strong>, chạm lần 2 để <strong>Xóa (Trắng)</strong>, và chạm lần 3 để hủy chọn.
                         </div>
                     </div>
                 )}
@@ -387,6 +411,7 @@ export const PdfRedactor: React.FC = () => {
                                     <PdfBlock
                                         key={block.id}
                                         block={block}
+                                        initialAction={blockActionsRef.current[block.id] || 'none'}
                                         onActionChange={handleActionChange}
                                     />
                                 ))}
