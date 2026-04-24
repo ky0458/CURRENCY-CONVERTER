@@ -114,11 +114,8 @@ export const PdfRedactor: React.FC = () => {
     // Docx states
     const [docxBlob, setDocxBlob] = useState<Blob | null>(null);
     const docxContainerRef = useRef<HTMLDivElement>(null);
-    const [selectionText, setSelectionText] = useState("");
-    const [selectionPos, setSelectionPos] = useState({ x: 0, y: 0 });
-    const [showTooltip, setShowTooltip] = useState(false);
-    const [ocrProgress, setOcrProgress] = useState<string>('');
     const [isManualMode, setIsManualMode] = useState<boolean>(false);
+    const [ocrProgress, setOcrProgress] = useState<string>('');
 
     const [drawingState, setDrawingState] = useState<{
         isDrawing: boolean;
@@ -217,45 +214,22 @@ export const PdfRedactor: React.FC = () => {
         setDrawingState(prev => ({ ...prev, isDrawing: false, pageIndex: null }));
     };
 
-    // Handle mouse up for DOCX redaction tooltip
-    const handleMouseUp = useCallback(() => {
+    const redactManualDocx = async (replacement: string = '[ĐÃ XÓA]', reRender: boolean = true, explicitSelectionText: string = '') => {
         if (!docxBlob) return;
-        const selection = window.getSelection();
-        const text = selection?.toString().trim();
-        if (text && text.length > 0 && selection && selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            const rect = range.getBoundingClientRect();
-            // Position above the selection
-            setSelectionPos({
-                x: rect.left + rect.width / 2,
-                y: rect.top + window.scrollY - 10
-            });
-            setSelectionText(text);
-            setShowTooltip(true);
-        } else {
-            setShowTooltip(false);
-        }
-    }, [docxBlob]);
+        const textToRedact = explicitSelectionText || window.getSelection()?.toString().trim();
+        if (!textToRedact) return;
 
-    useEffect(() => {
-        document.addEventListener('mouseup', handleMouseUp);
-        return () => document.removeEventListener('mouseup', handleMouseUp);
-    }, [handleMouseUp]);
-
-    const redactManualDocx = async () => {
-        if (!docxBlob || !selectionText) return;
-        setIsProcessing(true);
-        setShowTooltip(false);
+        if (reRender) setIsProcessing(true);
         try {
             const arrayBuffer = await docxBlob.arrayBuffer();
             const JSZip = (await import('jszip')).default;
             const zip = await JSZip.loadAsync(arrayBuffer);
             
-            // Escape special chars from selectionText
+            // Escape special chars
             const escapeRegExp = (string: string) => {
                 return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             };
-            const pattern = new RegExp(escapeRegExp(selectionText), 'gi');
+            const pattern = new RegExp(escapeRegExp(textToRedact), 'gi');
 
             const processXmlFile = async (filePath: string) => {
                 const f = zip.file(filePath);
@@ -263,7 +237,7 @@ export const PdfRedactor: React.FC = () => {
                     let xmlContent = await f.async('string');
                     xmlContent = xmlContent.replace(/(<w:t[^/>]*>)([^<]*)(<\/w:t>)/gi, (match, p1, p2, p3) => {
                         let text = p2;
-                        text = text.replace(pattern, '[ĐÃ XÓA]');
+                        text = text.replace(pattern, replacement);
                         return p1 + text + p3;
                     });
                     zip.file(filePath, xmlContent);
@@ -282,34 +256,65 @@ export const PdfRedactor: React.FC = () => {
                 mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             });
             setDocxBlob(newBlob);
-            setIsProcessing(false);
             
-            // Wait for re-render
-            setTimeout(async () => {
-                if (docxContainerRef.current) {
-                    const docx = await import('docx-preview');
-                    docxContainerRef.current.innerHTML = '';
-                    try {
-                        await docx.renderAsync(await newBlob.arrayBuffer(), docxContainerRef.current, docxContainerRef.current, {
-                            className: "docx",
-                            inWrapper: true,
-                            ignoreWidth: false,
-                            ignoreHeight: false,
-                            ignoreFonts: false,
-                            breakPages: true,
-                            useBase64URL: true
-                        });
-                    } catch (renderError) {
-                        console.error("docx-preview manual redact error:", renderError);
+            if (reRender) {
+                setIsProcessing(false);
+                setTimeout(async () => {
+                    if (docxContainerRef.current) {
+                        const docx = await import('docx-preview');
+                        docxContainerRef.current.innerHTML = '';
+                        try {
+                            await docx.renderAsync(await newBlob.arrayBuffer(), docxContainerRef.current, docxContainerRef.current, {
+                                className: "docx",
+                                inWrapper: true,
+                                ignoreWidth: false,
+                                ignoreHeight: false,
+                                ignoreFonts: false,
+                                breakPages: true,
+                                useBase64URL: true
+                            });
+                        } catch (renderError) {
+                            console.error("docx-preview manual redact error:", renderError);
+                        }
                     }
-                }
-            }, 100);
+                }, 100);
+            }
         } catch (err) {
             console.error("Manual redact logic error:", err);
-            alert("Có lỗi xảy ra khi xóa nội dung.");
-            setIsProcessing(false);
+            if (reRender) {
+                alert("Có lỗi xảy ra khi xóa nội dung.");
+                setIsProcessing(false);
+            }
         }
     };
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!docxBlob) return;
+            const selection = window.getSelection();
+            const text = selection?.toString().trim();
+            if (!selection || !text || text.length === 0) return;
+            
+            // Check if selection is within docxRef
+            if (docxContainerRef.current && !docxContainerRef.current.contains(selection.anchorNode)) {
+                return;
+            }
+
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                e.preventDefault();
+                
+                // Call redactManualDocx WITHOUT triggering a re-render
+                redactManualDocx(' ', false, text);
+                
+                // Immediately delete from the DOM manually so it looks like it instantly vanished
+                const range = selection.getRangeAt(0);
+                range.deleteContents();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [docxBlob]);
 
     const processPdfBuffer = async (arrayBuffer: ArrayBuffer) => {
         try {
@@ -678,104 +683,77 @@ export const PdfRedactor: React.FC = () => {
             const url = URL.createObjectURL(docxBlob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `Che_CV_${fileName}`;
+            link.download = `ĐÃ CHE_${fileName}`;
             link.click();
             URL.revokeObjectURL(url);
             return;
         }
 
-        if (!originalPdfBytes || pages.length === 0) return;
+        if (pages.length === 0) return;
         
         try {
             setIsProcessing(true);
-            // Dynamic import to keep initial bundle size smaller
-            const { PDFDocument, rgb, PDFName } = await import('pdf-lib');
-            
-            const pdfDoc = await PDFDocument.load(originalPdfBytes);
-            const pdfPages = pdfDoc.getPages();
+            const { PDFDocument } = await import('pdf-lib');
+            const newPdfDoc = await PDFDocument.create();
 
-            pages.forEach((pageData) => {
-                const pdfPage = pdfPages[pageData.pageIndex - 1]; // 0-indexed
+            for (const pageData of pages) {
+                // Create a canvas to draw the base image + redactions
+                const canvas = document.createElement('canvas');
+                canvas.width = pageData.width;
+                canvas.height = pageData.height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) continue;
 
-                // 1. Process annotations to remove clickable links under redacted blocks
-                const activeBlocks = pageData.blocks.filter(block => (blockActionsRef.current[block.id] || 'none') !== 'none');
+                // Load the base JPEG image which was generated perfectly without redactions
+                const img = new Image();
+                await new Promise<void>((resolve, reject) => {
+                    img.onload = () => resolve();
+                    img.onerror = reject;
+                    img.src = pageData.canvasUrl;
+                });
                 
-                if (activeBlocks.length > 0) {
-                    const annots = (pdfPage.node as any).Annots();
-                    if (annots && typeof annots.size === 'function' && typeof annots.remove === 'function') {
-                        // Iterate backwards to safely remove array items
-                        for (let i = annots.size() - 1; i >= 0; i--) {
-                            try {
-                                const annot = annots.lookup(i);
-                                if (annot && typeof annot.lookup === 'function') {
-                                    const subtype = annot.lookup(PDFName.of('Subtype'));
-                                    if (subtype && typeof subtype.asString === 'function' && subtype.asString() === '/Link') {
-                                        const rect = annot.lookup(PDFName.of('Rect'));
-                                        if (rect && typeof rect.size === 'function' && rect.size() === 4) {
-                                            const getNum = (idx: number) => {
-                                                const val = rect.lookup(idx);
-                                                return (val && typeof val.asNumber === 'function') ? val.asNumber() : null;
-                                            };
-                                            const llx = getNum(0);
-                                            const lly = getNum(1);
-                                            const urx = getNum(2);
-                                            const ury = getNum(3);
+                // Draw the original page
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                                            if (llx !== null && lly !== null && urx !== null && ury !== null) {
-                                                let shouldRemove = false;
-                                                for (const block of activeBlocks) {
-                                                    const b_llx = block.rawX;
-                                                    const b_lly = block.rawY;
-                                                    const b_urx = block.rawX + block.rawW;
-                                                    const b_ury = block.rawY + block.rawH;
-
-                                                    const overlapX = Math.max(llx, b_llx) < Math.min(urx, b_urx);
-                                                    const overlapY = Math.max(lly, b_lly) < Math.min(ury, b_ury);
-
-                                                    if (overlapX && overlapY) {
-                                                        shouldRemove = true;
-                                                        break;
-                                                    }
-                                                }
-                                                if (shouldRemove) {
-                                                    annots.remove(i);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            } catch (e) {
-                                console.warn("Quietly skipping annotation processing for index", i);
-                            }
-                        }
-                    }
-                }
-
-                // 2. Draw visual rectangles
+                // Draw redactions on top
                 pageData.blocks.forEach(block => {
                     const action = blockActionsRef.current[block.id] || 'none';
                     if (action !== 'none') {
-                        const isRedact = action === 'redact';
+                        ctx.fillStyle = action === 'redact' ? 'black' : 'white';
                         
-                        // Instead of trying to guess coordinates from viewport percentages interacting with PDF Rotation and CropBox,
-                        // we directly use the raw PDF device space coordinates that perfectly map to pdf-lib's system.
-                        pdfPage.drawRectangle({
-                            x: block.rawX,
-                            y: block.rawY,
-                            width: block.rawW,
-                            height: block.rawH,
-                            color: isRedact ? rgb(0, 0, 0) : rgb(1, 1, 1),
-                        });
+                        const x = (block.xPct / 100) * canvas.width;
+                        const y = (block.yPct / 100) * canvas.height;
+                        const w = (block.widthPct / 100) * canvas.width;
+                        const h = (block.heightPct / 100) * canvas.height;
+                        
+                        ctx.fillRect(x, y, w, h);
                     }
                 });
-            });
 
-            const pdfBytes = await pdfDoc.save();
+                // Convert flattened canvas to JPEG
+                const base64Jpeg = canvas.toDataURL('image/jpeg', 0.95);
+                const response = await fetch(base64Jpeg);
+                const jpegBytes = await response.arrayBuffer();
+                
+                // Embed into new PDF
+                const embeddedImage = await newPdfDoc.embedJpg(jpegBytes);
+                const pdfPage = newPdfDoc.addPage([pageData.width, pageData.height]);
+                
+                pdfPage.drawImage(embeddedImage, {
+                    x: 0,
+                    y: 0,
+                    width: pageData.width,
+                    height: pageData.height,
+                });
+            }
+
+            const pdfBytes = await newPdfDoc.save();
             const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `Che_CV_${fileName}`;
+            link.download = `ĐÃ CHE_${fileName.replace(/\.[^/.]+$/, "")}.pdf`;
             link.click();
             URL.revokeObjectURL(url);
             
@@ -867,21 +845,11 @@ export const PdfRedactor: React.FC = () => {
                         <div className="leading-relaxed">
                             <strong>Tự động (AI):</strong> Hệ thống đã tự nhận diện và ẩn sửa <strong>SĐT, Email, Link</strong>! 
                             {docxBlob ? (
-                                <span> Để che thêm thủ công, hãy <strong>bôi đen văn bản</strong> và chọn <strong>"Che nội dung này"</strong>.</span>
+                                <span> Để che thêm thủ công, hãy <strong>bôi đen văn bản</strong> trên màn hình và nhấn phím <strong>Delete</strong> hoặc <strong>Backspace</strong> để xóa!</span>
                             ) : (
                                 <span>  {isManualMode ? <strong>Kéo & thả chuột trực tiếp trên trang để che thủ công.</strong> : "Bật 'che thủ công' để tự vẽ vùng che đen."}</span>
                             )}
                         </div>
-                    </div>
-                )}
-                
-                {showTooltip && docxBlob && (
-                    <div 
-                        className="fixed z-50 transform -translate-x-1/2 -translate-y-full mb-2 bg-slate-900 text-white px-3 py-1.5 rounded-lg shadow-lg cursor-pointer hover:bg-slate-800 transition-colors"
-                        style={{ left: selectionPos.x, top: selectionPos.y }}
-                        onClick={redactManualDocx}
-                    >
-                        Che nội dung này
                     </div>
                 )}
             </div>
@@ -905,7 +873,7 @@ export const PdfRedactor: React.FC = () => {
                     <div className="flex flex-col items-center mx-auto w-full max-w-4xl relative">
                         <div 
                             ref={docxContainerRef}
-                            className="bg-white shadow-md rounded-sm w-full min-h-[A4] text-black"
+                            className="bg-white shadow-md rounded-sm w-full min-h-[A4] text-black outline-none"
                             style={{ padding: '0 2rem' }}
                         ></div>
                     </div>
