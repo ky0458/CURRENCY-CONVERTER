@@ -27,6 +27,7 @@ interface PageData {
     width: number;
     height: number;
     blocks: TextBlock[];
+    viewport: any;
 }
 
 const PdfBlock = React.memo(({ 
@@ -117,9 +118,104 @@ export const PdfRedactor: React.FC = () => {
     const [selectionPos, setSelectionPos] = useState({ x: 0, y: 0 });
     const [showTooltip, setShowTooltip] = useState(false);
     const [ocrProgress, setOcrProgress] = useState<string>('');
+    const [isManualMode, setIsManualMode] = useState<boolean>(false);
+
+    const [drawingState, setDrawingState] = useState<{
+        isDrawing: boolean;
+        pageIndex: number | null;
+        startX: number;
+        startY: number;
+        currentX: number;
+        currentY: number;
+    }>({ isDrawing: false, pageIndex: null, startX: 0, startY: 0, currentX: 0, currentY: 0 });
 
     // Instead of state that triggers global re-render, we track actions in a mutable ref
     const blockActionsRef = useRef<Record<string, ActionType>>({});
+
+    const handlePdfMouseDown = (e: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
+        if (!isManualMode) return;
+        if ((e.target as HTMLElement).closest('.pdf-block')) return;
+        
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        setDrawingState({
+            isDrawing: true,
+            pageIndex,
+            startX: x,
+            startY: y,
+            currentX: x,
+            currentY: y,
+        });
+    };
+
+    const handlePdfMouseMove = (e: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
+        if (!drawingState.isDrawing || drawingState.pageIndex !== pageIndex) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+        const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+        setDrawingState(prev => ({ ...prev, currentX: x, currentY: y }));
+    };
+
+    const handlePdfMouseUp = (e: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
+        if (!drawingState.isDrawing || drawingState.pageIndex !== pageIndex) return;
+        
+        const rect = e.currentTarget.getBoundingClientRect();
+        const xList = [drawingState.startX, drawingState.currentX];
+        const yList = [drawingState.startY, drawingState.currentY];
+        const minX = Math.min(...xList);
+        const maxX = Math.max(...xList);
+        const minY = Math.min(...yList);
+        const maxY = Math.max(...yList);
+        
+        const width = maxX - minX;
+        const height = maxY - minY;
+        
+        if (width > 5 && height > 5) {
+            const page = pages.find(p => p.pageIndex === pageIndex + 1); // pageIndex prop is 0-based idx, pdf is 1-based
+            if (page) {
+                const xPct = (minX / rect.width) * 100;
+                const yPct = (minY / rect.height) * 100;
+                const widthPct = (width / rect.width) * 100;
+                const heightPct = (height / rect.height) * 100;
+
+                // For point mapping, we assume rect is mapping exactly to page's viewport width/height
+                const mappedMinX = (minX / rect.width) * page.width;
+                const mappedMinY = (minY / rect.height) * page.height;
+                const mappedMaxX = (maxX / rect.width) * page.width;
+                const mappedMaxY = (maxY / rect.height) * page.height;
+
+                const pt1 = page.viewport.convertToPdfPoint(mappedMinX, mappedMinY);
+                const pt2 = page.viewport.convertToPdfPoint(mappedMaxX, mappedMinY);
+                const pt3 = page.viewport.convertToPdfPoint(mappedMaxX, mappedMaxY);
+                const pt4 = page.viewport.convertToPdfPoint(mappedMinX, mappedMaxY);
+
+                const xs = [pt1[0], pt2[0], pt3[0], pt4[0]];
+                const ys = [pt1[1], pt2[1], pt3[1], pt4[1]];
+
+                const rawX = Math.min(...xs);
+                const rawY = Math.min(...ys);
+                const rawW = Math.max(...xs) - rawX;
+                const rawH = Math.max(...ys) - rawY;
+
+                const blockId = `p${pageIndex + 1}_manual_${Date.now()}`;
+                blockActionsRef.current[blockId] = 'redact';
+
+                const newBlock: TextBlock = {
+                    id: blockId,
+                    text: 'Thủ công',
+                    xPct, yPct, widthPct, heightPct,
+                    rawX, rawY, rawW, rawH
+                };
+
+                setPages(prev => prev.map(p => 
+                    p.pageIndex === pageIndex + 1 ? { ...p, blocks: [...p.blocks, newBlock] } : p
+                ));
+            }
+        }
+        setDrawingState(prev => ({ ...prev, isDrawing: false, pageIndex: null }));
+    };
 
     // Handle mouse up for DOCX redaction tooltip
     const handleMouseUp = useCallback(() => {
@@ -215,93 +311,13 @@ export const PdfRedactor: React.FC = () => {
         }
     };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setFileName(file.name);
-        setIsProcessing(true);
-        setPages([]);
-        setDocxBlob(null);
-        blockActionsRef.current = {};
-
-        if (file.name.toLowerCase().endsWith('.docx')) {
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const JSZip = (await import('jszip')).default;
-                const zip = await JSZip.loadAsync(arrayBuffer);
-                
-                const processXmlFile = async (filePath: string) => {
-                    const f = zip.file(filePath);
-                    if (f) {
-                        let xmlContent = await f.async('string');
-                        // Replace URLs and emails safely in text nodes
-                        xmlContent = xmlContent.replace(/(<w:t[^/>]*>)([^<]*)(<\/w:t>)/gi, (match, p1, p2, p3) => {
-                            let text = p2;
-                            text = text.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi, '[EMAIL ĐÃ XÓA]');
-                            text = text.replace(/(?:(?:(?:\+|\(\+?|00)\d{1,4}\)?)|0)[1-9](?:[\s.-]*\d){7,11}\b/g, '[SĐT ĐÃ XÓA]');
-                            text = text.replace(/(?:linkedin\.com\/in\/|github\.com\/)[a-zA-Z0-9_-]+/gi, '[LIÊN KẾT ĐÃ XÓA]');
-                            text = text.replace(/https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi, '[LIÊN KẾT ĐÃ XÓA]');
-                            return p1 + text + p3;
-                        });
-
-                        // Specifically target Hyperlink relationships in .rels files to prevent URI errors
-                        if (filePath.endsWith('.rels')) {
-                            xmlContent = xmlContent.replace(/(<Relationship[^>]*Type="[^"]*relationships\/hyperlink"[^>]*Target=")([^"]+)("[^>]*\/>)/gi, (match, p1, p2, p3) => {
-                                return p1 + 'https://hidden.link' + p3;
-                            });
-                        }
-
-                        zip.file(filePath, xmlContent);
-                    }
-                };
-
-                await processXmlFile("word/document.xml");
-                for (const [name, fileObj] of Object.entries(zip.files)) {
-                    if ((name.startsWith("word/header") || name.startsWith("word/footer")) && name.endsWith(".xml")) {
-                        await processXmlFile(name);
-                    }
-                    if (name.startsWith("word/_rels/") && name.endsWith(".rels")) {
-                        await processXmlFile(name);
-                    }
-                }
-
-                const newBlob = await zip.generateAsync({ 
-                    type: 'blob',
-                    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-                });
-                setDocxBlob(newBlob);
-                setIsProcessing(false);
-                
-                setTimeout(async () => {
-                    if (docxContainerRef.current) {
-                        const docx = await import('docx-preview');
-                        docxContainerRef.current.innerHTML = '';
-                        try {
-                            await docx.renderAsync(await newBlob.arrayBuffer(), docxContainerRef.current, docxContainerRef.current, {
-                                className: "docx",
-                                inWrapper: true,
-                                ignoreWidth: false,
-                                ignoreHeight: false,
-                                ignoreFonts: false,
-                                breakPages: true,
-                                useBase64URL: true
-                            });
-                        } catch (renderError) {
-                            console.error("docx-preview render error:", renderError);
-                        }
-                    }
-                }, 100);
-            } catch (err) {
-                console.error("Docx parse error:", err);
-                alert("Có lỗi khi che CV Docx.");
-                setIsProcessing(false);
-            }
-            return;
-        }
-
+    const processPdfBuffer = async (arrayBuffer: ArrayBuffer) => {
         try {
-            const arrayBuffer = await file.arrayBuffer();
+            setIsProcessing(true);
+            setPages([]);
+            setDocxBlob(null);
+            blockActionsRef.current = {};
+            
             // Create a completely separate copy for pdf-lib to ensure it's not modified/detached by pdfjs
             setOriginalPdfBytes(new Uint8Array(arrayBuffer.slice(0)));
             
@@ -331,8 +347,62 @@ export const PdfRedactor: React.FC = () => {
                 const blocks: TextBlock[] = [];
                 
                 const validItems = textContent.items.filter((item: any) => item.str && item.str.trim() !== '');
+
+                // Extract annotations to catch hyperlinked graphical objects/icons
+                try {
+                    const annotations = await page.getAnnotations();
+                    annotations.forEach((annot: any, aIndex: number) => {
+                        if (annot.subtype === 'Link' && annot.url) {
+                            const urlStr = annot.url;
+                            let isSensitive = false;
+                            
+                            if (/^mailto:/i.test(urlStr)) isSensitive = true;
+                            if (/^tel:/i.test(urlStr)) isSensitive = true;
+                            if (isSensitiveData(urlStr)) isSensitive = true;
+
+                            if (isSensitive) {
+                                const [rectX0, rectY0, rectX1, rectY1] = annot.rect;
+                                const rawX = Math.min(rectX0, rectX1);
+                                const rawY = Math.min(rectY0, rectY1);
+                                const rawW = Math.abs(rectX1 - rectX0);
+                                const rawH = Math.abs(rectY1 - rectY0);
+
+                                const pt1 = viewport.convertToViewportPoint(rawX, rawY);
+                                const pt2 = viewport.convertToViewportPoint(rawX + rawW, rawY);
+                                const pt3 = viewport.convertToViewportPoint(rawX + rawW, rawY + rawH);
+                                const pt4 = viewport.convertToViewportPoint(rawX, rawY + rawH);
+
+                                const xs = [pt1[0], pt2[0], pt3[0], pt4[0]];
+                                const ys = [pt1[1], pt2[1], pt3[1], pt4[1]];
+
+                                const minX = Math.min(...xs);
+                                const maxX = Math.max(...xs);
+                                const minY = Math.min(...ys);
+                                const maxY = Math.max(...ys);
+
+                                const blockId = `p${i}_annot_${aIndex}`;
+                                blockActionsRef.current[blockId] = 'redact';
+
+                                blocks.push({
+                                    id: blockId,
+                                    text: urlStr.replace(/^mailto:/i, '').replace(/^tel:/i, ''),
+                                    xPct: (minX / viewport.width) * 100,
+                                    yPct: (minY / viewport.height) * 100,
+                                    widthPct: ((maxX - minX) / viewport.width) * 100,
+                                    heightPct: ((maxY - minY) / viewport.height) * 100,
+                                    rawX,
+                                    rawY,
+                                    rawW,
+                                    rawH
+                                });
+                            }
+                        }
+                    });
+                } catch (err) {
+                    console.log("Could not process annotations", err);
+                }
                 
-                // Fallback to OCR if the page has no extractable text items
+                // Use OCR if the page has no extractable text items
                 if (validItems.length === 0 && context) {
                     setOcrProgress(`Đang quét ảnh trang ${i}/${pdf.numPages}...`);
                     try {
@@ -345,40 +415,44 @@ export const PdfRedactor: React.FC = () => {
                             }
                         });
 
-                        data.words.forEach((word: any, wIndex: number) => {
-                            const str = word.text;
-                            if (!str || str.trim() === '') return;
+                        if (data && data.words) {
+                            data.words.forEach((word: any, wIndex: number) => {
+                                const str = word.text;
+                                if (!str || str.trim() === '') return;
+                                
+                                const pt0 = viewport.convertToPdfPoint(word.bbox.x0, word.bbox.y0);
+                                const pt1 = viewport.convertToPdfPoint(word.bbox.x1, word.bbox.y1);
                             
-                            const pt0 = viewport.convertToPdfPoint(word.bbox.x0, word.bbox.y0);
-                            const pt1 = viewport.convertToPdfPoint(word.bbox.x1, word.bbox.y1);
-                            
-                            const rawX = Math.min(pt0[0], pt1[0]);
-                            const rawW = Math.abs(pt1[0] - pt0[0]);
-                            const rawY = Math.min(pt0[1], pt1[1]);
-                            const rawH = Math.abs(pt1[1] - pt0[1]);
-                            
-                            const xPct = (word.bbox.x0 / viewport.width) * 100;
-                            const yPct = (word.bbox.y0 / viewport.height) * 100;
-                            const widthPct = ((word.bbox.x1 - word.bbox.x0) / viewport.width) * 100;
-                            const heightPct = ((word.bbox.y1 - word.bbox.y0) / viewport.height) * 100;
+                                const rawX = Math.min(pt0[0], pt1[0]);
+                                const rawW = Math.abs(pt1[0] - pt0[0]);
+                                const rawY = Math.min(pt0[1], pt1[1]);
+                                const rawH = Math.abs(pt1[1] - pt0[1]);
+                                
+                                const xPct = (word.bbox.x0 / viewport.width) * 100;
+                                const yPct = (word.bbox.y0 / viewport.height) * 100;
+                                const widthPct = ((word.bbox.x1 - word.bbox.x0) / viewport.width) * 100;
+                                const heightPct = ((word.bbox.y1 - word.bbox.y0) / viewport.height) * 100;
 
-                            const blockId = `p${i}_ocr_${wIndex}`;
-                            if (isSensitiveData(str)) {
-                                blockActionsRef.current[blockId] = 'redact';
-                            }
+                                const blockId = `p${i}_ocr_${wIndex}`;
+                                if (isSensitiveData(str)) {
+                                    blockActionsRef.current[blockId] = 'redact';
+                                }
 
-                            blocks.push({
-                                id: blockId,
-                                text: str,
-                                xPct, yPct, widthPct, heightPct,
-                                rawX, rawY, rawW, rawH
+                                blocks.push({
+                                    id: blockId,
+                                    text: str,
+                                    xPct, yPct, widthPct, heightPct,
+                                    rawX, rawY, rawW, rawH
+                                });
                             });
-                        });
+                        }
                     } catch (e) {
                          console.error("OCR Error:", e);
                     }
                     setOcrProgress('');
-                } else {
+                } 
+                
+                if (validItems.length > 0) {
                     // Sort to read top-to-bottom, left-to-right (PDF origin is bottom-left)
                     validItems.sort((a: any, b: any) => {
                         const yDiff = b.transform[5] - a.transform[5]; // Descending Y
@@ -487,7 +561,8 @@ export const PdfRedactor: React.FC = () => {
                     canvasUrl: canvas.toDataURL('image/jpeg', 0.95),
                     width: viewport.width,
                     height: viewport.height,
-                    blocks: blocks
+                    blocks: blocks,
+                    viewport: viewport
                 });
             }
 
@@ -496,6 +571,100 @@ export const PdfRedactor: React.FC = () => {
             console.error("Error parsing PDF:", error);
             alert("Có lỗi xảy ra khi đọc file PDF.");
         } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setFileName(file.name);
+        setIsProcessing(true);
+        setPages([]);
+        setDocxBlob(null);
+        blockActionsRef.current = {};
+
+        if (file.name.toLowerCase().endsWith('.docx')) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const JSZip = (await import('jszip')).default;
+                const zip = await JSZip.loadAsync(arrayBuffer);
+                
+                const processXmlFile = async (filePath: string) => {
+                    const f = zip.file(filePath);
+                    if (f) {
+                        let xmlContent = await f.async('string');
+                        // Replace URLs and emails safely in text nodes
+                        xmlContent = xmlContent.replace(/(<w:t[^/>]*>)([^<]*)(<\/w:t>)/gi, (match, p1, p2, p3) => {
+                            let text = p2;
+                            text = text.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/gi, '[EMAIL ĐÃ XÓA]');
+                            text = text.replace(/(?:(?:(?:\+|\(\+?|00)\d{1,4}\)?)|0)[1-9](?:[\s.-]*\d){7,11}\b/g, '[SĐT ĐÃ XÓA]');
+                            text = text.replace(/(?:linkedin\.com\/in\/|github\.com\/)[a-zA-Z0-9_-]+/gi, '[LIÊN KẾT ĐÃ XÓA]');
+                            text = text.replace(/https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi, '[LIÊN KẾT ĐÃ XÓA]');
+                            return p1 + text + p3;
+                        });
+
+                        // Specifically target Hyperlink relationships in .rels files to prevent URI errors
+                        if (filePath.endsWith('.rels')) {
+                            xmlContent = xmlContent.replace(/(<Relationship[^>]*Type="[^"]*relationships\/hyperlink"[^>]*Target=")([^"]+)("[^>]*\/>)/gi, (match, p1, p2, p3) => {
+                                return p1 + 'https://hidden.link' + p3;
+                            });
+                        }
+
+                        zip.file(filePath, xmlContent);
+                    }
+                };
+
+                await processXmlFile("word/document.xml");
+                for (const [name, fileObj] of Object.entries(zip.files)) {
+                    if ((name.startsWith("word/header") || name.startsWith("word/footer")) && name.endsWith(".xml")) {
+                        await processXmlFile(name);
+                    }
+                    if (name.startsWith("word/_rels/") && name.endsWith(".rels")) {
+                        await processXmlFile(name);
+                    }
+                }
+
+                const newBlob = await zip.generateAsync({ 
+                    type: 'blob',
+                    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                });
+                setDocxBlob(newBlob);
+                setIsProcessing(false);
+                
+                setTimeout(async () => {
+                    if (docxContainerRef.current) {
+                        const docx = await import('docx-preview');
+                        docxContainerRef.current.innerHTML = '';
+                        try {
+                            await docx.renderAsync(await newBlob.arrayBuffer(), docxContainerRef.current, docxContainerRef.current, {
+                                className: "docx",
+                                inWrapper: true,
+                                ignoreWidth: false,
+                                ignoreHeight: false,
+                                ignoreFonts: false,
+                                breakPages: true,
+                                useBase64URL: true
+                            });
+                        } catch (renderError) {
+                            console.error("docx-preview render error:", renderError);
+                        }
+                    }
+                }, 100);
+            } catch (err) {
+                console.error("Docx parse error:", err);
+                alert("Có lỗi khi che CV Docx.");
+                setIsProcessing(false);
+            }
+            return;
+        }
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            await processPdfBuffer(arrayBuffer);
+        } catch (error) {
+            console.error("Error starting PDF process:", error);
             setIsProcessing(false);
         }
     };
@@ -667,6 +836,26 @@ export const PdfRedactor: React.FC = () => {
                     </div>
                 </div>
 
+                {pages.length > 0 && !isProcessing && (
+                    <div className="flex items-center gap-3 px-2 py-1">
+                        <button 
+                            type="button"
+                            onClick={() => setIsManualMode(!isManualMode)}
+                            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ${isManualMode ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                            role="switch"
+                            aria-checked={isManualMode}
+                        >
+                            <span
+                                aria-hidden="true"
+                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isManualMode ? 'translate-x-5' : 'translate-x-0'}`}
+                            />
+                        </button>
+                        <span className="text-sm font-semibold text-slate-700 cursor-pointer select-none" onClick={() => setIsManualMode(!isManualMode)}>
+                            Bật tính năng che thủ công (Kéo thả chuột trên trang)
+                        </span>
+                    </div>
+                )}
+
                 {/* Instructions Box - Always visible across platforms nicely */}
                 {(pages.length > 0 || docxBlob) && !isProcessing && (
                     <div className="flex items-start sm:items-center gap-3 bg-emerald-50/70 border border-emerald-100/70 p-3.5 rounded-2xl text-emerald-900 text-sm w-full relative">
@@ -678,9 +867,9 @@ export const PdfRedactor: React.FC = () => {
                         <div className="leading-relaxed">
                             <strong>Tự động (AI):</strong> Hệ thống đã tự nhận diện và ẩn sửa <strong>SĐT, Email, Link</strong>! 
                             {docxBlob ? (
-                                <span> Để che thêm thủ công, hãy <strong>bôi đen văn bản</strong> và chọn <strong>"Che nội dung này"</strong>. Tệp bạn tải về sẽ giữ nguyên bố cục Word gốc.</span>
+                                <span> Để che thêm thủ công, hãy <strong>bôi đen văn bản</strong> và chọn <strong>"Che nội dung này"</strong>.</span>
                             ) : (
-                                <span> Chạm 1 lần vào đoạn bất kỳ khác để <strong>Che (Đen)</strong>, chạm lần 2 để <strong>Xóa (Trắng)</strong>, và chạm lần 3 để hủy chọn.</span>
+                                <span>  {isManualMode ? <strong>Kéo & thả chuột trực tiếp trên trang để che thủ công.</strong> : "Bật 'che thủ công' để tự vẽ vùng che đen."}</span>
                             )}
                         </div>
                     </div>
@@ -729,11 +918,27 @@ export const PdfRedactor: React.FC = () => {
                         {pages.map((page, idx) => (
                             <div 
                                 key={idx} 
-                                className="relative bg-white shadow-md rounded-sm overflow-hidden w-full transition-all hover:shadow-lg ring-1 ring-slate-900/5" 
-                                style={{ aspectRatio: `${page.width} / ${page.height}` }}
+                                className="relative bg-white shadow-md rounded-sm overflow-hidden w-full transition-all hover:shadow-lg ring-1 ring-slate-900/5 select-none" 
+                                style={{ aspectRatio: `${page.width} / ${page.height}`, touchAction: 'none' }}
+                                onMouseDown={(e) => handlePdfMouseDown(e, idx)}
+                                onMouseMove={(e) => handlePdfMouseMove(e, idx)}
+                                onMouseUp={(e) => handlePdfMouseUp(e, idx)}
+                                onMouseLeave={(e) => handlePdfMouseUp(e, idx)}
                             >
                                 <img src={page.canvasUrl} alt={`Page ${idx + 1}`} className="absolute top-0 left-0 w-full h-full object-contain pointer-events-none" />
                                 
+                                {drawingState.isDrawing && drawingState.pageIndex === idx && (
+                                    <div 
+                                        className="absolute border-2 border-black bg-black/40 z-50 pointer-events-none"
+                                        style={{
+                                            left: `${Math.min(drawingState.startX, drawingState.currentX)}px`,
+                                            top: `${Math.min(drawingState.startY, drawingState.currentY)}px`,
+                                            width: `${Math.abs(drawingState.currentX - drawingState.startX)}px`,
+                                            height: `${Math.abs(drawingState.currentY - drawingState.startY)}px`,
+                                        }}
+                                    />
+                                )}
+
                                 {page.blocks.map(block => (
                                     <PdfBlock
                                         key={block.id}
