@@ -1091,7 +1091,7 @@ const AppContent: React.FC = () => {
             {/* History Panel - Absolute Positioned over Content */}
             {showHistory && (
                 <div 
-                    className={`absolute inset-0 z-50 rounded-3xl overflow-hidden bg-slate-50 transition-all duration-300 origin-top
+                    className={`fixed inset-0 h-[100dvh] sm:h-auto z-[100] sm:absolute sm:inset-0 sm:z-50 sm:rounded-3xl overflow-hidden bg-slate-50 transition-all duration-300 origin-top
                     ${isClosingHistory ? 'animate-fade-out-down opacity-0' : 'animate-fade-in-up opacity-100'}`}
                 >
                     <HistorySection

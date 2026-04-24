@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-const CURRENT_VERSION = 'v1.0.2'; // Change this to show modal again in future updates
+const CURRENT_VERSION = 'v1.0.3'; // Change this to show modal again in future updates
 
 export const ChangelogModal: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
 
     useEffect(() => {
         const hasSeen = localStorage.getItem(`has_seen_changelog_${CURRENT_VERSION}`);
@@ -14,22 +15,25 @@ export const ChangelogModal: React.FC = () => {
     }, []);
 
     const handleClose = () => {
-        setIsOpen(false);
-        localStorage.setItem(`has_seen_changelog_${CURRENT_VERSION}`, 'true');
+        setIsClosing(true);
+        setTimeout(() => {
+            setIsOpen(false);
+            localStorage.setItem(`has_seen_changelog_${CURRENT_VERSION}`, 'true');
+        }, 200);
     };
 
     if (!isOpen) return null;
 
     const modalContent = (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-200 ${isClosing ? 'opacity-0' : 'opacity-100'}`}>
             {/* Backdrop */}
             <div 
-                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
                 onClick={handleClose}
             ></div>
 
             {/* Modal */}
-            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-fade-in-up duration-200 m-4">
+            <div className={`relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] m-4 ${isClosing ? 'animate-scale-out' : 'animate-fade-in-up'}`}>
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-6 sm:py-8 text-white relative shrink-0">
                     <button 
                         onClick={handleClose}
@@ -65,6 +69,22 @@ export const ChangelogModal: React.FC = () => {
                                 <h3 className="font-bold text-slate-800 text-lg mb-1">Nâng cấp mạnh mẽ tính năng Che CV</h3>
                                 <p className="text-slate-600 text-sm leading-relaxed">
                                     Tính năng che thủ công đã được bổ sung thêm nút <strong>Hoàn tác</strong>, giúp bạn quay lại thao tác trước đó một cách dễ dàng. Đồng thời hỗ trợ <strong>chạm giữ</strong> (trên mobile/tablet) hoặc phím <strong>Delete/Backspace</strong> (trên PC) để xóa đi các vùng chắn bị vẽ nhầm. Tốc độ nhận diện cũng được cải thiện đáng kể!
+                                </p>
+                            </div>
+                        </li>
+
+                        <li className="flex gap-4">
+                            <div className="shrink-0 mt-1">
+                                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-800 text-lg mb-1">Cập nhật Hướng dẫn Chế độ Chat AI</h3>
+                                <p className="text-slate-600 text-sm leading-relaxed">
+                                    Trong chức năng Chat AI, chúng tôi đã bổ sung các hướng dẫn sử dụng chi tiết, giúp bạn dễ dàng tiến hành các thao tác thuận lợi khi cần dùng đến chế độ Dịch Chuyên Sâu!
                                 </p>
                             </div>
                         </li>

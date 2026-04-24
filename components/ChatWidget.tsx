@@ -37,6 +37,7 @@ export const ChatWidget: React.FC = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [isChatOpening, setIsChatOpening] = useState(false);
   const [showSidebar, setShowSidebar] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -45,6 +46,10 @@ export const ChatWidget: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState<'normal' | 'deep_translate'>('normal');
+  const [showModeGuide, setShowModeGuide] = useState(false);
+  const [isClosingModeGuide, setIsClosingModeGuide] = useState(false);
+  const [showGuideTooltip, setShowGuideTooltip] = useState(false);
+  const [isClosingGuideTooltip, setIsClosingGuideTooltip] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -61,6 +66,7 @@ export const ChatWidget: React.FC = () => {
   const chatFileInputRef = useRef<HTMLInputElement>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
   const chatSessionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -153,7 +159,7 @@ export const ChatWidget: React.FC = () => {
           const base64Data = base64String.split(',')[1];
           setAttachment({
               data: base64Data,
-              mimeType: file.type,
+              mimeType: file.type || 'application/octet-stream',
               name: file.name
           });
       };
@@ -161,6 +167,69 @@ export const ChatWidget: React.FC = () => {
       
       if (chatFileInputRef.current) {
           chatFileInputRef.current.value = '';
+      }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      // Close sidebar when clicking outside (applies to desktop, tablet, and mobile)
+      if (showSidebar && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+        const toggleBtn = document.getElementById('chat-sidebar-toggle');
+        const toggleBtnDesktop = document.getElementById('chat-sidebar-toggle-desktop');
+        if ((toggleBtn && toggleBtn.contains(event.target as Node)) || 
+            (toggleBtnDesktop && toggleBtnDesktop.contains(event.target as Node))) {
+             return;
+        }
+        
+        // Don't close if clicking inside modals or confirmation dialogs
+        const targetElement = event.target as Element;
+        if (targetElement.closest('.fixed.inset-0.z-\\[60\\]')) {
+            return;
+        }
+        
+        setShowSidebar(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [showSidebar]);
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+      if (attachment) return; // Only one file allowed
+      const items = e.clipboardData.items;
+      for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf('image/') !== -1 || items[i].type === 'application/pdf' || items[i].type.includes('word')) {
+              const file = items[i].getAsFile();
+              if (file) {
+                  if (file.size > 5 * 1024 * 1024) {
+                      alert("Vui lòng dán file nhỏ hơn 5MB.");
+                      return;
+                  }
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                      const base64String = reader.result as string;
+                      const base64Data = base64String.split(',')[1];
+                      let nameFallback = 'document';
+                      if (items[i].type.indexOf('image/') !== -1) nameFallback = 'image.png';
+                      else if (items[i].type === 'application/pdf') nameFallback = 'document.pdf';
+                      else nameFallback = 'document.docx';
+
+                      setAttachment({
+                          data: base64Data,
+                          mimeType: file.type || items[i].type,
+                          name: file.name || nameFallback
+                      });
+                  };
+                  reader.readAsDataURL(file);
+              }
+              break; // Prevent multiple file pastes at once
+          }
       }
   };
 
@@ -248,11 +317,30 @@ export const ChatWidget: React.FC = () => {
       setTimeout(() => {
         setIsOpen(false);
         setIsClosing(false);
-      }, 300);
+      }, 200);
     } else {
       setIsOpen(true);
+      setIsChatOpening(true);
+      setTimeout(() => setIsChatOpening(false), 300);
+      setShowGuideTooltip(true);
+      setIsClosingGuideTooltip(false);
+      setTimeout(() => {
+        setIsClosingGuideTooltip(true);
+        setTimeout(() => {
+          setShowGuideTooltip(false);
+          setIsClosingGuideTooltip(false);
+        }, 300);
+      }, 3700);
       setTimeout(scrollToBottom, 100);
     }
+  };
+
+  const handleCloseModeGuide = () => {
+    setIsClosingModeGuide(true);
+    setTimeout(() => {
+        setShowModeGuide(false);
+        setIsClosingModeGuide(false);
+    }, 200);
   };
 
   const scrollToBottom = () => {
@@ -351,9 +439,9 @@ YÊU CẦU QUAN TRỌNG: Bản dịch (cả tiếng Trung và tiếng Việt) ph
 
 1. Nếu input là tiếng Việt: Dịch sang tiếng Trung. Văn phong phải cực kỳ tự nhiên, giống như người bản xứ đang nhắn tin trò chuyện thực tế, KHÔNG dùng từ ngữ quá sách vở.
 Định dạng đầu ra BẮT BUỘC:
-[Câu dịch tiếng Trung]
+Câu dịch tiếng Trung
 
-Nghĩa tiếng Việt: [Nghĩa tiếng Việt khi dịch ngược lại câu tiếng Trung vừa dịch]
+Nghĩa tiếng Việt: Nghĩa tiếng Việt tương ứng
 
 2. Nếu input là tiếng Trung: Dịch sang tiếng Việt một cách tự nhiên, đúng ngữ cảnh giao tiếp Headhunter.
 
@@ -637,8 +725,8 @@ ${text}`;
             />
             
             <div 
-                className={`bg-white/95 backdrop-blur-xl w-full max-w-full h-full sm:h-auto sm:max-w-5xl sm:rounded-3xl shadow-2xl overflow-hidden flex relative z-10 origin-center sm:border border-white/60
-                    ${isClosing ? 'animate-fade-out-down' : 'animate-fade-in-up'}
+                className={`bg-white/95 backdrop-blur-xl w-full max-w-full h-full sm:h-auto sm:max-w-5xl sm:rounded-3xl shadow-2xl overflow-hidden flex relative z-10 origin-bottom-left sm:border border-white/60
+                    ${isClosing ? 'animate-scale-out' : 'animate-scale-in'}
                 `}
                 style={{
                     height: typeof window !== 'undefined' && window.innerWidth < 640 ? '100dvh' : '85vh',
@@ -647,7 +735,7 @@ ${text}`;
                 }}
             >
                 {/* Sidebar (History) */}
-                <div className={`absolute z-30 h-full bg-slate-50/95 backdrop-blur-md border-r border-slate-200/60 flex flex-col transition-all duration-300 ease-in-out shadow-2xl sm:shadow-none
+                <div ref={sidebarRef} className={`absolute z-30 h-full bg-slate-50/95 backdrop-blur-md border-r border-slate-200/60 flex flex-col ease-in-out shadow-2xl sm:shadow-none ${isChatOpening ? '' : 'transition-all duration-300'}
                     ${showSidebar ? 'translate-x-0 w-[85%] sm:w-72 sm:relative' : '-translate-x-full w-[85%] sm:w-0 sm:border-none sm:opacity-0 sm:overflow-hidden'}`}>
                     <div className="p-4 sm:p-5 border-b border-slate-200/60 flex items-center justify-between bg-white/50 shrink-0 w-full sm:w-72">
                         <div className="flex items-center justify-start gap-2">
@@ -674,7 +762,7 @@ ${text}`;
                         )}
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-4 w-full sm:w-72">
+                    <div className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] p-3 space-y-4 w-full sm:w-72">
                         <button 
                             onClick={createNewChat}
                             className="w-full flex items-center gap-2 p-3.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 font-medium text-sm"
@@ -838,6 +926,7 @@ ${text}`;
                     <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 bg-white/50 backdrop-blur-md shrink-0">
                         <div className="flex items-center gap-3 sm:gap-4">
                             <button 
+                                id="chat-sidebar-toggle"
                                 onClick={() => setShowSidebar(!showSidebar)}
                                 className="sm:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
                             >
@@ -846,6 +935,7 @@ ${text}`;
                                 </svg>
                             </button>
                             <button 
+                                id="chat-sidebar-toggle-desktop"
                                 onClick={() => setShowSidebar(!showSidebar)}
                                 className="hidden sm:block p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
                                 title="Lịch sử chat"
@@ -898,7 +988,7 @@ ${text}`;
                     </div>
 
                     {/* Content: Chat Tab */}
-                    <div className={`flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-6 transition-colors duration-300 ${chatMode === 'deep_translate' ? 'bg-gradient-to-b from-indigo-50/30 to-purple-50/30' : 'bg-slate-50/30'}`} ref={scrollRef}>
+                    <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] space-y-6 transition-colors duration-300 ${chatMode === 'deep_translate' ? 'bg-gradient-to-b from-indigo-50/30 to-purple-50/30' : 'bg-slate-50/30'}`} ref={scrollRef}>
                         {messages.map((msg) => {
                             const isMe = msg.sender === 'user';
                             
@@ -910,30 +1000,30 @@ ${text}`;
                                                 {avatarUrl ? (
                                                     <img src={avatarUrl} alt="AI Avatar" className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M5.25 12h13.5m-13.5 3H3m18 0h-1.5m-11.25 6v-1.5m4.5 1.5v-1.5M12 3v1.5m-3.75 3h7.5A2.25 2.25 0 0 1 18 9.75v4.5a2.25 2.25 0 0 1-2.25 2.25h-7.5A2.25 2.25 0 0 1 6 14.25v-4.5A2.25 2.25 0 0 1 8.25 7.5Z" />
                                                     </svg>
                                                 )}
                                             </div>
                                         </div>
                                     )}
-                                    <div className={`max-w-[85%] sm:max-w-[75%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                                        <div className="group relative">
+                                    <div className={`max-w-[85%] sm:max-w-[75%] flex flex-col min-w-0 ${isMe ? 'items-end' : 'items-start'}`}>
+                                        <div className="group relative min-w-0 w-full">
                                             <div 
-                                                className={`px-5 py-3.5 rounded-2xl text-[15px] shadow-sm transition-colors duration-300
+                                                className={`px-4 py-2 rounded-[28px] text-[15px] shadow-sm transition-colors duration-300 overflow-x-auto
                                                     ${isMe 
                                                         ? chatMode === 'deep_translate' 
-                                                            ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-br-none shadow-md' 
-                                                            : 'bg-indigo-600 text-white rounded-br-none' 
+                                                            ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-br-[10px] shadow-md' 
+                                                            : 'bg-indigo-600 text-white rounded-br-[10px]' 
                                                         : chatMode === 'deep_translate'
-                                                            ? 'bg-white text-slate-800 rounded-bl-none border border-purple-100 shadow-[0_4px_20px_-4px_rgba(168,85,247,0.1)]'
-                                                            : 'bg-white text-slate-800 rounded-bl-none border border-slate-200/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]'}
+                                                            ? 'bg-white text-slate-800 rounded-bl-[10px] border border-purple-100 shadow-[0_4px_20px_-4px_rgba(168,85,247,0.1)]'
+                                                            : 'bg-white text-slate-800 rounded-bl-[10px] border border-slate-200/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]'}
                                                 `}
                                             >
                                                 {isMe ? (
                                                     <div className="break-words whitespace-pre-wrap leading-relaxed">{msg.text}</div>
                                                 ) : (
-                                                    <div className="markdown-body prose prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-pre:bg-slate-800 prose-pre:text-slate-100 prose-headings:text-slate-800 prose-a:text-indigo-600">
+                                                    <div className="markdown-body prose prose-sm sm:prose-base max-w-none w-full prose-p:leading-relaxed prose-pre:bg-slate-800 prose-pre:text-slate-100 prose-headings:text-slate-800 prose-a:text-indigo-600 prose-pre:overflow-x-auto">
                                                         <ReactMarkdown>{msg.text}</ReactMarkdown>
                                                     </div>
                                                 )}
@@ -966,17 +1056,17 @@ ${text}`;
                         {isLoading && (
                             <div className="flex gap-3 sm:gap-4 justify-start">
                                 <div className="w-10 h-10 shrink-0 flex items-end">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md ring-2 ring-white">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 animate-spin">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md ring-2 ring-white overflow-hidden">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
                                         </svg>
                                     </div>
                                 </div>
-                                <div className="max-w-[80%] flex flex-col items-start">
+                                <div className="max-w-[80%] flex flex-col items-start animate-fade-in-up" style={{ animationDuration: '0.3s' }}>
                                     <div className="px-5 py-4 rounded-2xl bg-white text-slate-700 rounded-bl-none border border-slate-200/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex items-center gap-2">
-                                        <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                                        <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                                        <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                                        <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.5s' }}></span>
+                                        <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1.5s' }}></span>
+                                        <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '600ms', animationDuration: '1.5s' }}></span>
                                     </div>
                                 </div>
                             </div>
@@ -986,11 +1076,35 @@ ${text}`;
                     <div className="p-4 sm:p-5 bg-white border-t border-slate-100 relative shrink-0">
                         {/* Mode Toggle */}
                         <div className="flex items-center gap-2 mb-3 max-w-4xl mx-auto">
-                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chế độ:</span>
-                            <div className="flex bg-slate-100/80 p-1 rounded-xl ring-1 ring-slate-200/50">
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chế độ:</span>
+                                <div className="relative flex items-center justify-center">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => { setShowModeGuide(true); setShowGuideTooltip(false); }} 
+                                        className="text-slate-400 hover:text-indigo-500 transition-colors p-1 -m-1" 
+                                        title="Hướng dẫn chế độ"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                    </button>
+                                    {showGuideTooltip && (
+                                        <div className={`absolute bottom-full mb-[18px] sm:mb-2 left-[-10px] sm:left-1/2 sm:-translate-x-1/2 w-[180px] sm:w-max bg-indigo-600 text-white text-[11px] sm:text-xs font-medium py-2 px-3 rounded-xl shadow-lg before:content-[''] before:absolute before:left-[18px] sm:before:left-1/2 before:-translate-x-1/2 before:-bottom-1.5 before:border-t-[6px] before:border-t-indigo-600 before:border-l-[6px] before:border-l-transparent before:border-r-[6px] before:border-r-transparent ${isClosingGuideTooltip ? 'animate-fade-out-down' : 'animate-fade-in-up'} z-50`}>
+                                            Bấm vào đây để xem hướng dẫn
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex relative bg-slate-100/80 p-1 rounded-xl ring-1 ring-slate-200/50">
+                                <div 
+                                    className={`absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
+                                        ${chatMode === 'normal' 
+                                            ? 'translate-x-0 bg-white shadow-[0_2px_8px_-2px_rgba(79,70,229,0.15)] ring-1 ring-indigo-100' 
+                                            : 'translate-x-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_2px_10px_-2px_rgba(99,102,241,0.4)] ring-1 ring-indigo-500/50'
+                                        }`}
+                                />
                                 <button 
                                     onClick={() => setChatMode('normal')}
-                                    className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${chatMode === 'normal' ? 'bg-white text-indigo-600 shadow-[0_2px_8px_-2px_rgba(79,70,229,0.15)] ring-1 ring-indigo-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                                    className={`relative z-10 w-1/2 flex justify-center items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-300 ${chatMode === 'normal' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
@@ -999,7 +1113,7 @@ ${text}`;
                                 </button>
                                 <button 
                                     onClick={() => setChatMode('deep_translate')}
-                                    className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${chatMode === 'deep_translate' ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-[0_2px_10px_-2px_rgba(99,102,241,0.4)] ring-1 ring-indigo-500/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                                    className={`relative z-10 w-1/2 flex justify-center items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-300 ${chatMode === 'deep_translate' ? 'text-white' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
@@ -1009,7 +1123,44 @@ ${text}`;
                             </div>
                         </div>
                         <form onSubmit={handleSendMessage} className="flex flex-col gap-2 max-w-4xl mx-auto relative">
+                            {attachment && (
+                                <div className="flex flex-col animate-fade-in-up">
+                                    <div className="flex items-center gap-3 bg-white border border-slate-200 shadow-sm p-2 pr-3 rounded-2xl w-max max-w-[85%] relative group">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500 shrink-0">
+                                            {attachment.mimeType.includes('image') ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col min-w-0 pr-4">
+                                            <span className="text-sm font-bold text-slate-700 truncate">{attachment.name}</span>
+                                            <span className="text-[11px] text-slate-400 font-medium tracking-wide">Tệp đính kèm</span>
+                                        </div>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setAttachment(null)} 
+                                            className="absolute -top-2 -right-2 w-6 h-6 bg-slate-100 hover:bg-slate-200 flex items-center justify-center rounded-full text-slate-500 hover:text-slate-700 transition-colors shadow-sm ring-2 ring-white"
+                                            title="Xóa tệp"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                             <div className="flex items-center gap-2">
+                                <input type="file" ref={chatFileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*,.pdf,.doc,.docx" />
+                                <button
+                                    type="button"
+                                    onClick={() => chatFileInputRef.current?.click()}
+                                    className="p-3 sm:p-4 rounded-2xl transition-colors border shrink-0 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200"
+                                    title="Đính kèm tệp, ảnh"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
+                                    </svg>
+                                </button>
+
                                 <button 
                                     type="button"
                                     onMouseDown={startRecording}
@@ -1019,7 +1170,7 @@ ${text}`;
                                     onTouchEnd={stopRecording}
                                     onContextMenu={(e) => e.preventDefault()}
                                     className={`p-3 sm:p-4 rounded-2xl transition-colors border shrink-0 select-none
-                                        ${isRecording ? 'bg-rose-100 text-rose-600 border-rose-200 animate-pulse' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200'}
+                                        ${isRecording ? 'bg-rose-100 text-rose-600 border-rose-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200'}
                                     `}
                                     title="Nhấn giữ để nói"
                                 >
@@ -1029,19 +1180,29 @@ ${text}`;
                                 </button>
 
                                 {isRecording ? (
-                                    <div className="flex-1 bg-rose-50 border border-rose-200 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl flex items-center gap-3 shadow-inner min-w-0">
-                                        <span className="relative flex h-3 w-3 shrink-0">
-                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                                          <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
-                                        </span>
-                                        <span className="text-rose-600 font-medium text-[15px] animate-pulse truncate">Đang thu âm... Hãy nói gì đó</span>
+                                    <div className="flex-1 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl flex items-center justify-center gap-4 shadow-inner min-w-0">
+                                        <style>{`
+                                            @keyframes sound-wave {
+                                                0%, 100% { height: 6px; }
+                                                50% { height: 24px; }
+                                            }
+                                        `}</style>
+                                        <div className="flex items-center gap-1.5 h-6">
+                                            <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0s' }}></div>
+                                            <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0.2s' }}></div>
+                                            <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0.4s' }}></div>
+                                            <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0.1s' }}></div>
+                                            <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0.3s' }}></div>
+                                        </div>
+                                        <span className="text-rose-600 font-semibold text-[15px] animate-pulse truncate">Đang thu âm thanh... thả tay để gửi</span>
                                     </div>
                                 ) : (
                                     <input 
                                         type="text" 
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
-                                        placeholder="Hỏi AI bất cứ điều gì..." 
+                                        onPaste={handlePaste}
+                                        placeholder="Hỏi AI bất cứ điều gì (Nhấn Ctrl+V để dán ảnh)..." 
                                         className="flex-1 bg-slate-50 border border-slate-200 outline-none px-4 sm:px-5 py-3 sm:py-4 rounded-2xl text-[15px] font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-300 transition-all text-slate-800 placeholder:text-slate-400 shadow-inner min-w-0"
                                         disabled={isLoading}
                                     />
@@ -1049,9 +1210,9 @@ ${text}`;
                                 
                                 <button 
                                     type="submit" 
-                                    disabled={!newMessage.trim() || isLoading}
+                                    disabled={(!newMessage.trim() && !attachment) || isLoading}
                                     className={`p-3 sm:p-4 rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-center shrink-0
-                                        ${newMessage.trim() && !isLoading ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}
+                                        ${(newMessage.trim() || attachment) && !isLoading ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}
                                     `}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
@@ -1063,6 +1224,70 @@ ${text}`;
                     </div>
                 </div>
             </div>
+            
+            {/* Mode Guide Modal */}
+            {showModeGuide && (
+                <div className={`fixed inset-0 z-[60] flex items-center justify-center p-4 transition-opacity duration-200 ${isClosingModeGuide ? 'opacity-0' : 'opacity-100'}`} onClick={handleCloseModeGuide}>
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
+                    <div className={`bg-white rounded-2xl shadow-xl max-w-lg w-full flex flex-col max-h-[90vh] relative z-10 m-4 ${isClosingModeGuide ? 'animate-scale-out' : 'animate-scale-in'}`} onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-100 shrink-0">
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-indigo-500">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+                                </svg>
+                                Hướng dẫn chế độ chat
+                            </h3>
+                            <button onClick={handleCloseModeGuide} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-1.5 rounded-full transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        
+                        <div className="p-4 sm:p-6 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
+                            <div className="space-y-4 text-sm text-slate-600">
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                    <div className="font-semibold text-slate-800 mb-1 flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+                                        Chế độ "Bình thường"
+                                    </div>
+                                    <p>Sử dụng cho hệ thống hỏi đáp, làm việc thông thường. Trợ lý AI sẽ xưng hô thân thiện "em-chị".</p>
+                                    <div className="mt-3 bg-white p-3 rounded-lg border border-slate-200">
+                                        <p className="font-semibold text-[13px] text-slate-700 mb-1">💡 Mẹo prompt hiệu quả:</p>
+                                        <ul className="list-disc pl-4 text-[13px] space-y-1 text-slate-500">
+                                            <li>Viết rõ bối cảnh (vd: <i>"Viết email từ chối ứng viên tế nhị, do họ thiếu kinh nghiệm quản lý"</i>)</li>
+                                            <li>Yêu cầu định dạng (vd: <i>"Hãy trình bày dưới dạng gạch đầu dòng ngắn gọn"</i>)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                    <div className="font-semibold text-indigo-700 mb-1 flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                        Chế độ "Dịch chuyên sâu"
+                                    </div>
+                                    <p>Tự động khử xưng hô "em-chị", tinh chỉnh văn phong dịch thuật tự nhiên nhất cho giao tiếp <strong>Headhunter - Đối tác/Ứng viên</strong>.</p>
+                                    <div className="mt-3 bg-white/60 p-3 rounded-lg border border-indigo-100">
+                                        <p className="font-semibold text-[13px] text-indigo-800 mb-1">💡 Mẹo prompt hiệu quả:</p>
+                                        <ul className="list-disc pl-4 text-[13px] space-y-1 text-indigo-700/80">
+                                            <li>Chỉ cần <strong>dán trực tiếp</strong> đoạn văn bản cần dịch, không cần thêm lệnh "Hãy dịch..."</li>
+                                            <li>Ghi chú thêm mức độ trang trọng nếu cần (vd: <i>"Dùng từ ngữ lịch sự nịnh nọt ứng viên C-level"</i>)</li>
+                                        </ul>
+                                    </div>
+                                    <p className="mt-2 text-xs italic text-indigo-600 font-medium">Lưu ý: Chỉ dịch thuần túy, nội dung AI không tự chèn thêm bình luận.</p>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-6 flex justify-end">
+                                <button 
+                                    onClick={handleCloseModeGuide}
+                                    className="px-5 py-2.5 rounded-xl font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm shadow-indigo-200 transition-all active:scale-95"
+                                >
+                                    Đã hiểu
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && (
