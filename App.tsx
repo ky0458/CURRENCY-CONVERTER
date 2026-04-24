@@ -12,6 +12,7 @@ import { NotesManager } from './components/NotesManager';
 import { ChatWidget } from './components/ChatWidget'; // Import ChatWidget
 import { UserMenu } from './components/UserMenu';
 import { DocumentSection } from './components/DocumentSection';
+import { ChangelogModal } from './components/ChangelogModal'; // Added import
 import { useCurrencyConverter } from './hooks/useCurrencyConverter';
 import { useRevenueTracker } from './hooks/useRevenueTracker';
 import { RevenueStatsSection } from './components/RevenueStatsSection';
@@ -494,6 +495,7 @@ const AppContent: React.FC = () => {
         }}
     >
       <ToastNotification />
+      <ChangelogModal />
 
       {/* GLOBAL FIXED CONTROLS */}
       <div className="absolute top-3 right-3 sm:top-5 sm:right-6 z-[100] flex items-center gap-3 animate-fade-in-up">
@@ -1110,7 +1112,7 @@ const AppContent: React.FC = () => {
       <div className="relative z-20 pb-4 text-center">
           <p className={`text-xs font-bold uppercase tracking-widest ${hasBackground ? 'text-white/80 text-shadow-sm' : 'text-slate-400'}`}>Powered By ZiQi</p>
           <p className={`text-[10px] font-medium mt-0.5 ${hasBackground ? 'text-white/60 text-shadow-sm' : 'text-slate-300'}`}>
-              Lastest update: 00:54 25/04/2026
+              Lastest update: 02:08 25/04/2026
           </p>
       </div>
 
