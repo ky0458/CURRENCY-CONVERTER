@@ -33,15 +33,22 @@ interface PageData {
 const PdfBlock = React.memo(({ 
     block, 
     initialAction = 'none',
-    onActionChange 
+    onActionChange,
+    onDeleteBlock
 }: { 
     block: TextBlock; 
     initialAction?: ActionType;
     onActionChange: (id: string, action: ActionType) => void;
+    onDeleteBlock?: (id: string) => void;
 }) => {
     const [action, setAction] = useState<ActionType>(initialAction);
+    const timerRef = useRef<NodeJS.Timeout>();
+    const isLongPressActive = useRef(false);
 
-    const handleToggle = useCallback(() => {
+    const handleToggle = useCallback((e: React.MouseEvent) => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        if (isLongPressActive.current) return;
+
         setAction(prev => {
             let next: ActionType = 'none';
             if (prev === 'none') next = 'redact';
@@ -52,6 +59,20 @@ const PdfBlock = React.memo(({
             return next;
         });
     }, [block.id, onActionChange]);
+
+    const handlePointerDown = (e: React.PointerEvent) => {
+        isLongPressActive.current = false;
+        timerRef.current = setTimeout(() => {
+            isLongPressActive.current = true;
+            if (onDeleteBlock) {
+                onDeleteBlock(block.id);
+            }
+        }, 500); // 500ms long press
+    };
+
+    const handlePointerCancel = () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+    };
 
     let actionClasses = '';
     if (action === 'redact') {
@@ -65,7 +86,7 @@ const PdfBlock = React.memo(({
     return (
         <div
             data-action={action}
-            className={`absolute cursor-pointer border rounded-sm touch-manipulation ${actionClasses}`}
+            className={`absolute cursor-pointer border rounded-sm touch-manipulation pdf-block ${actionClasses}`}
             style={{
                 left: `${block.xPct}%`,
                 top: `${block.yPct}%`,
@@ -73,6 +94,9 @@ const PdfBlock = React.memo(({
                 height: `${block.heightPct}%`,
                 zIndex: 10
             }}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerCancel}
+            onPointerLeave={handlePointerCancel}
             onClick={handleToggle}
             title={action === 'none' ? 'Chạm để Che (Đen)' : action === 'redact' ? 'Chạm để Xóa (Trắng)' : 'Chạm để Hủy'}
         >
@@ -116,6 +140,7 @@ export const PdfRedactor: React.FC = () => {
     const docxContainerRef = useRef<HTMLDivElement>(null);
     const [isManualMode, setIsManualMode] = useState<boolean>(false);
     const [ocrProgress, setOcrProgress] = useState<string>('');
+    const [manualHistory, setManualHistory] = useState<string[]>([]);
 
     const [drawingState, setDrawingState] = useState<{
         isDrawing: boolean;
@@ -129,7 +154,32 @@ export const PdfRedactor: React.FC = () => {
     // Instead of state that triggers global re-render, we track actions in a mutable ref
     const blockActionsRef = useRef<Record<string, ActionType>>({});
 
-    const handlePdfMouseDown = (e: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
+    const undoLastManualBlock = () => {
+        setManualHistory(prev => {
+            if (prev.length === 0) return prev;
+            const lastId = prev[prev.length - 1];
+            
+            setPages(currentPages => currentPages.map(p => ({
+                ...p,
+                blocks: p.blocks.filter(b => b.id !== lastId)
+            })));
+            
+            delete blockActionsRef.current[lastId];
+            return prev.slice(0, -1);
+        });
+    };
+
+    const handleDeleteBlock = useCallback((id: string) => {
+        if (!id.includes('manual_')) return;
+        setPages(currentPages => currentPages.map(p => ({
+            ...p,
+            blocks: p.blocks.filter(b => b.id !== id)
+        })));
+        delete blockActionsRef.current[id];
+        setManualHistory(prev => prev.filter(manualId => manualId !== id));
+    }, []);
+
+    const handlePdfMouseDown = (e: React.PointerEvent<HTMLDivElement>, pageIndex: number) => {
         if (!isManualMode) return;
         if ((e.target as HTMLElement).closest('.pdf-block')) return;
         
@@ -147,7 +197,7 @@ export const PdfRedactor: React.FC = () => {
         });
     };
 
-    const handlePdfMouseMove = (e: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
+    const handlePdfMouseMove = (e: React.PointerEvent<HTMLDivElement>, pageIndex: number) => {
         if (!drawingState.isDrawing || drawingState.pageIndex !== pageIndex) return;
         const rect = e.currentTarget.getBoundingClientRect();
         const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
@@ -155,7 +205,7 @@ export const PdfRedactor: React.FC = () => {
         setDrawingState(prev => ({ ...prev, currentX: x, currentY: y }));
     };
 
-    const handlePdfMouseUp = (e: React.MouseEvent<HTMLDivElement>, pageIndex: number) => {
+    const handlePdfMouseUp = (e: React.PointerEvent<HTMLDivElement>, pageIndex: number) => {
         if (!drawingState.isDrawing || drawingState.pageIndex !== pageIndex) return;
         
         const rect = e.currentTarget.getBoundingClientRect();
@@ -209,6 +259,7 @@ export const PdfRedactor: React.FC = () => {
                 setPages(prev => prev.map(p => 
                     p.pageIndex === pageIndex + 1 ? { ...p, blocks: [...p.blocks, newBlock] } : p
                 ));
+                setManualHistory(prev => [...prev, blockId]);
             }
         }
         setDrawingState(prev => ({ ...prev, isDrawing: false, pageIndex: null }));
@@ -808,29 +859,46 @@ export const PdfRedactor: React.FC = () => {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                                 </svg>
-                                Tải CV Đã Che
+                                <span className="hidden sm:inline">Tải CV Đã Che</span>
+                                <span className="sm:hidden">Tải về</span>
                             </button>
                         )}
                     </div>
                 </div>
 
                 {pages.length > 0 && !isProcessing && (
-                    <div className="flex items-center gap-3 px-2 py-1">
-                        <button 
-                            type="button"
-                            onClick={() => setIsManualMode(!isManualMode)}
-                            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ${isManualMode ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                            role="switch"
-                            aria-checked={isManualMode}
-                        >
-                            <span
-                                aria-hidden="true"
-                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isManualMode ? 'translate-x-5' : 'translate-x-0'}`}
-                            />
-                        </button>
-                        <span className="text-sm font-semibold text-slate-700 cursor-pointer select-none" onClick={() => setIsManualMode(!isManualMode)}>
-                            Bật tính năng che thủ công (Kéo thả chuột trên trang)
-                        </span>
+                    <div className="flex items-center flex-wrap gap-3 px-2 py-1">
+                        <div className="flex items-center gap-3">
+                            <button 
+                                type="button"
+                                onClick={() => setIsManualMode(!isManualMode)}
+                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ${isManualMode ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                                role="switch"
+                                aria-checked={isManualMode}
+                            >
+                                <span
+                                    aria-hidden="true"
+                                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isManualMode ? 'translate-x-5' : 'translate-x-0'}`}
+                                />
+                            </button>
+                            <span className="text-sm font-semibold text-slate-700 cursor-pointer select-none" onClick={() => setIsManualMode(!isManualMode)}>
+                                <span className="hidden sm:inline">Bật tính năng che thủ công (Kéo thả trên trang)</span>
+                                <span className="sm:hidden">Bật che thủ công</span>
+                            </span>
+                        </div>
+
+                        {isManualMode && (
+                            <button 
+                                onClick={undoLastManualBlock}
+                                disabled={manualHistory.length === 0}
+                                className={`ml-auto sm:ml-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${manualHistory.length > 0 ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 cursor-pointer' : 'bg-slate-50 text-slate-400 cursor-not-allowed'}`}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                                </svg>
+                                <span>Hoàn tác</span>
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -847,7 +915,7 @@ export const PdfRedactor: React.FC = () => {
                             {docxBlob ? (
                                 <span> Để che thêm thủ công, hãy <strong>bôi đen văn bản</strong> trên màn hình và nhấn phím <strong>Delete</strong> hoặc <strong>Backspace</strong> để xóa!</span>
                             ) : (
-                                <span>  {isManualMode ? <strong>Kéo & thả chuột trực tiếp trên trang để che thủ công.</strong> : "Bật 'che thủ công' để tự vẽ vùng che đen."}</span>
+                                <span>  {isManualMode ? <span><strong>Kéo thả trên trang</strong> để che thủ công. <strong>Nhấn giữ</strong> (0.5s) vùng vừa vẽ để xóa.</span> : "Bật 'che thủ công' để tự vẽ vùng che đen."}</span>
                             )}
                         </div>
                     </div>
@@ -887,11 +955,11 @@ export const PdfRedactor: React.FC = () => {
                             <div 
                                 key={idx} 
                                 className="relative bg-white shadow-md rounded-sm overflow-hidden w-full transition-all hover:shadow-lg ring-1 ring-slate-900/5 select-none" 
-                                style={{ aspectRatio: `${page.width} / ${page.height}`, touchAction: 'none' }}
-                                onMouseDown={(e) => handlePdfMouseDown(e, idx)}
-                                onMouseMove={(e) => handlePdfMouseMove(e, idx)}
-                                onMouseUp={(e) => handlePdfMouseUp(e, idx)}
-                                onMouseLeave={(e) => handlePdfMouseUp(e, idx)}
+                                style={{ aspectRatio: `${page.width} / ${page.height}`, touchAction: isManualMode ? 'none' : 'auto' }}
+                                onPointerDown={(e) => handlePdfMouseDown(e, idx)}
+                                onPointerMove={(e) => handlePdfMouseMove(e, idx)}
+                                onPointerUp={(e) => handlePdfMouseUp(e, idx)}
+                                onPointerLeave={(e) => handlePdfMouseUp(e, idx)}
                             >
                                 <img src={page.canvasUrl} alt={`Page ${idx + 1}`} className="absolute top-0 left-0 w-full h-full object-contain pointer-events-none" />
                                 
@@ -913,6 +981,7 @@ export const PdfRedactor: React.FC = () => {
                                         block={block}
                                         initialAction={blockActionsRef.current[block.id] || 'none'}
                                         onActionChange={handleActionChange}
+                                        onDeleteBlock={handleDeleteBlock}
                                     />
                                 ))}
                             </div>
