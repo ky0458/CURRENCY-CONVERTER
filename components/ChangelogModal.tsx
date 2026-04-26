@@ -52,7 +52,7 @@ export const ChangelogModal: React.FC = () => {
                         </div>
                         <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight">Cập nhật mới!</h2>
                     </div>
-                    <p className="text-indigo-100 font-medium text-sm sm:text-base">Bản cập nhật ngày 26/04/2026 - 15:39</p>
+                    <p className="text-indigo-100 font-medium text-sm sm:text-base">Bản cập nhật ngày 26/04/2026 - 11:24</p>
                 </div>
 
                 <div className="p-4 sm:p-6 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
