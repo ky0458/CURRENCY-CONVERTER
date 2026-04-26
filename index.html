@@ -24,6 +24,14 @@
                 800: 'var(--color-primary-800)',
                 900: 'var(--color-primary-900)',
               }
+            },
+            keyframes: {
+              shimmer: {
+                '100%': { transform: 'translateX(100%)' },
+              }
+            },
+            animation: {
+              shimmer: 'shimmer 2s infinite',
             }
           }
         }
@@ -163,6 +171,15 @@
       }
       .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
+      }
+
+      /* Hide scrollbar */
+      .hide-scrollbar {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+      }
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
       }
     </style>
   <script type="importmap">

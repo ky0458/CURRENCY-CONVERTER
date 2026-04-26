@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-const CURRENT_VERSION = 'v1.0.3'; // Change this to show modal again in future updates
+const CURRENT_VERSION = 'v1.0.4'; // Change this to show modal again in future updates
 
 export const ChangelogModal: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -33,7 +33,7 @@ export const ChangelogModal: React.FC = () => {
             ></div>
 
             {/* Modal */}
-            <div className={`relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] m-4 ${isClosing ? 'animate-scale-out' : 'animate-fade-in-up'}`}>
+            <div className={`relative bg-white rounded-2xl shadow-2xl w-full max-w-lg sm:max-w-2xl lg:max-w-3xl overflow-hidden flex flex-col max-h-[90vh] m-4 ${isClosing ? 'animate-scale-out' : 'animate-fade-in-up'}`}>
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-6 sm:py-8 text-white relative shrink-0">
                     <button 
                         onClick={handleClose}
@@ -52,11 +52,27 @@ export const ChangelogModal: React.FC = () => {
                         </div>
                         <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight">Cập nhật mới!</h2>
                     </div>
-                    <p className="text-indigo-100 font-medium text-sm sm:text-base">Bản cập nhật ngày 25/04/2026 - 02:08</p>
+                    <p className="text-indigo-100 font-medium text-sm sm:text-base">Bản cập nhật ngày 26/04/2026 - 15:39</p>
                 </div>
 
-                <div className="p-4 sm:p-6 overflow-y-auto">
+                <div className="p-4 sm:p-6 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
                     <ul className="space-y-4">
+                        <li className="flex gap-4">
+                            <div className="shrink-0 mt-1">
+                                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.861-3.86a2.25 2.25 0 0 0-3.182-3.182l-3.86 3.86a15.995 15.995 0 0 0-4.648 4.764m3.42 3.42a15.995 15.995 0 0 1-4.648-4.764m3.42 3.42a15.994 15.994 0 0 0 4.764-4.648" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-800 text-lg mb-1">Nâng cấp Theme Tùy chỉnh Cao cấp</h3>
+                                <p className="text-slate-600 text-sm leading-relaxed">
+                                    Khám phá sự lột xác với các theme chủ đề mới! Các Theme trên thanh tiêu đề và nút bấm không chỉ đổi màu sắc như trước, mà nay được nâng cấp với các chi tiết trang trí đặc trưng (Ếch xanh, Mèo vàng, Gấu trúc...). Làm cho máy đổi tiền của bạn độc đáo hơn bao giờ hết!
+                                </p>
+                            </div>
+                        </li>
+
                         <li className="flex gap-4">
                             <div className="shrink-0 mt-1">
                                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">

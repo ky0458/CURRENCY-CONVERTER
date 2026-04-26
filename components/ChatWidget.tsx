@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
+import { AppStyles } from '../types';
 
 // Initialize Gemini API
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -33,7 +35,11 @@ interface ChatSession {
   messages: ChatMessage[];
 }
 
-export const ChatWidget: React.FC = () => {
+interface ChatWidgetProps {
+  appStyles: AppStyles;
+}
+
+export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -48,8 +54,7 @@ export const ChatWidget: React.FC = () => {
   const [chatMode, setChatMode] = useState<'normal' | 'deep_translate'>('normal');
   const [showModeGuide, setShowModeGuide] = useState(false);
   const [isClosingModeGuide, setIsClosingModeGuide] = useState(false);
-  const [showGuideTooltip, setShowGuideTooltip] = useState(false);
-  const [isClosingGuideTooltip, setIsClosingGuideTooltip] = useState(false);
+  const [showMobileActions, setShowMobileActions] = useState(true);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedSessions, setSelectedSessions] = useState<Set<string>>(new Set());
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -172,8 +177,8 @@ export const ChatWidget: React.FC = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      // Close sidebar when clicking outside (applies to desktop, tablet, and mobile)
-      if (showSidebar && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+      // Close sidebar when clicking outside (applies only on mobile screens < 640px)
+      if (window.innerWidth < 640 && showSidebar && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
         const toggleBtn = document.getElementById('chat-sidebar-toggle');
         const toggleBtnDesktop = document.getElementById('chat-sidebar-toggle-desktop');
         if ((toggleBtn && toggleBtn.contains(event.target as Node)) || 
@@ -322,15 +327,6 @@ export const ChatWidget: React.FC = () => {
       setIsOpen(true);
       setIsChatOpening(true);
       setTimeout(() => setIsChatOpening(false), 300);
-      setShowGuideTooltip(true);
-      setIsClosingGuideTooltip(false);
-      setTimeout(() => {
-        setIsClosingGuideTooltip(true);
-        setTimeout(() => {
-          setShowGuideTooltip(false);
-          setIsClosingGuideTooltip(false);
-        }, 300);
-      }, 3700);
       setTimeout(scrollToBottom, 100);
     }
   };
@@ -704,9 +700,104 @@ ${text}`;
             <div className="relative">
                 <button 
                     onClick={toggleChat}
-                    className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-2xl flex items-center justify-center transition-transform duration-200 hover:scale-110 active:scale-95 border-2 border-white/50 backdrop-blur-md"
+                    className={`
+                        w-14 h-14 rounded-full text-white flex items-center justify-center transition-transform duration-200 active:scale-95 backdrop-blur-md relative overflow-hidden group
+                        ${appStyles.button === '3d' ? 'bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-white/50 shadow-[0_8px_0_theme(colors.indigo.800)] hover:-translate-y-2 active:shadow-[0_0px_0_theme(colors.indigo.800)] active:translate-y-0' 
+                        : appStyles.button === 'glow' ? 'bg-indigo-600 border-2 border-white/50 shadow-[0_0_20px_rgba(79,70,229,0.5)] hover:shadow-[0_0_30px_rgba(79,70,229,0.7)] hover:scale-110'
+                        : appStyles.button === 'leaf' ? 'bg-green-600 border-2 border-white/50 rounded-tl-none rounded-br-[16px] shadow-[0_8px_0_theme(colors.green.800)] hover:-translate-y-2 active:shadow-none active:translate-y-0'
+                        : appStyles.button === 'diamond' ? 'bg-cyan-500 !rounded-none [clip-path:polygon(10%_0,90%_0,100%_50%,90%_100%,10%_100%,0_50%)] hover:scale-110'
+                        : appStyles.button === 'magic_wand' ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 border-0 ring-4 ring-purple-300 ring-offset-2 ring-offset-white/20 hover:scale-110'
+                        : appStyles.button === 'bubble' ? 'bg-sky-400 border-0 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2),_0_8px_16px_rgba(56,189,248,0.4)] hover:scale-110'
+                        : appStyles.button === 'rocket' ? 'bg-red-500 !rounded-t-3xl border-2 border-white/50 !rounded-b-md shadow-[0_6px_0_theme(colors.red.700)] hover:-translate-y-2 active:translate-y-0 active:shadow-none'
+                        : appStyles.button === 'frog' ? 'bg-[#14532d] text-white border-[3px] border-[#064e3b] rounded-[40px] hover:-translate-y-1 active:scale-95 shadow-[0_4px_0_theme(colors.emerald.950)] active:translate-y-1 active:shadow-none'
+                        : appStyles.button === 'cat' ? 'bg-[#FDBA74] text-slate-900 border-[3px] border-[#EA580C] !rounded-xl hover:-translate-y-1 active:scale-95 shadow-md'
+                        : appStyles.button === 'panda' ? 'bg-zinc-800 text-white border-[3px] border-zinc-900 rounded-[20px] hover:-translate-y-1 active:scale-95 shadow-[0_4px_0_theme(colors.zinc.900)] active:shadow-none active:translate-y-1'
+                        : appStyles.button === 'fox' ? 'bg-[#F97316] text-white border-[3px] border-[#C2410C] rounded-xl hover:-translate-y-1 active:scale-95 shadow-[0_4px_0_theme(colors.orange.800)] active:shadow-none active:translate-y-1'
+                        : appStyles.button === 'dragon' ? 'bg-red-600 text-white !rounded-none border-[3px] border-red-900 [clip-path:polygon(10%_0%,90%_0%,100%_50%,90%_100%,10%_100%,0%_50%)] hover:scale-110 active:scale-95 shadow-xl'
+                        : appStyles.button === 'penguin' ? 'bg-blue-400 text-white !rounded-[24px] border-[3px] border-blue-600 hover:-translate-y-1 active:scale-95 shadow-[0_4px_0_theme(colors.blue.600)] active:shadow-none active:translate-y-1 overflow-hidden'
+                        : appStyles.button === 'bear' ? 'bg-amber-700 text-amber-50 rounded-[16px] border-[3px] border-amber-900 hover:-translate-y-1 active:scale-95 shadow-[0_4px_0_theme(colors.amber.900)] active:shadow-none active:translate-y-1'
+                        : appStyles.button === 'rabbit' ? 'bg-pink-400 text-white rounded-[24px] border-[3px] border-pink-600 hover:-translate-y-1 active:scale-95 shadow-[0_4px_0_theme(colors.pink.600)] active:shadow-none active:translate-y-1'
+                        : appStyles.button === 'bee' ? 'bg-yellow-400 text-slate-900 rounded-[20px] border-[3px] border-yellow-600 hover:-translate-y-1 active:scale-95 shadow-[0_4px_0_theme(colors.yellow.600)] active:shadow-none active:translate-y-1 overflow-hidden'
+                        : appStyles.button === 'whale' ? 'bg-sky-500 text-white rounded-[20px] border-[3px] border-sky-700 hover:-translate-y-1 active:scale-95 shadow-[0_4px_0_theme(colors.sky.700)] active:shadow-none active:translate-y-1 overflow-hidden'
+                        : 'bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-white/50 shadow-2xl hover:scale-110'}
+                    `}
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-7 h-7">
+                    {appStyles.button === 'glow' && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
+                    )}
+                    {appStyles.button === 'leaf' && <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rotate-45 pointer-events-none"></div>}
+                    {appStyles.button === 'diamond' && <div className="absolute inset-x-0 top-0 h-1/2 bg-white/20 pointer-events-none"></div>}
+                    {appStyles.button === 'bubble' && <div className="absolute top-1 left-2 w-4 h-2 bg-white/40 rounded-full rotate-[-20deg] pointer-events-none"></div>}
+                    {appStyles.button === 'rocket' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-1.5 bg-yellow-400 rounded-b-full pointer-events-none shadow-[0_2px_6px_theme(colors.orange.500)]"></div>}
+                    
+                    {/* Animal Chat Decorators */}
+                    {appStyles.button === 'frog' && (
+                        <>
+                            <div className="absolute -top-3 left-[15%] w-6 h-5 bg-[#14532d] border-[3px] border-[#064e3b] rounded-t-full z-[-1] pointer-events-none"></div>
+                            <div className="absolute -top-3 right-[15%] w-6 h-5 bg-[#14532d] border-[3px] border-[#064e3b] rounded-t-full z-[-1] pointer-events-none"></div>
+                            <div className="absolute -top-[2px] left-[18%] w-2.5 h-2.5 bg-white rounded-full z-10 pointer-events-none flex items-center justify-center"><div className="w-1 h-1 bg-slate-900 rounded-full mb-0.5 ml-0.5"></div></div>
+                            <div className="absolute -top-[2px] right-[22%] w-2.5 h-2.5 bg-white rounded-full z-10 pointer-events-none flex items-center justify-center"><div className="w-1 h-1 bg-slate-900 rounded-full mb-0.5 -ml-0.5"></div></div>
+                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-4 bg-gradient-to-t from-[#65a30d] to-[#84cc16] border-t-[3px] border-[#4d7c0f] rounded-t-full opacity-90 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] overflow-hidden pointer-events-none"></div>
+                        </>
+                    )}
+                    {appStyles.button === 'cat' && (
+                        <>
+                            <div className="absolute -top-1 left-[10%] w-4 h-4 bg-[#FDBA74] border-[2px] border-[#EA580C] rotate-[-20deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)] z-[-1] pointer-events-none"></div>
+                            <div className="absolute -top-1 right-[10%] w-4 h-4 bg-[#FDBA74] border-[2px] border-[#EA580C] rotate-[20deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)] z-[-1] pointer-events-none"></div>
+                        </>
+                    )}
+                    {appStyles.button === 'panda' && (
+                        <>
+                            <div className="absolute -top-2 left-[10%] w-5 h-5 bg-zinc-900 rounded-full z-[-1] pointer-events-none"></div>
+                            <div className="absolute -top-2 right-[10%] w-5 h-5 bg-zinc-900 rounded-full z-[-1] pointer-events-none"></div>
+                        </>
+                    )}
+                    {appStyles.button === 'fox' && (
+                        <>
+                            <div className="absolute -top-2 left-[10%] w-5 h-5 bg-[#C2410C] rotate-[-15deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)] z-[-1] pointer-events-none"></div>
+                            <div className="absolute -top-2 right-[10%] w-5 h-5 bg-[#C2410C] rotate-[15deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)] z-[-1] pointer-events-none"></div>
+                        </>
+                    )}
+                    {appStyles.button === 'dragon' && (
+                        <>
+                            <div className="absolute -top-2 left-1/4 w-4 h-4 bg-red-800 rotate-45 z-[-1] pointer-events-none"></div>
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-red-900 rotate-45 z-[-1] pointer-events-none"></div>
+                            <div className="absolute -top-2 right-1/4 w-4 h-4 bg-red-800 rotate-45 z-[-1] pointer-events-none"></div>
+                        </>
+                    )}
+                    {appStyles.button === 'penguin' && (
+                        <>
+                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-[70%] h-1/2 bg-white rounded-t-full z-0 pointer-events-none"></div>
+                        </>
+                    )}
+                    {appStyles.button === 'bear' && (
+                        <>
+                            <div className="absolute -top-2 left-[15%] w-5 h-5 bg-amber-800 rounded-full z-[-1] pointer-events-none"></div>
+                            <div className="absolute -top-2 right-[15%] w-5 h-5 bg-amber-800 rounded-full z-[-1] pointer-events-none"></div>
+                        </>
+                    )}
+                    {appStyles.button === 'rabbit' && (
+                        <>
+                            <div className="absolute -top-6 left-[20%] w-4 h-8 bg-pink-500 rounded-full rotate-[-15deg] z-[-1] pointer-events-none flex items-center justify-center border-[2px] border-pink-600"><div className="w-1.5 h-4 bg-pink-200 rounded-full"></div></div>
+                            <div className="absolute -top-6 right-[20%] w-4 h-8 bg-pink-500 rounded-full rotate-[15deg] z-[-1] pointer-events-none flex items-center justify-center border-[2px] border-pink-600"><div className="w-1.5 h-4 bg-pink-200 rounded-full"></div></div>
+                        </>
+                    )}
+                    {appStyles.button === 'bee' && (
+                        <>
+                            <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent,transparent_10px,rgba(0,0,0,0.15)_10px,rgba(0,0,0,0.15)_20px)] pointer-events-none"></div>
+                            <div className="absolute -top-2 left-[15%] w-5 h-3 bg-white/40 rotate-[-30deg] rounded-full z-[-1] pointer-events-none border border-white/60"></div>
+                            <div className="absolute -top-2 right-[15%] w-5 h-3 bg-white/40 rotate-[30deg] rounded-full z-[-1] pointer-events-none border border-white/60"></div>
+                        </>
+                    )}
+                    {appStyles.button === 'whale' && (
+                        <>
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-1.5 h-4 bg-sky-200/80 z-[-1] pointer-events-none"></div>
+                            <div className="absolute -top-4 left-1/2 -translate-x-[90%] w-3 h-2 bg-sky-200/80 rounded-full rotate-[-30deg] z-[-1] pointer-events-none"></div>
+                            <div className="absolute -top-4 left-1/2 -translate-x-[10%] w-3 h-2 bg-sky-200/80 rounded-full rotate-[30deg] z-[-1] pointer-events-none"></div>
+                            <div className="absolute bottom-0 left-0 w-full h-1.5 bg-sky-600/50 pointer-events-none"></div>
+                        </>
+                    )}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-7 h-7 relative z-10">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
                     </svg>
                 </button>
@@ -717,19 +808,18 @@ ${text}`;
       )}
 
       {/* Main Chat Window */}
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center sm:p-6 overflow-hidden">
+      {isOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center sm:p-6 overflow-hidden">
             <div 
                 className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100 animate-fade-in'}`}
-                onClick={toggleChat}
+                onClick={() => { if (window.innerWidth < 640) toggleChat() }}
             />
             
             <div 
-                className={`bg-white/95 backdrop-blur-xl w-full max-w-full h-full sm:h-auto sm:max-w-5xl sm:rounded-3xl shadow-2xl overflow-hidden flex relative z-10 origin-bottom-left sm:border border-white/60
+                className={`bg-white/95 backdrop-blur-xl w-full max-w-full h-[100dvh] sm:h-[85vh] sm:max-w-5xl sm:rounded-3xl shadow-2xl overflow-hidden flex relative z-10 origin-bottom-left sm:border border-white/60
                     ${isClosing ? 'animate-scale-out' : 'animate-scale-in'}
                 `}
                 style={{
-                    height: typeof window !== 'undefined' && window.innerWidth < 640 ? '100dvh' : '85vh',
                     maxHeight: typeof window !== 'undefined' && window.innerWidth < 640 ? '100dvh' : '85vh',
                     animationDuration: '0.3s'
                 }}
@@ -1009,27 +1099,239 @@ ${text}`;
                                     )}
                                     <div className={`max-w-[85%] sm:max-w-[75%] flex flex-col min-w-0 ${isMe ? 'items-end' : 'items-start'}`}>
                                         <div className="group relative min-w-0 w-full">
-                                            <div 
-                                                className={`px-4 py-2 rounded-[28px] text-[15px] shadow-sm transition-colors duration-300 overflow-x-auto
-                                                    ${isMe 
-                                                        ? chatMode === 'deep_translate' 
-                                                            ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-br-[10px] shadow-md' 
-                                                            : 'bg-indigo-600 text-white rounded-br-[10px]' 
-                                                        : chatMode === 'deep_translate'
-                                                            ? 'bg-white text-slate-800 rounded-bl-[10px] border border-purple-100 shadow-[0_4px_20px_-4px_rgba(168,85,247,0.1)]'
-                                                            : 'bg-white text-slate-800 rounded-bl-[10px] border border-slate-200/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]'}
-                                                `}
-                                            >
-                                                {isMe ? (
-                                                    <div className="break-words whitespace-pre-wrap leading-relaxed">{msg.text}</div>
+                                                                                        {(() => {
+                                                const style = isMe ? appStyles.userBubble : appStyles.aiBubble;
+                                                const content = isMe ? (
+                                                    <div className="break-words whitespace-pre-wrap leading-relaxed relative z-10 font-medium">{msg.text}</div>
                                                 ) : (
-                                                    <div className="markdown-body prose prose-sm sm:prose-base max-w-none w-full prose-p:leading-relaxed prose-pre:bg-slate-800 prose-pre:text-slate-100 prose-headings:text-slate-800 prose-a:text-indigo-600 prose-pre:overflow-x-auto">
+                                                    <div className={`markdown-body prose prose-sm sm:prose-base max-w-none w-full prose-p:leading-relaxed prose-pre:overflow-x-auto relative z-10 ${
+                                                        style === 'robot' ? 'prose-pre:bg-slate-900 prose-pre:text-green-400 prose-headings:text-slate-100 prose-a:text-green-500 prose-pre:border prose-pre:border-slate-700' :
+                                                        style === 'alien' ? 'prose-pre:bg-lime-950 prose-pre:text-lime-400 prose-headings:text-lime-300 prose-a:text-lime-500 prose-pre:border prose-pre:border-lime-800' :
+                                                        style === 'dinosaur' ? 'prose-pre:bg-emerald-900 prose-pre:text-emerald-100 prose-headings:text-emerald-800 prose-a:text-emerald-600' :
+                                                        style === 'unicorn' ? 'prose-pre:bg-purple-900 prose-pre:text-purple-100 prose-headings:text-purple-900 prose-a:text-pink-600' :
+                                                        style === 'ghost' ? 'prose-pre:bg-slate-800 prose-pre:text-slate-100 prose-headings:text-slate-800 prose-a:text-slate-600' :
+                                                        style === 'ninja' ? 'prose-pre:bg-black prose-pre:text-slate-300 prose-headings:text-slate-100 prose-a:text-red-400' :
+                                                        style === 'dragon' ? 'prose-pre:bg-red-950 prose-pre:text-orange-200 prose-headings:text-red-800 prose-a:text-red-600' :
+                                                        style === 'capybara' ? 'prose-pre:bg-slate-800 prose-pre:text-slate-100 prose-headings:text-slate-800 prose-a:text-pink-600' :
+                                                        style === 'fox' ? 'prose-pre:bg-orange-950 prose-pre:text-orange-200 prose-headings:text-orange-900 prose-a:text-orange-700' :
+                                                        style === 'panda' ? 'prose-pre:bg-slate-900 prose-pre:text-slate-200 prose-headings:text-slate-900 prose-a:text-slate-700' :
+                                                        style === 'hamster' ? 'prose-pre:bg-amber-900 prose-pre:text-amber-100 prose-headings:text-amber-900 prose-a:text-amber-700' :
+                                                        style === 'owl' ? 'prose-pre:bg-amber-950 prose-pre:text-amber-100 prose-headings:text-amber-100 prose-a:text-amber-600' :
+                                                        style === 'sloth' ? 'prose-pre:bg-slate-700 prose-pre:text-slate-100 prose-headings:text-slate-800 prose-a:text-slate-600' :
+                                                        style === 'otter' ? 'prose-pre:bg-zinc-900 prose-pre:text-zinc-200 prose-headings:text-zinc-100 prose-a:text-zinc-400' :
+                                                        style === 'turtle' ? 'prose-pre:bg-green-950 prose-pre:text-green-200 prose-headings:text-green-900 prose-a:text-green-700' :
+                                                        style === 'bee' ? 'prose-pre:bg-yellow-950 prose-pre:text-yellow-200 prose-headings:text-yellow-900 prose-a:text-yellow-700' :
+                                                        style === 'whale' ? 'prose-pre:bg-sky-950 prose-pre:text-sky-200 prose-headings:text-sky-100 prose-a:text-sky-300' :
+                                                        style === 'octopus' ? 'prose-pre:bg-purple-950 prose-pre:text-purple-200 prose-headings:text-purple-100 prose-a:text-purple-300' :
+                                                        'prose-pre:bg-slate-800 prose-pre:text-slate-100 prose-headings:text-slate-800 prose-a:text-indigo-600'
+                                                    }`}>
                                                         <ReactMarkdown>{msg.text}</ReactMarkdown>
                                                     </div>
-                                                )}
-                                            </div>
-                                            
-                                            {/* Copy Button for AI Messages */}
+                                                );
+
+                                                if (style === 'frog') return (
+                                                    <div className="relative mt-4">
+                                                        <div className="absolute -top-3 left-4 w-6 h-6 bg-[#14532d] border-2 border-white rounded-full flex items-end justify-center z-10"><div className="w-3 h-3 bg-white rounded-full flex items-end justify-center mb-0.5"><div className="w-1.5 h-1.5 bg-slate-900 rounded-full mb-px" /></div></div>
+                                                        <div className="absolute -top-3 right-4 w-6 h-6 bg-[#14532d] border-2 border-white rounded-full flex items-end justify-center z-10"><div className="w-3 h-3 bg-white rounded-full flex items-end justify-center mb-0.5"><div className="w-1.5 h-1.5 bg-slate-900 rounded-full mb-px" /></div></div>
+                                                        <div className={`px-5 py-3 rounded-[24px] text-[15px] shadow-sm bg-[#14532d] text-white border-b-[4px] border-[#064e3b] shadow-[0_4px_0_theme(colors.emerald.950)] relative overflow-hidden`}>
+                                                            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-20 h-10 bg-gradient-to-t from-[#65a30d] to-[#84cc16] border-t-[4px] border-[#4d7c0f] rounded-t-full opacity-90 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]"></div>
+                                                            <div className="absolute top-[30%] left-[5%] w-8 h-4 bg-pink-500/40 rounded-full blur-md"></div>
+                                                            <div className="absolute top-[30%] right-[5%] w-8 h-4 bg-pink-500/40 rounded-full blur-md"></div>
+                                                            <div className="relative z-10">{content}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                                if (style === 'cat') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-3 left-4 w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-transparent border-b-[#fcd34d] rotate-[-20deg]"></div>
+                                                        <div className="absolute -top-3 right-4 w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-transparent border-b-[#fcd34d] rotate-[20deg]"></div>
+                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-[#fcd34d] text-slate-800 border-b-4 border-amber-600`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'dog') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-3 -left-2 w-5 h-8 bg-[#d97706] rounded-full rotate-[-45deg]"></div>
+                                                        <div className="absolute -top-3 -right-2 w-5 h-8 bg-[#d97706] rounded-full rotate-[45deg]"></div>
+                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-[#fbbf24] text-amber-900 border-b-4 border-amber-700`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'penguin') return (
+                                                    <div className="relative mt-2">
+                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-[#1e293b] text-white border-b-4 border-blue-500`}>{content}</div>
+                                                        <div className="absolute -bottom-2 left-6 w-5 h-4 bg-orange-500 rounded-full"></div>
+                                                        <div className="absolute -bottom-2 right-6 w-5 h-4 bg-orange-500 rounded-full"></div>
+                                                    </div>
+                                                );
+                                                if (style === 'bear') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-3 left-3 w-8 h-8 bg-[#78350f] rounded-full"></div>
+                                                        <div className="absolute -top-3 right-3 w-8 h-8 bg-[#78350f] rounded-full"></div>
+                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-[#92400e] text-orange-50 border-b-4 border-[#451a03]`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'rabbit') return (
+                                                    <div className="relative mt-6">
+                                                        <div className="absolute -top-7 left-5 w-4 h-10 bg-pink-100 border-2 border-slate-200 rounded-t-full rotate-[-15deg]"></div>
+                                                        <div className="absolute -top-7 right-5 w-4 h-10 bg-pink-100 border-2 border-slate-200 rounded-t-full rotate-[15deg]"></div>
+                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-white text-slate-700 border-2 border-slate-200 border-b-4 border-b-slate-300`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'koala') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-2 -left-3 w-8 h-8 bg-slate-400 rounded-full"></div>
+                                                        <div className="absolute -top-2 -right-3 w-8 h-8 bg-slate-400 rounded-full"></div>
+                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-slate-300 text-slate-800 border-b-4 border-slate-500 z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'duck') return (
+                                                    <div className="relative">
+                                                        <div className="absolute top-1/2 -left-4 transform -translate-y-1/2 w-6 h-4 bg-orange-400 rounded-l-full"></div>
+                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-[#fef08a] text-yellow-900 border-b-4 border-yellow-500`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'capybara') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-4 left-4 w-12 h-6 bg-[#C69C6D] rounded-t-full flex items-center justify-center">
+                                                            <div className="absolute top-1 left-2 w-1.5 h-1.5 bg-slate-800 rounded-full"></div>
+                                                            <div className="absolute top-1 right-2 w-1.5 h-1.5 bg-slate-800 rounded-full"></div>
+                                                            <div className="absolute -top-1 left-0 w-2.5 h-2.5 bg-[#a37e54] rounded-full"></div>
+                                                            <div className="absolute -top-1 right-0 w-2.5 h-2.5 bg-[#a37e54] rounded-full"></div>
+                                                            <div className="absolute top-2 w-2 h-1 bg-pink-300 rounded-full"></div>
+                                                        </div>
+                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-[#FFD6E4] text-slate-800 border-2 border-pink-200 relative`}>
+                                                            <span className="absolute -left-1.5 top-2 text-xl rotate-12">💖</span>
+                                                            <span className="absolute -right-2 bottom-1 text-xl -rotate-12">✨</span>
+                                                            {content}
+                                                        </div>
+                                                    </div>
+                                                );
+                                                if (style === 'robot') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-2 left-6 w-4 h-4 bg-slate-300 rounded-md border border-slate-400 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div></div>
+                                                        <div className={`px-5 py-3 rounded-xl text-[15px] shadow-sm bg-slate-800 text-green-400 border border-slate-700 font-mono`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'alien') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-3 left-6 w-6 h-6 bg-lime-400 rounded-t-full flex items-center gap-1 justify-center"><div className="w-1.5 h-1.5 bg-black rounded-full"></div><div className="w-1.5 h-1.5 bg-black rounded-full"></div></div>
+                                                        <div className={`px-5 py-3 rounded-2xl rounded-tl-none text-[15px] shadow-sm bg-lime-900 text-lime-400 border border-lime-700 font-mono`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'dinosaur') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-2 left-4 w-4 h-4 bg-emerald-600 rounded-t-md rotate-[-45deg]"></div>
+                                                        <div className="absolute -top-2 left-10 w-4 h-4 bg-emerald-600 rounded-t-md rotate-[-45deg]"></div>
+                                                        <div className={`px-5 py-3 rounded-xl text-[15px] shadow-sm bg-emerald-100 text-emerald-900 border-2 border-emerald-500`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'unicorn') return (
+                                                    <div className="relative mt-5">
+                                                        <div className="absolute -top-5 left-6 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[16px] border-transparent border-b-yellow-400"></div>
+                                                        <div className={`px-5 py-3 rounded-xl text-[15px] shadow-sm bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100 text-purple-900 border border-purple-200`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'ghost') return (
+                                                    <div className="relative mt-2">
+                                                        <div className={`px-5 py-3 rounded-t-2xl rounded-bl-sm rounded-br-3xl text-[15px] shadow-sm bg-slate-100 text-slate-800 border border-slate-200`}>{content}</div>
+                                                        <div className="absolute -bottom-3 left-4 w-3 h-3 bg-slate-100 rounded-full"></div>
+                                                    </div>
+                                                );
+                                                if (style === 'ninja') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-1 left-6 w-16 h-3 bg-red-500 transform -skew-x-12"></div>
+                                                        <div className={`px-5 py-3 rounded-xl text-[15px] shadow-sm bg-slate-900 text-slate-200 border border-slate-700 z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'dragon') return (
+                                                    <div className="relative mt-4">
+                                                        <div className="absolute -top-4 left-4 w-5 h-6 bg-red-600 rounded-t-full rotate-[-20deg]"></div>
+                                                        <div className="absolute -top-4 left-8 w-5 h-6 bg-red-600 rounded-t-full rotate-[20deg]"></div>
+                                                        <div className={`px-5 py-3 rounded-xl text-[15px] shadow-sm bg-orange-100 text-red-900 border-2 border-red-500 z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'fox') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-3 -left-1 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[12px] border-transparent border-b-orange-600 rotate-[-25deg]"></div>
+                                                        <div className="absolute -top-3 -right-1 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[12px] border-transparent border-b-orange-600 rotate-[25deg]"></div>
+                                                        <div className={`px-5 py-3 rounded-[14px] text-[15px] shadow-sm bg-orange-500 text-white border-b-4 border-orange-700 z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'panda') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-3 left-1 w-6 h-6 bg-slate-800 rounded-full"></div>
+                                                        <div className="absolute -top-3 right-1 w-6 h-6 bg-slate-800 rounded-full"></div>
+                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-white text-slate-800 border-4 border-slate-800 z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'hamster') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-3 left-2 w-5 h-5 bg-amber-200 rounded-full"></div>
+                                                        <div className="absolute -top-3 right-2 w-5 h-5 bg-amber-200 rounded-full"></div>
+                                                        <div className={`px-5 py-3 rounded-3xl text-[15px] shadow-sm bg-amber-100 text-amber-900 border-2 border-amber-300 z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'owl') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-3 left-2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-[#451a03]"></div>
+                                                        <div className="absolute -top-3 right-2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-[#451a03]"></div>
+                                                        <div className={`px-5 py-3 rounded-[14px] text-[15px] shadow-sm bg-[#78350f] text-[#fef3c7] border-b-4 border-[#451a03] z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'sloth') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-2 left-3 w-10 h-6 bg-[#a1a1aa] rounded-t-full"></div>
+                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-[#d4d4d8] text-slate-800 border-b-4 border-[#a1a1aa] z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'otter') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-3 left-2 w-4 h-4 bg-[#52525b] rounded-full"></div>
+                                                        <div className="absolute -top-3 right-2 w-4 h-4 bg-[#52525b] rounded-full"></div>
+                                                        <div className={`px-5 py-3 rounded-[16px] text-[15px] shadow-sm bg-[#71717a] text-white border-b-4 border-[#3f3f46] z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'turtle') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-2 left-6 w-6 h-6 bg-[#166534] rounded-t-full"></div>
+                                                        <div className={`px-5 py-3 rounded-[16px] text-[15px] shadow-sm bg-[#22c55e] text-[#14532d] border-4 border-[#16a34a] z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'bee') return (
+                                                    <div className="relative mt-3">
+                                                        <div className="absolute -top-4 left-4 w-2 h-4 bg-slate-900 rounded-full rotate-[-30deg]"></div>
+                                                        <div className="absolute -top-4 right-4 w-2 h-4 bg-slate-900 rounded-full rotate-[30deg]"></div>
+                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-[#fde047] text-slate-900 border-4 border-[#eab308] border-dashed z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'whale') return (
+                                                    <div className="relative mt-4">
+                                                        <div className="absolute -top-5 left-8 w-1 h-5 bg-sky-200"></div>
+                                                        <div className="absolute -top-5 left-5 w-1 h-4 bg-sky-300 rotate-[-30deg]"></div>
+                                                        <div className="absolute -top-5 left-11 w-1 h-4 bg-sky-300 rotate-[30deg]"></div>
+                                                        <div className={`px-5 py-3 rounded-[20px] text-[15px] shadow-sm bg-[#0ea5e9] text-white border-b-4 border-[#0284c7] z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+                                                if (style === 'octopus') return (
+                                                    <div className="relative mt-2">
+                                                        <div className={`px-5 py-3 rounded-t-[20px] text-[15px] shadow-sm bg-[#c084fc] text-white border border-[#a855f7] z-10 relative`}>{content}</div>
+                                                        <div className="flex gap-2 justify-center mt-[-1px]">
+                                                            <div className="w-3 h-5 bg-[#c084fc] rounded-b-full"></div>
+                                                            <div className="w-3 h-4 bg-[#c084fc] rounded-b-full"></div>
+                                                            <div className="w-3 h-5 bg-[#c084fc] rounded-b-full"></div>
+                                                        </div>
+                                                    </div>
+                                                );
+
+                                                return (
+                                                    <div className={`px-4 py-2 rounded-[28px] text-[15px] shadow-sm transition-colors duration-300 ${
+                                                        isMe 
+                                                            ? (chatMode === 'deep_translate' ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-br-[10px] shadow-md' : 'bg-indigo-600 text-white rounded-br-[10px]')
+                                                            : (chatMode === 'deep_translate' ? 'bg-white text-slate-800 rounded-bl-[10px] border border-purple-100 shadow-[0_4px_20px_-4px_rgba(168,85,247,0.1)]' : 'bg-white text-slate-800 rounded-bl-[10px] border border-slate-200/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]')
+                                                    }`}>
+                                                        {content}
+                                                    </div>
+                                                );
+                                            })()}
                                             {!isMe && msg.text && (
                                                 <button
                                                     onClick={() => handleCopy(msg.text, msg.id)}
@@ -1078,20 +1380,15 @@ ${text}`;
                         <div className="flex items-center gap-2 mb-3 max-w-4xl mx-auto">
                             <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chế độ:</span>
-                                <div className="relative flex items-center justify-center">
+                                <div className="relative">
                                     <button 
                                         type="button" 
-                                        onClick={() => { setShowModeGuide(true); setShowGuideTooltip(false); }} 
-                                        className="text-slate-400 hover:text-indigo-500 transition-colors p-1 -m-1" 
+                                        onClick={() => setShowModeGuide(true)} 
+                                        className="text-slate-400 hover:text-indigo-500 transition-colors p-1" 
                                         title="Hướng dẫn chế độ"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
                                     </button>
-                                    {showGuideTooltip && (
-                                        <div className={`absolute bottom-full mb-[18px] sm:mb-2 left-[-10px] sm:left-1/2 sm:-translate-x-1/2 w-[180px] sm:w-max bg-indigo-600 text-white text-[11px] sm:text-xs font-medium py-2 px-3 rounded-xl shadow-lg before:content-[''] before:absolute before:left-[18px] sm:before:left-1/2 before:-translate-x-1/2 before:-bottom-1.5 before:border-t-[6px] before:border-t-indigo-600 before:border-l-[6px] before:border-l-transparent before:border-r-[6px] before:border-r-transparent ${isClosingGuideTooltip ? 'animate-fade-out-down' : 'animate-fade-in-up'} z-50`}>
-                                            Bấm vào đây để xem hướng dẫn
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                             <div className="flex relative bg-slate-100/80 p-1 rounded-xl ring-1 ring-slate-200/50">
@@ -1149,35 +1446,49 @@ ${text}`;
                                 </div>
                             )}
                             <div className="flex items-center gap-2">
-                                <input type="file" ref={chatFileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*,.pdf,.doc,.docx" />
-                                <button
-                                    type="button"
-                                    onClick={() => chatFileInputRef.current?.click()}
-                                    className="p-3 sm:p-4 rounded-2xl transition-colors border shrink-0 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200"
-                                    title="Đính kèm tệp, ảnh"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
-                                    </svg>
-                                </button>
+                                <div className={`flex items-center overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${!showMobileActions ? 'max-w-0 opacity-0 sm:max-w-[140px] sm:opacity-100' : 'max-w-[140px] opacity-100 gap-2 mr-2'}`}>
+                                    <input type="file" ref={chatFileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*,.pdf,.doc,.docx" />
+                                    <button
+                                        type="button"
+                                        onClick={() => chatFileInputRef.current?.click()}
+                                        className="p-3 sm:p-4 rounded-2xl transition-colors border shrink-0 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200"
+                                        title="Đính kèm tệp, ảnh"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
+                                        </svg>
+                                    </button>
 
-                                <button 
-                                    type="button"
-                                    onMouseDown={startRecording}
-                                    onMouseUp={stopRecording}
-                                    onMouseLeave={stopRecording}
-                                    onTouchStart={startRecording}
-                                    onTouchEnd={stopRecording}
-                                    onContextMenu={(e) => e.preventDefault()}
-                                    className={`p-3 sm:p-4 rounded-2xl transition-colors border shrink-0 select-none
-                                        ${isRecording ? 'bg-rose-100 text-rose-600 border-rose-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200'}
-                                    `}
-                                    title="Nhấn giữ để nói"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                                    </svg>
-                                </button>
+                                    <button 
+                                        type="button"
+                                        onMouseDown={startRecording}
+                                        onMouseUp={stopRecording}
+                                        onMouseLeave={stopRecording}
+                                        onTouchStart={startRecording}
+                                        onTouchEnd={stopRecording}
+                                        onContextMenu={(e) => e.preventDefault()}
+                                        className={`p-3 sm:p-4 rounded-2xl transition-colors border shrink-0 select-none
+                                            ${isRecording ? 'bg-rose-100 text-rose-600 border-rose-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200'}
+                                        `}
+                                        title="Nhấn giữ để nói"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                {!showMobileActions && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowMobileActions(true)}
+                                        className="p-3 sm:hidden mr-2 rounded-2xl transition-colors border shrink-0 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-200 shadow-sm animate-fade-in-up"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                                        </svg>
+                                    </button>
+                                )}
 
                                 {isRecording ? (
                                     <div className="flex-1 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl flex items-center justify-center gap-4 shadow-inner min-w-0">
@@ -1201,6 +1512,7 @@ ${text}`;
                                         type="text" 
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
+                                        onFocus={() => { if (window.innerWidth < 640) setShowMobileActions(false) }}
                                         onPaste={handlePaste}
                                         placeholder="Hỏi AI bất cứ điều gì (Nhấn Ctrl+V để dán ảnh)..." 
                                         className="flex-1 bg-slate-50 border border-slate-200 outline-none px-4 sm:px-5 py-3 sm:py-4 rounded-2xl text-[15px] font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-300 transition-all text-slate-800 placeholder:text-slate-400 shadow-inner min-w-0"
@@ -1229,7 +1541,7 @@ ${text}`;
             {showModeGuide && (
                 <div className={`fixed inset-0 z-[60] flex items-center justify-center p-4 transition-opacity duration-200 ${isClosingModeGuide ? 'opacity-0' : 'opacity-100'}`} onClick={handleCloseModeGuide}>
                     <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
-                    <div className={`bg-white rounded-2xl shadow-xl max-w-lg w-full flex flex-col max-h-[90vh] relative z-10 m-4 ${isClosingModeGuide ? 'animate-scale-out' : 'animate-scale-in'}`} onClick={e => e.stopPropagation()}>
+                    <div className={`bg-white rounded-2xl shadow-xl w-full max-w-lg sm:max-w-2xl lg:max-w-3xl flex flex-col max-h-[90vh] relative z-10 m-4 ${isClosingModeGuide ? 'animate-scale-out' : 'animate-scale-in'}`} onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-100 shrink-0">
                             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-indigo-500">
@@ -1325,7 +1637,8 @@ ${text}`;
                     </div>
                 </div>
             )}
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

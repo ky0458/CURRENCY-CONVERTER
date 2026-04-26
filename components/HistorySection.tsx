@@ -174,7 +174,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
   return (
     <div className="w-full flex flex-col h-full max-h-full relative bg-slate-50 min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-white sticky top-0 z-20 shadow-sm shrink-0">
+      <div className="flex items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))] sm:pt-4 border-b border-slate-200 bg-white sticky top-0 z-20 shadow-sm shrink-0">
         {isSelectionMode ? (
             <div className="flex items-center gap-3">
                 <button onClick={toggleSelectionMode} className="text-slate-600 font-bold hover:text-slate-900 bg-slate-100 px-3 py-1 rounded-lg">Hủy</button>
@@ -218,7 +218,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
               <span className="text-base font-medium text-slate-500">Chưa có lịch sử nào.</span>
           </div>
       ) : (
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 pb-24 sm:p-4 min-h-0 overscroll-contain touch-pan-y">
+        <div className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] p-3 pb-4 sm:p-4 min-h-0 overscroll-contain touch-pan-y">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {history.map(item => {
                     const isCalculate = item.type === 'calculate';

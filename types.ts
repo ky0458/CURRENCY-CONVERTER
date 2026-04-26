@@ -52,6 +52,19 @@ export enum LoadingState {
 
 export type ThemeColor = string;
 
+export type HeaderStyle = 'default' | 'waves' | 'clouds' | 'sunset' | 'forest' | 'magic' | 'ocean' | 'space' | 'frog' | 'cat' | 'panda' | 'fox' | 'dragon' | 'penguin' | 'bear' | 'rabbit' | 'bee' | 'whale';
+export type ButtonStyle = 'default' | '3d' | 'glow' | 'leaf' | 'diamond' | 'magic_wand' | 'bubble' | 'rocket' | 'frog' | 'cat' | 'panda' | 'fox' | 'dragon' | 'penguin' | 'bear' | 'rabbit' | 'bee' | 'whale';
+export type BubbleTheme = 'default' | 'frog' | 'cat' | 'dog' | 'penguin' | 'bear' | 'rabbit' | 'koala' | 'duck' | 'capybara' | 'robot' | 'alien' | 'dinosaur' | 'unicorn' | 'ghost' | 'ninja' | 'dragon' | 'fox' | 'panda' | 'hamster' | 'owl' | 'sloth' | 'otter' | 'turtle' | 'bee' | 'whale' | 'octopus';
+export type UserBubbleStyle = BubbleTheme;
+export type AIBubbleStyle = BubbleTheme;
+
+export interface AppStyles {
+  header: HeaderStyle;
+  button: ButtonStyle;
+  userBubble: UserBubbleStyle;
+  aiBubble: AIBubbleStyle;
+}
+
 // --- NOTES SYSTEM TYPES ---
 
 export type NoteStatus = 'incomplete' | 'completed' | 'attention' | 'skipped';
