@@ -26,8 +26,8 @@ export const TabSelector: React.FC<TabSelectorProps> = ({ activeTab, onTabChange
   };
 
   if (buttonStyle === 'frog') {
-    activeTabClassConfig.bgClass = 'bg-[#15803d] shadow-md border-b-2 border-r-2 border-[#14532d] shadow-green-900/20';
-    activeTabClassConfig.textClass = 'text-white';
+    activeTabClassConfig.bgClass = 'bg-green-100 shadow-md border-b-2 border-r-2 border-green-600 shadow-green-900/20';
+    activeTabClassConfig.textClass = 'text-green-900 font-bold';
   } else if (buttonStyle === 'cat') {
     activeTabClassConfig.bgClass = 'bg-[#FDBA74] shadow-md border-b-2 border-[#EA580C]';
     activeTabClassConfig.textClass = 'text-slate-900';
@@ -61,7 +61,8 @@ export const TabSelector: React.FC<TabSelectorProps> = ({ activeTab, onTabChange
   } else if (buttonStyle === 'bubble') {
       activeTabClassConfig.bgClass = 'bg-sky-400 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),_0_4px_8px_rgba(56,189,248,0.4)] !rounded-full';
   } else if (buttonStyle === 'rocket') {
-      activeTabClassConfig.bgClass = 'bg-red-500 !rounded-t-2xl !rounded-b shadow-[0_4px_0_theme(colors.red.700)]';
+      activeTabClassConfig.bgClass = 'bg-slate-800 !rounded-t-2xl !rounded-b shadow-[0_4px_0_theme(colors.slate.900)] border border-indigo-400/30';
+      activeTabClassConfig.textClass = 'text-indigo-100';
   }
 
   return (

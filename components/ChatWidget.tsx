@@ -708,8 +708,8 @@ ${text}`;
                         : appStyles.button === 'diamond' ? 'bg-cyan-500 !rounded-none [clip-path:polygon(10%_0,90%_0,100%_50%,90%_100%,10%_100%,0_50%)] hover:scale-110'
                         : appStyles.button === 'magic_wand' ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 border-0 ring-4 ring-purple-300 ring-offset-2 ring-offset-white/20 hover:scale-110'
                         : appStyles.button === 'bubble' ? 'bg-sky-400 border-0 shadow-[inset_0_-4px_8px_rgba(0,0,0,0.2),_0_8px_16px_rgba(56,189,248,0.4)] hover:scale-110'
-                        : appStyles.button === 'rocket' ? 'bg-red-500 !rounded-t-3xl border-2 border-white/50 !rounded-b-md shadow-[0_6px_0_theme(colors.red.700)] hover:-translate-y-2 active:translate-y-0 active:shadow-none'
-                        : appStyles.button === 'frog' ? 'bg-[#14532d] text-white border-[3px] border-[#064e3b] rounded-[40px] hover:-translate-y-1 active:scale-95 shadow-[0_4px_0_theme(colors.emerald.950)] active:translate-y-1 active:shadow-none'
+                        : appStyles.button === 'rocket' ? 'bg-slate-800 text-indigo-50 !rounded-t-3xl border-2 border-indigo-400 !rounded-b-md shadow-[0_6px_0_theme(colors.slate.900)] hover:-translate-y-2 active:translate-y-0 active:shadow-none'
+                        : appStyles.button === 'frog' ? 'bg-green-100 text-green-900 border-[3px] border-green-600 rounded-[40px] hover:-translate-y-1 active:scale-95 shadow-[0_4px_0_theme(colors.green.700)] active:translate-y-1 active:shadow-none'
                         : appStyles.button === 'cat' ? 'bg-[#FDBA74] text-slate-900 border-[3px] border-[#EA580C] !rounded-xl hover:-translate-y-1 active:scale-95 shadow-md'
                         : appStyles.button === 'panda' ? 'bg-zinc-800 text-white border-[3px] border-zinc-900 rounded-[20px] hover:-translate-y-1 active:scale-95 shadow-[0_4px_0_theme(colors.zinc.900)] active:shadow-none active:translate-y-1'
                         : appStyles.button === 'fox' ? 'bg-[#F97316] text-white border-[3px] border-[#C2410C] rounded-xl hover:-translate-y-1 active:scale-95 shadow-[0_4px_0_theme(colors.orange.800)] active:shadow-none active:translate-y-1'
@@ -733,17 +733,34 @@ ${text}`;
                     {/* Animal Chat Decorators */}
                     {appStyles.button === 'frog' && (
                         <>
-                            <div className="absolute -top-3 left-[15%] w-6 h-5 bg-[#14532d] border-[3px] border-[#064e3b] rounded-t-full z-[-1] pointer-events-none"></div>
-                            <div className="absolute -top-3 right-[15%] w-6 h-5 bg-[#14532d] border-[3px] border-[#064e3b] rounded-t-full z-[-1] pointer-events-none"></div>
-                            <div className="absolute -top-[2px] left-[18%] w-2.5 h-2.5 bg-white rounded-full z-10 pointer-events-none flex items-center justify-center"><div className="w-1 h-1 bg-slate-900 rounded-full mb-0.5 ml-0.5"></div></div>
-                            <div className="absolute -top-[2px] right-[22%] w-2.5 h-2.5 bg-white rounded-full z-10 pointer-events-none flex items-center justify-center"><div className="w-1 h-1 bg-slate-900 rounded-full mb-0.5 -ml-0.5"></div></div>
-                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-4 bg-gradient-to-t from-[#65a30d] to-[#84cc16] border-t-[3px] border-[#4d7c0f] rounded-t-full opacity-90 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] overflow-hidden pointer-events-none"></div>
+                            {/* Hai con mắt lồi to (thu nhỏ lại cho nút chat) */}
+                            <div className="absolute -top-[12px] left-[15%] w-8 h-8 bg-green-100 border-[3px] border-green-600 rounded-full z-[-1] flex items-center justify-center shadow-sm">
+                                <div className="w-5 h-5 bg-white rounded-full flex justify-center items-center">
+                                    <div className="w-2.5 h-2.5 bg-slate-900 rounded-full translate-x-0.5">
+                                        <div className="w-1 h-1 bg-white rounded-full mt-[1px] ml-[1px]"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="absolute -top-[12px] right-[15%] w-8 h-8 bg-green-100 border-[3px] border-green-600 rounded-full z-[-1] flex items-center justify-center shadow-sm">
+                                <div className="w-5 h-5 bg-white rounded-full flex justify-center items-center">
+                                    <div className="w-2.5 h-2.5 bg-slate-900 rounded-full -translate-x-0.5">
+                                        <div className="w-1 h-1 bg-white rounded-full mt-[1px] ml-[1px]"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Bụng */}
+                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[85%] h-3 bg-green-200 rounded-t-[40px] opacity-95 pointer-events-none"></div>
+                            {/* Má hồng */}
+                            <div className="absolute top-[40%] left-[8%] w-4 h-2 bg-pink-400/60 rounded-full blur-[2px] pointer-events-none"></div>
+                            <div className="absolute top-[40%] right-[8%] w-4 h-2 bg-pink-400/60 rounded-full blur-[2px] pointer-events-none"></div>
                         </>
                     )}
                     {appStyles.button === 'cat' && (
                         <>
                             <div className="absolute -top-1 left-[10%] w-4 h-4 bg-[#FDBA74] border-[2px] border-[#EA580C] rotate-[-20deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)] z-[-1] pointer-events-none"></div>
                             <div className="absolute -top-1 right-[10%] w-4 h-4 bg-[#FDBA74] border-[2px] border-[#EA580C] rotate-[20deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)] z-[-1] pointer-events-none"></div>
+                            <div className="absolute top-[35%] left-1/2 -translate-x-1/2 flex gap-3 pointer-events-none z-10"><div className="w-1.5 h-1.5 bg-amber-950 rounded-full"></div><div className="w-1.5 h-1.5 bg-amber-950 rounded-full"></div></div>
+                            <div className="absolute top-[50%] left-1/2 -translate-x-1/2 w-2 h-1 border-b-[2px] border-amber-900 rounded-b-full pointer-events-none z-10"></div>
                         </>
                     )}
                     {appStyles.button === 'panda' && (
@@ -1131,21 +1148,26 @@ ${text}`;
 
                                                 if (style === 'frog') return (
                                                     <div className="relative mt-4">
-                                                        <div className="absolute -top-3 left-4 w-6 h-6 bg-[#14532d] border-2 border-white rounded-full flex items-end justify-center z-10"><div className="w-3 h-3 bg-white rounded-full flex items-end justify-center mb-0.5"><div className="w-1.5 h-1.5 bg-slate-900 rounded-full mb-px" /></div></div>
-                                                        <div className="absolute -top-3 right-4 w-6 h-6 bg-[#14532d] border-2 border-white rounded-full flex items-end justify-center z-10"><div className="w-3 h-3 bg-white rounded-full flex items-end justify-center mb-0.5"><div className="w-1.5 h-1.5 bg-slate-900 rounded-full mb-px" /></div></div>
-                                                        <div className={`px-5 py-3 rounded-[24px] text-[15px] shadow-sm bg-[#14532d] text-white border-b-[4px] border-[#064e3b] shadow-[0_4px_0_theme(colors.emerald.950)] relative overflow-hidden`}>
-                                                            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-20 h-10 bg-gradient-to-t from-[#65a30d] to-[#84cc16] border-t-[4px] border-[#4d7c0f] rounded-t-full opacity-90 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]"></div>
-                                                            <div className="absolute top-[30%] left-[5%] w-8 h-4 bg-pink-500/40 rounded-full blur-md"></div>
-                                                            <div className="absolute top-[30%] right-[5%] w-8 h-4 bg-pink-500/40 rounded-full blur-md"></div>
+                                                        <div className="absolute -top-4 left-4 w-8 h-8 bg-[#86efac] border-[2px] border-[#4ade80] rounded-full flex justify-center items-center z-10"><div className="w-5 h-5 bg-white rounded-full flex justify-center items-center"><div className="w-2.5 h-2.5 bg-slate-900 rounded-full translate-x-[1px]"><div className="w-1 h-1 bg-white rounded-full mt-[1px] ml-[1px]"></div></div></div></div>
+                                                        <div className="absolute -top-4 right-4 w-8 h-8 bg-[#86efac] border-[2px] border-[#4ade80] rounded-full flex justify-center items-center z-10"><div className="w-5 h-5 bg-white rounded-full flex justify-center items-center"><div className="w-2.5 h-2.5 bg-slate-900 rounded-full -translate-x-[1px]"><div className="w-1 h-1 bg-white rounded-full mt-[1px] ml-[1px]"></div></div></div></div>
+                                                        <div className="bg-[#86efac] text-[#064e3b] font-medium border-b-[4px] border-[#4ade80] px-5 py-3 rounded-[24px] shadow-sm relative overflow-hidden">
+                                                            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-8 bg-[#bbf7d0] rounded-t-[100%] pointer-events-none"></div>
+                                                            <div className="absolute top-[30%] left-[5%] w-5 h-2.5 bg-pink-400/50 rounded-full blur-[1px]"></div>
+                                                            <div className="absolute top-[30%] right-[5%] w-5 h-2.5 bg-pink-400/50 rounded-full blur-[1px]"></div>
                                                             <div className="relative z-10">{content}</div>
                                                         </div>
                                                     </div>
                                                 );
                                                 if (style === 'cat') return (
-                                                    <div className="relative mt-3">
-                                                        <div className="absolute -top-3 left-4 w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-transparent border-b-[#fcd34d] rotate-[-20deg]"></div>
-                                                        <div className="absolute -top-3 right-4 w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-transparent border-b-[#fcd34d] rotate-[20deg]"></div>
-                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-[#fcd34d] text-slate-800 border-b-4 border-amber-600`}>{content}</div>
+                                                    <div className="relative mt-4">
+                                                        <div className="absolute -top-4 left-4 w-0 h-0 border-l-[12px] border-r-[12px] border-b-[16px] border-transparent border-b-[#fcd34d] rotate-[-25deg] z-10"><div className="absolute -left-[4px] top-[4px] w-0 h-0 border-l-[4px] border-r-[4px] border-b-[6px] border-transparent border-b-pink-300"></div></div>
+                                                        <div className="absolute -top-4 right-4 w-0 h-0 border-l-[12px] border-r-[12px] border-b-[16px] border-transparent border-b-[#fcd34d] rotate-[25deg] z-10"><div className="absolute -left-[4px] top-[4px] w-0 h-0 border-l-[4px] border-r-[4px] border-b-[6px] border-transparent border-b-pink-300"></div></div>
+                                                        <div className="bg-[#fcd34d] text-slate-800 font-medium border-b-[4px] border-amber-500 px-5 py-3 rounded-[24px] shadow-sm relative overflow-hidden">
+                                                            <div className="absolute top-[20%] left-[5%] w-6 h-3 bg-pink-400/40 rounded-full blur-[1px]"></div>
+                                                            <div className="absolute top-[20%] right-[5%] w-6 h-3 bg-pink-400/40 rounded-full blur-[1px]"></div>
+                                                            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-3 bg-pink-300 rounded-t-full border-[1.5px] border-amber-600 border-b-0"></div>
+                                                            <div className="relative z-10">{content}</div>
+                                                        </div>
                                                     </div>
                                                 );
                                                 if (style === 'dog') return (
@@ -1156,17 +1178,25 @@ ${text}`;
                                                     </div>
                                                 );
                                                 if (style === 'penguin') return (
-                                                    <div className="relative mt-2">
-                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-[#1e293b] text-white border-b-4 border-blue-500`}>{content}</div>
-                                                        <div className="absolute -bottom-2 left-6 w-5 h-4 bg-orange-500 rounded-full"></div>
-                                                        <div className="absolute -bottom-2 right-6 w-5 h-4 bg-orange-500 rounded-full"></div>
+                                                    <div className="relative mt-4">
+                                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[12px] border-transparent border-t-orange-500 z-20 hover:scale-110 transition-transform origin-top"></div>
+                                                        <div className="bg-slate-800 text-white font-medium border-[3px] border-slate-900 border-b-[5px] px-5 py-3 rounded-[24px] shadow-sm relative overflow-hidden z-10">
+                                                            <div className="absolute inset-x-4 top-0 bottom-0 bg-white rounded-t-[100%] opacity-15 pointer-events-none"></div>
+                                                            <div className="absolute top-[30%] left-[8%] w-5 h-2.5 bg-pink-400/40 rounded-full blur-[1px]"></div>
+                                                            <div className="absolute top-[30%] right-[8%] w-5 h-2.5 bg-pink-400/40 rounded-full blur-[1px]"></div>
+                                                            <div className="relative z-10">{content}</div>
+                                                        </div>
                                                     </div>
                                                 );
                                                 if (style === 'bear') return (
-                                                    <div className="relative mt-3">
-                                                        <div className="absolute -top-3 left-3 w-8 h-8 bg-[#78350f] rounded-full"></div>
-                                                        <div className="absolute -top-3 right-3 w-8 h-8 bg-[#78350f] rounded-full"></div>
-                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-[#92400e] text-orange-50 border-b-4 border-[#451a03]`}>{content}</div>
+                                                    <div className="relative mt-4">
+                                                        <div className="absolute -top-3 left-4 w-7 h-7 bg-amber-700 rounded-full border-[2px] border-amber-900 z-0"><div className="absolute inset-1 bg-amber-900/40 rounded-full pointer-events-none"></div></div>
+                                                        <div className="absolute -top-3 right-4 w-7 h-7 bg-amber-700 rounded-full border-[2px] border-amber-900 z-0"><div className="absolute inset-1 bg-amber-900/40 rounded-full pointer-events-none"></div></div>
+                                                        <div className="bg-amber-100 text-amber-900 font-medium border-b-[4px] border-[2px] border-amber-700 px-5 py-3 rounded-[24px] shadow-sm relative overflow-hidden z-10">
+                                                            <div className="absolute top-[30%] left-[8%] w-5 h-2.5 bg-pink-400/30 rounded-full blur-[1px]"></div>
+                                                            <div className="absolute top-[30%] right-[8%] w-5 h-2.5 bg-pink-400/30 rounded-full blur-[1px]"></div>
+                                                            <div className="relative z-10">{content}</div>
+                                                        </div>
                                                     </div>
                                                 );
                                                 if (style === 'rabbit') return (
@@ -1257,10 +1287,14 @@ ${text}`;
                                                     </div>
                                                 );
                                                 if (style === 'panda') return (
-                                                    <div className="relative mt-3">
-                                                        <div className="absolute -top-3 left-1 w-6 h-6 bg-slate-800 rounded-full"></div>
-                                                        <div className="absolute -top-3 right-1 w-6 h-6 bg-slate-800 rounded-full"></div>
-                                                        <div className={`px-5 py-3 rounded-2xl text-[15px] shadow-sm bg-white text-slate-800 border-4 border-slate-800 z-10 relative`}>{content}</div>
+                                                    <div className="relative mt-4">
+                                                        <div className="absolute -top-4 left-3 w-7 h-6 bg-zinc-800 rounded-full rotate-[-25deg] border-[2px] border-zinc-900 shadow-sm z-0"></div>
+                                                        <div className="absolute -top-4 right-3 w-7 h-6 bg-zinc-800 rounded-full rotate-[25deg] border-[2px] border-zinc-900 shadow-sm z-0"></div>
+                                                        <div className="bg-white text-slate-800 font-medium border-[3px] border-zinc-800 border-b-[5px] px-5 py-3 rounded-[24px] shadow-sm relative overflow-hidden z-10">
+                                                            <div className="absolute top-[30%] left-[8%] w-5 h-2.5 bg-pink-300/40 rounded-full blur-[1px]"></div>
+                                                            <div className="absolute top-[30%] right-[8%] w-5 h-2.5 bg-pink-300/40 rounded-full blur-[1px]"></div>
+                                                            <div className="relative z-10">{content}</div>
+                                                        </div>
                                                     </div>
                                                 );
                                                 if (style === 'hamster') return (

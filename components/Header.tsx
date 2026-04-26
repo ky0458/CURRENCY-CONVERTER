@@ -1,5 +1,6 @@
 import React from 'react';
 import { ThemeColor, HeaderStyle } from '../types';
+import { ThemeSignboard } from './ThemeSignboard';
 
 interface HeaderProps {
   theme: ThemeColor;
@@ -10,8 +11,23 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ theme, headerStyle = 'default' }) => {
   return (
     <div className="relative rounded-t-3xl z-[50]">
+      {/* Signboard positioned completely on top of the header */}
+      <div className="absolute bottom-full left-0 w-full mb-[-1px] pointer-events-none z-30 flex justify-center">
+        <ThemeSignboard style={headerStyle} />
+      </div>
+
       {/* Background Layer */}
-      <div className={`absolute inset-0 overflow-hidden transition-colors duration-500 rounded-t-3xl ${['default', 'waves', 'clouds'].includes(headerStyle as string) ? (headerStyle !== 'default' ? 'bg-primary-600' : 'bg-gradient-to-r from-primary-600 to-primary-800') : ''}`}>
+      <div className={`absolute inset-0 overflow-hidden transition-colors duration-500 rounded-t-3xl ${['default', 'waves', 'clouds'].includes(headerStyle as string) ? (headerStyle !== 'default' ? 'bg-primary-600' : 'bg-gradient-to-br from-slate-800 via-slate-900 to-black') : ''}`}>
+        {headerStyle === 'default' && (
+             <>
+                 <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-400 via-indigo-500 to-transparent mix-blend-screen"></div>
+                 <div className="absolute -top-[50%] -left-[10%] w-[120%] h-[120%] rounded-[100%] border-[2px] border-white/5 opacity-30 transform -rotate-12 pointer-events-none"></div>
+                 <div className="absolute -bottom-[60%] -right-[10%] w-[120%] h-[120%] rounded-[100%] border-[4px] border-white/5 opacity-20 transform rotate-12 pointer-events-none"></div>
+                 <div className="absolute top-[20%] left-[10%] w-2 h-2 bg-blue-300 rounded-full animate-pulse blur-[1px]"></div>
+                 <div className="absolute top-[60%] right-[15%] w-3 h-3 bg-indigo-400 rounded-full animate-pulse blur-[2px]" style={{animationDelay: '1s'}}></div>
+                 <div className="absolute bottom-[20%] left-[30%] w-1.5 h-1.5 bg-cyan-300 rounded-full animate-pulse blur-[1px]" style={{animationDelay: '2s'}}></div>
+             </>
+        )}
         {headerStyle === 'waves' && (
              <div className="absolute top-0 left-0 w-full h-full opacity-10">
                 <svg className="w-full h-full" viewBox="0 0 1440 320" preserveAspectRatio="none">
@@ -98,26 +114,27 @@ export const Header: React.FC<HeaderProps> = ({ theme, headerStyle = 'default' }
                 headerStyle === 'bee' ? 'bg-yellow-400' :
                 'bg-sky-500' // whale
             }`}>
-               {headerStyle === 'frog' && (
+                {headerStyle === 'frog' && (
                     <>
-                        {/* Bụng ếch xanh nhạt pha vàng */}
-                        <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-[85%] h-[40%] bg-gradient-to-t from-[#65a30d] to-[#84cc16] border-t-[6px] border-[#4d7c0f] rounded-t-[100%] opacity-90 shadow-[inset_0_4px_10px_rgba(0,0,0,0.1)]"></div>
-                        {/* Má hồng dạ quang */}
-                        <div className="absolute top-[30%] left-[5%] w-24 h-12 bg-pink-500/40 rounded-full blur-2xl"></div>
-                        <div className="absolute top-[30%] right-[5%] w-24 h-12 bg-pink-500/40 rounded-full blur-2xl"></div>
-                        {/* Miệng ếch khổng lồ cười rộng */}
-                        <div className="absolute top-[50%] left-1/2 -translate-x-1/2 w-[60%] h-24 border-b-[10px] border-[#022c22] rounded-b-full opacity-85 shadow-[0_4px_8px_rgba(0,0,0,0.3)]"></div>
-                        {/* Hai đốm màu cam (vân ếch nhiệt đới) */}
-                        <div className="absolute -top-4 left-[30%] w-12 h-12 bg-orange-500/20 rounded-full blur-lg"></div>
-                        <div className="absolute -top-4 right-[30%] w-12 h-12 bg-orange-500/20 rounded-full blur-lg"></div>
-                        {/* Các đốm đậm đà */}
-                        <div className="absolute top-[15%] left-[25%] w-10 h-8 bg-[#064e3b] rounded-full opacity-60"></div>
-                        <div className="absolute top-[35%] left-[15%] w-6 h-6 bg-[#064e3b] rounded-full opacity-50"></div>
-                        <div className="absolute top-[18%] right-[22%] w-14 h-10 bg-[#064e3b] rounded-full opacity-60"></div>
-                        <div className="absolute top-[40%] right-[18%] w-5 h-5 bg-[#064e3b] rounded-full opacity-50"></div>
-                        {/* Lá sen trang trí mờ mờ hai bên */}
-                        <div className="absolute bottom-[-10px] left-[-20px] w-32 h-16 bg-green-800 rounded-full [clip-path:polygon(0_0,100%_0,80%_100%,0_100%)] opacity-30 rotate-12"></div>
-                        <div className="absolute bottom-[-10px] right-[-20px] w-32 h-16 bg-green-800 rounded-full [clip-path:polygon(0_0,100%_0,100%_100%,20%_100%)] opacity-30 rotate-[-12deg]"></div>
+                        {/* Background color override for cuter frog */}
+                        <div className="absolute inset-0 bg-[#86efac]"></div>
+                        {/* Bụng ếch xanh nhạt */}
+                        <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[85%] h-[60%] bg-[#bbf7d0] rounded-t-[100%] opacity-90"></div>
+                        {/* Má hồng dễ thương */}
+                        <div className="absolute top-[40%] left-[15%] w-12 h-6 bg-pink-400/60 rounded-full blur-[2px]"></div>
+                        <div className="absolute top-[40%] right-[15%] w-12 h-6 bg-pink-400/60 rounded-full blur-[2px]"></div>
+                        {/* Mũi ếch (2 chấm nhỏ) */}
+                        <div className="absolute top-[35%] left-1/2 -translate-x-1/2 flex gap-4">
+                            <div className="w-1.5 h-1.5 bg-[#166534] rounded-full opacity-60"></div>
+                            <div className="w-1.5 h-1.5 bg-[#166534] rounded-full opacity-60"></div>
+                        </div>
+                        {/* Miệng ếch cười rộng (hình chữ U) */}
+                        <div className="absolute top-[45%] left-1/2 -translate-x-1/2 w-24 h-12 border-b-[6px] border-[#166534] rounded-b-[2rem] shadow-[0_2px_4px_rgba(22,101,52,0.2)]"></div>
+                        
+                        {/* Các đốm lốm đốm đặc trưng */}
+                        <div className="absolute top-[70%] left-[10%] w-8 h-6 bg-[#4ade80] rounded-full opacity-50"></div>
+                        <div className="absolute top-[60%] right-[8%] w-10 h-8 bg-[#4ade80] rounded-full opacity-50"></div>
+                        <div className="absolute top-[80%] right-[15%] w-6 h-4 bg-[#4ade80] rounded-full opacity-50"></div>
                     </>
                 )}
                 {headerStyle === 'cat' && (
@@ -279,19 +296,19 @@ export const Header: React.FC<HeaderProps> = ({ theme, headerStyle = 'default' }
       {/* Animal Header Decorators (outside overflow-hidden) */}
       {headerStyle === 'frog' && (
         <>
-          <div className="absolute -top-6 left-10 w-16 h-16 rounded-full bg-[#15803d] flex items-center justify-center border-4 border-white shadow-sm z-[-1]">
-             <div className="w-10 h-10 bg-white rounded-[100%] flex items-center justify-center relative shadow-inner">
-                 <div className="w-6 h-6 bg-slate-900 rounded-[100%] absolute right-1 bottom-1">
-                     <div className="w-2 h-2 bg-white rounded-full absolute top-1 left-1"></div>
-                 </div>
-             </div>
+          <div className="absolute -top-8 left-12 sm:left-16 w-20 h-20 bg-[#86efac] rounded-full flex justify-center items-center shadow-lg z-[-1] border-[4px] border-[#4ade80]">
+              <div className="w-14 h-14 bg-white rounded-full flex justify-center items-center shadow-inner">
+                  <div className="w-7 h-7 bg-slate-900 rounded-full translate-x-1.5">
+                      <div className="w-2.5 h-2.5 bg-white rounded-full mt-1 ml-1"></div>
+                  </div>
+              </div>
           </div>
-          <div className="absolute -top-6 right-10 w-16 h-16 rounded-full bg-[#15803d] flex items-center justify-center border-4 border-white shadow-sm z-[-1]">
-             <div className="w-10 h-10 bg-white rounded-[100%] flex items-center justify-center relative shadow-inner">
-                 <div className="w-6 h-6 bg-slate-900 rounded-[100%] absolute left-1 bottom-1">
-                     <div className="w-2 h-2 bg-white rounded-full absolute top-1 right-1"></div>
-                 </div>
-             </div>
+          <div className="absolute -top-8 right-12 sm:right-16 w-20 h-20 bg-[#86efac] rounded-full flex justify-center items-center shadow-lg z-[-1] border-[4px] border-[#4ade80]">
+              <div className="w-14 h-14 bg-white rounded-full flex justify-center items-center shadow-inner">
+                  <div className="w-7 h-7 bg-slate-900 rounded-full -translate-x-1.5">
+                      <div className="w-2.5 h-2.5 bg-white rounded-full mt-1 ml-3.5"></div>
+                  </div>
+              </div>
           </div>
         </>
       )}
@@ -372,14 +389,8 @@ export const Header: React.FC<HeaderProps> = ({ theme, headerStyle = 'default' }
       )}
 
       {/* Content Layer */}
-      <div className={`relative z-10 text-center ${headerStyle !== 'default' ? 'p-8 sm:p-10' : 'p-6 sm:p-8'}`}>
-        <div className="relative z-10">
-          <h1 className={`text-white mb-3 tracking-tight pr-0 [text-shadow:0_2px_6px_rgba(0,0,0,0.3),0_1px_2px_rgba(0,0,0,0.5)] ${headerStyle !== 'default' ? 'text-3xl sm:text-4xl font-black' : 'text-2xl sm:text-3xl font-extrabold'}`}>Máy Đổi Tiền Của Gia Hân</h1>
-          <div className={`inline-flex items-center gap-2 text-white/95 text-xs sm:text-sm font-medium backdrop-blur-md ${headerStyle !== 'default' ? 'bg-black/20 px-4 py-1.5 rounded-full border border-white/20 shadow-sm' : 'bg-white/20 px-3 py-1 rounded-full'}`}>
-             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_#4ade80]"></span>
-             Tỷ giá cập nhật liên tục
-          </div>
-        </div>
+      <div className={`relative z-10 text-center ${headerStyle !== 'default' ? 'pt-24 pb-6 sm:pt-28 sm:pb-8' : 'pt-20 pb-4 sm:pt-24 sm:pb-6'}`}>
+        
       </div>
     </div>
   );

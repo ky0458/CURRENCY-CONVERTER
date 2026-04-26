@@ -28,6 +28,228 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const renderBubblePreview = (style: string, isUser: boolean) => {
+    const content = <div className="text-[9px] font-medium">{isUser ? 'Oh!' : 'Chào bạn!'}</div>;
+    if (style === 'default') {
+        return (
+            <div className={`px-2 py-1 ${isUser ? 'bg-primary-500 text-white rounded-xl rounded-tr-sm' : 'bg-white border border-slate-200 text-slate-800 rounded-xl rounded-tl-sm'} shadow-sm`}>
+                {content}
+            </div>
+        );
+    }
+    if (style === 'frog') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-4 left-2 w-6 h-4 bg-[#86efac] border-[2px] border-[#4ade80] rounded-full flex justify-center items-center z-10"><div className="w-5 h-5 bg-white rounded-full flex justify-center items-center"><div className="w-2.5 h-2.5 bg-slate-900 rounded-full translate-x-[1px]"><div className="w-1 h-1 bg-white rounded-full mt-[1px] ml-[1px]"></div></div></div></div>
+                                                        <div className="absolute -top-4 right-2 w-6 h-4 bg-[#86efac] border-[2px] border-[#4ade80] rounded-full flex justify-center items-center z-10"><div className="w-5 h-5 bg-white rounded-full flex justify-center items-center"><div className="w-2.5 h-2.5 bg-slate-900 rounded-full -translate-x-[1px]"><div className="w-1 h-1 bg-white rounded-full mt-[1px] ml-[1px]"></div></div></div></div>
+                                                        <div className="bg-[#86efac] text-[#064e3b] font-medium border-b-[4px] border-[#4ade80] px-2 py-1 rounded-xl shadow-sm relative overflow-hidden">
+                                                            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-4 bg-[#bbf7d0] rounded-t-[100%] pointer-events-none"></div>
+                                                            <div className="absolute top-[30%] left-[5%] w-5 h-2.5 bg-pink-400/50 rounded-full blur-[1px]"></div>
+                                                            <div className="absolute top-[30%] right-[5%] w-5 h-2.5 bg-pink-400/50 rounded-full blur-[1px]"></div>
+                                                            <div className="relative z-10">{content}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+    if (style === 'cat') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-4 left-2 w-0 h-0 border-l-[12px] border-r-[12px] border-b-[16px] border-transparent border-b-[#fcd34d] rotate-[-25deg] z-10"><div className="absolute -left-[4px] top-[4px] w-0 h-0 border-l-[4px] border-r-[4px] border-b-[6px] border-transparent border-b-pink-300"></div></div>
+                                                        <div className="absolute -top-4 right-2 w-0 h-0 border-l-[12px] border-r-[12px] border-b-[16px] border-transparent border-b-[#fcd34d] rotate-[25deg] z-10"><div className="absolute -left-[4px] top-[4px] w-0 h-0 border-l-[4px] border-r-[4px] border-b-[6px] border-transparent border-b-pink-300"></div></div>
+                                                        <div className="bg-[#fcd34d] text-slate-800 font-medium border-b-[4px] border-amber-500 px-2 py-1 rounded-xl shadow-sm relative overflow-hidden">
+                                                            <div className="absolute top-[20%] left-[5%] w-6 h-3 bg-pink-400/40 rounded-full blur-[1px]"></div>
+                                                            <div className="absolute top-[20%] right-[5%] w-6 h-3 bg-pink-400/40 rounded-full blur-[1px]"></div>
+                                                            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-3 bg-pink-300 rounded-t-full border-[1.5px] border-amber-600 border-b-0"></div>
+                                                            <div className="relative z-10">{content}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+    if (style === 'dog') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-3 -left-2 w-5 h-4 bg-[#d97706] rounded-full rotate-[-45deg]"></div>
+                                                        <div className="absolute -top-3 -right-2 w-5 h-4 bg-[#d97706] rounded-full rotate-[45deg]"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-[#fbbf24] text-amber-900 border-b-4 border-amber-700`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'penguin') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[12px] border-transparent border-t-orange-500 z-20 hover:scale-110 transition-transform origin-top"></div>
+                                                        <div className="bg-slate-800 text-white font-medium border-[3px] border-slate-900 border-b-[5px] px-2 py-1 rounded-xl shadow-sm relative overflow-hidden z-10">
+                                                            <div className="absolute inset-x-4 top-0 bottom-0 bg-white rounded-t-[100%] opacity-15 pointer-events-none"></div>
+                                                            <div className="absolute top-[30%] left-[8%] w-5 h-2.5 bg-pink-400/40 rounded-full blur-[1px]"></div>
+                                                            <div className="absolute top-[30%] right-[8%] w-5 h-2.5 bg-pink-400/40 rounded-full blur-[1px]"></div>
+                                                            <div className="relative z-10">{content}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+    if (style === 'bear') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-3 left-2 w-7 h-7 bg-amber-700 rounded-full border-[2px] border-amber-900 z-0"><div className="absolute inset-1 bg-amber-900/40 rounded-full pointer-events-none"></div></div>
+                                                        <div className="absolute -top-3 right-2 w-7 h-7 bg-amber-700 rounded-full border-[2px] border-amber-900 z-0"><div className="absolute inset-1 bg-amber-900/40 rounded-full pointer-events-none"></div></div>
+                                                        <div className="bg-amber-100 text-amber-900 font-medium border-b-[4px] border-[2px] border-amber-700 px-2 py-1 rounded-xl shadow-sm relative overflow-hidden z-10">
+                                                            <div className="absolute top-[30%] left-[8%] w-5 h-2.5 bg-pink-400/30 rounded-full blur-[1px]"></div>
+                                                            <div className="absolute top-[30%] right-[8%] w-5 h-2.5 bg-pink-400/30 rounded-full blur-[1px]"></div>
+                                                            <div className="relative z-10">{content}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+    if (style === 'rabbit') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-7 left-5 w-4 h-10 bg-pink-100 border-2 border-slate-200 rounded-t-full rotate-[-15deg]"></div>
+                                                        <div className="absolute -top-7 right-5 w-4 h-10 bg-pink-100 border-2 border-slate-200 rounded-t-full rotate-[15deg]"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-white text-slate-700 border-2 border-slate-200 border-b-4 border-b-slate-300`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'koala') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-2 -left-3 w-6 h-4 bg-slate-400 rounded-full"></div>
+                                                        <div className="absolute -top-2 -right-3 w-6 h-4 bg-slate-400 rounded-full"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-slate-300 text-slate-800 border-b-4 border-slate-500 z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'duck') return (
+                                                    <div className="relative">
+                                                        <div className="absolute top-1/2 -left-2 transform -translate-y-1/2 w-6 h-4 bg-orange-400 rounded-l-full"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-[#fef08a] text-yellow-900 border-b-4 border-yellow-500`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'capybara') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-4 left-2 w-6 h-4 bg-[#C69C6D] rounded-t-full flex items-center justify-center">
+                                                            <div className="absolute top-1 left-2 w-1.5 h-1.5 bg-slate-800 rounded-full"></div>
+                                                            <div className="absolute top-1 right-2 w-1.5 h-1.5 bg-slate-800 rounded-full"></div>
+                                                            <div className="absolute -top-1 left-0 w-2.5 h-2.5 bg-[#a37e54] rounded-full"></div>
+                                                            <div className="absolute -top-1 right-0 w-2.5 h-2.5 bg-[#a37e54] rounded-full"></div>
+                                                            <div className="absolute top-2 w-2 h-1 bg-pink-300 rounded-full"></div>
+                                                        </div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-[#FFD6E4] text-slate-800 border-2 border-pink-200 relative`}>
+                                                            <span className="absolute -left-1.5 top-2 text-xl rotate-12">💖</span>
+                                                            <span className="absolute -right-2 bottom-1 text-xl -rotate-12">✨</span>
+                                                            {content}
+                                                        </div>
+                                                    </div>
+                                                );
+    if (style === 'robot') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-2 left-6 w-4 h-4 bg-slate-300 rounded-md border border-slate-400 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-slate-800 text-green-400 border border-slate-700 font-mono`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'alien') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-3 left-6 w-6 h-4 bg-lime-400 rounded-t-full flex items-center gap-1 justify-center"><div className="w-1.5 h-1.5 bg-black rounded-full"></div><div className="w-1.5 h-1.5 bg-black rounded-full"></div></div>
+                                                        <div className={`px-2 py-1 rounded-xl rounded-tl-none text-[9px] shadow-sm bg-lime-900 text-lime-400 border border-lime-700 font-mono`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'dinosaur') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-2 left-2 w-4 h-4 bg-emerald-600 rounded-t-md rotate-[-45deg]"></div>
+                                                        <div className="absolute -top-2 left-10 w-4 h-4 bg-emerald-600 rounded-t-md rotate-[-45deg]"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-emerald-100 text-emerald-900 border-2 border-emerald-500`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'unicorn') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-5 left-6 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[16px] border-transparent border-b-yellow-400"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100 text-purple-900 border border-purple-200`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'ghost') return (
+                                                    <div className="relative mt-1">
+                                                        <div className={`px-2 py-1 rounded-t-2xl rounded-bl-sm rounded-br-3xl text-[9px] shadow-sm bg-slate-100 text-slate-800 border border-slate-200`}>{content}</div>
+                                                        <div className="absolute -bottom-3 left-2 w-3 h-3 bg-slate-100 rounded-full"></div>
+                                                    </div>
+                                                );
+    if (style === 'ninja') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-1 left-6 w-16 h-3 bg-red-500 transform -skew-x-12"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-slate-900 text-slate-200 border border-slate-700 z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'dragon') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-4 left-2 w-5 h-4 bg-red-600 rounded-t-full rotate-[-20deg]"></div>
+                                                        <div className="absolute -top-4 left-8 w-5 h-4 bg-red-600 rounded-t-full rotate-[20deg]"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-orange-100 text-red-900 border-2 border-red-500 z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'fox') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-3 -left-1 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[12px] border-transparent border-b-orange-600 rotate-[-25deg]"></div>
+                                                        <div className="absolute -top-3 -right-1 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[12px] border-transparent border-b-orange-600 rotate-[25deg]"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-orange-500 text-white border-b-4 border-orange-700 z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'panda') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-4 left-3 w-7 h-4 bg-zinc-800 rounded-full rotate-[-25deg] border-[2px] border-zinc-900 shadow-sm z-0"></div>
+                                                        <div className="absolute -top-4 right-3 w-7 h-4 bg-zinc-800 rounded-full rotate-[25deg] border-[2px] border-zinc-900 shadow-sm z-0"></div>
+                                                        <div className="bg-white text-slate-800 font-medium border-[3px] border-zinc-800 border-b-[5px] px-2 py-1 rounded-xl shadow-sm relative overflow-hidden z-10">
+                                                            <div className="absolute top-[30%] left-[8%] w-5 h-2.5 bg-pink-300/40 rounded-full blur-[1px]"></div>
+                                                            <div className="absolute top-[30%] right-[8%] w-5 h-2.5 bg-pink-300/40 rounded-full blur-[1px]"></div>
+                                                            <div className="relative z-10">{content}</div>
+                                                        </div>
+                                                    </div>
+                                                );
+    if (style === 'hamster') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-3 left-2 w-5 h-5 bg-amber-200 rounded-full"></div>
+                                                        <div className="absolute -top-3 right-2 w-5 h-5 bg-amber-200 rounded-full"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-amber-100 text-amber-900 border-2 border-amber-300 z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'owl') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-3 left-2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-[#451a03]"></div>
+                                                        <div className="absolute -top-3 right-2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-[#451a03]"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-[#78350f] text-[#fef3c7] border-b-4 border-[#451a03] z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'sloth') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-2 left-3 w-10 h-4 bg-[#a1a1aa] rounded-t-full"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-[#d4d4d8] text-slate-800 border-b-4 border-[#a1a1aa] z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'otter') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-3 left-2 w-4 h-4 bg-[#52525b] rounded-full"></div>
+                                                        <div className="absolute -top-3 right-2 w-4 h-4 bg-[#52525b] rounded-full"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-[#71717a] text-white border-b-4 border-[#3f3f46] z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'turtle') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-2 left-6 w-6 h-4 bg-[#166534] rounded-t-full"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-[#22c55e] text-[#14532d] border-4 border-[#16a34a] z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'bee') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-4 left-2 w-2 h-4 bg-slate-900 rounded-full rotate-[-30deg]"></div>
+                                                        <div className="absolute -top-4 right-2 w-2 h-4 bg-slate-900 rounded-full rotate-[30deg]"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-[#fde047] text-slate-900 border-4 border-[#eab308] border-dashed z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'whale') return (
+                                                    <div className="relative mt-1">
+                                                        <div className="absolute -top-5 left-8 w-1 h-5 bg-sky-200"></div>
+                                                        <div className="absolute -top-5 left-5 w-1 h-4 bg-sky-300 rotate-[-30deg]"></div>
+                                                        <div className="absolute -top-5 left-11 w-1 h-4 bg-sky-300 rotate-[30deg]"></div>
+                                                        <div className={`px-2 py-1 rounded-xl text-[9px] shadow-sm bg-[#0ea5e9] text-white border-b-4 border-[#0284c7] z-10 relative`}>{content}</div>
+                                                    </div>
+                                                );
+    if (style === 'octopus') return (
+        <div className="relative mt-2">
+            <div className={`px-2 py-1 rounded-t-[20px] text-[9px] shadow-sm bg-[#c084fc] text-white border border-[#a855f7] z-10 relative`}>{content}</div>
+            <div className="flex gap-2 justify-center mt-[-1px]">
+                <div className="w-2 h-3 bg-[#c084fc] rounded-b-full"></div>
+                <div className="w-2 h-2 bg-[#c084fc] rounded-b-full"></div>
+                <div className="w-2 h-3 bg-[#c084fc] rounded-b-full"></div>
+            </div>
+        </div>
+    );
+    return <div className="px-2 py-1 bg-slate-200 rounded-xl text-[9px]">{content}</div>;
+  };
+
+
   const handleCustomColor = (e: React.ChangeEvent<HTMLInputElement>) => {
     onThemeChange(e.target.value);
   };
@@ -101,10 +323,10 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                 </div>
 
                 {/* Modal Body */}
-                <div className="p-6 overflow-y-auto space-y-8 flex-1">
+                <div className="p-4 sm:p-6 overflow-y-auto space-y-6 sm:space-y-8 flex-1">
                     
                     {/* Colors & Background */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                         {/* Section: Colors */}
                         <div>
                             <div className="flex items-center justify-between mb-3">
@@ -203,614 +425,416 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Các thành phần UI</h3>
                          
                          {/* Tabs */}
-                         <div className="flex overflow-x-auto hide-scrollbar gap-2 mb-6 pb-2 border-b border-slate-100">
+                         <div className="flex flex-wrap gap-2 sm:gap-3 mb-6 pb-4 border-b border-slate-100">
                              {[
-                                 { id: 'header', label: 'Thanh tiêu đề' },
-                                 { id: 'button', label: 'Nút thao tác' },
-                                 { id: 'userBubble', label: 'Hộp thoại (Bạn)' },
+                                 { id: 'header', label: 'Chủ đề' },
+                                  { id: 'userBubble', label: 'Hộp thoại (Bạn)' },
                                  { id: 'aiBubble', label: 'Hộp thoại (AI)' }
                              ].map(tab => (
                                  <button
                                      key={tab.id}
                                      onClick={() => setActiveTab(tab.id as any)}
-                                     className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activeTab === tab.id ? 'bg-primary-500 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                                     className={`px-4 xl:px-5 py-2.5 rounded-xl text-xs sm:text-sm text-center font-bold transition-all flex-1 min-w-[calc(50%-0.5rem)] sm:min-w-0 sm:flex-none ${activeTab === tab.id ? 'bg-primary-500 text-white shadow-[0_4px_12px_rgba(0,0,0,0.15)] ring-2 ring-primary-500 ring-offset-1' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}
                                  >
                                      {tab.label}
                                  </button>
                              ))}
                          </div>
 
-                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 pb-4">
+                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 pb-12 sm:pb-4">
                             
                             {/* Header Styles */}
                             {activeTab === 'header' && (
                                 <>
-                                    <button onClick={() => onStyleChange({ header: 'default' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'default' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-primary-600"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90">Mặc định</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ header: 'waves' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'waves' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-gradient-to-r from-primary-500 to-indigo-600"></div>
-                                        <svg className="absolute bottom-0 w-full" viewBox="0 0 1440 320" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style={{height:'40px'}}><path fill="rgba(255,255,255,0.4)" fillOpacity="1" d="M0,192L48,192C96,192,192,192,288,176C384,160,480,128,576,133.3C672,139,768,181,864,197.3C960,213,1056,203,1152,186.7C1248,171,1344,149,1392,138.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90">Lượn sóng</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ header: 'clouds' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'clouds' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-sky-400"></div>
-                                        <div className="absolute w-8 h-8 bg-white/40 rounded-full -top-2 left-2"></div>
-                                        <div className="absolute w-12 h-12 bg-white/40 rounded-full -top-4 left-6"></div>
-                                        <div className="absolute w-8 h-8 bg-white/40 rounded-full top-2 left-12"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md">Đám mây</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ header: 'sunset' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'sunset' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-gradient-to-b from-orange-400 to-pink-500"></div>
-                                        <div className="absolute bottom-[-20%] left-1/2 -translate-x-1/2 w-20 h-20 bg-yellow-300 rounded-full blur-[2px] opacity-80"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md">Hoàng hôn</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ header: 'forest' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'forest' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-gradient-to-b from-green-600 to-emerald-800"></div>
-                                        <div className="absolute bottom-[-5px] left-2 w-0 h-0 border-l-[10px] border-r-[10px] border-b-[20px] border-transparent border-b-green-700/80"></div>
-                                        <div className="absolute bottom-[-2px] left-6 w-0 h-0 border-l-[15px] border-r-[15px] border-b-[30px] border-transparent border-b-green-800"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md">Rừng xanh</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ header: 'magic' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'magic' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-fuchsia-700"></div>
-                                        <div className="absolute top-2 left-4 text-xs">✨</div>
-                                        <div className="absolute top-6 right-8 text-xs">🌟</div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md">Phép thuật</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ header: 'ocean' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'ocean' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-gradient-to-b from-cyan-500 to-blue-700"></div>
-                                        <div className="absolute bottom-2 left-4 w-2 h-2 rounded-full border-2 border-white/50"></div>
-                                        <div className="absolute top-1/2 right-6 w-6 h-3 bg-blue-300/30 rounded-[100%] rotate-12"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md">Đại dương</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ header: 'space' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'space' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-indigo-950"></div>
-                                        <div className="absolute top-3 left-4 w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_4px_#fff]"></div>
-                                        <div className="absolute top-4 right-6 w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-red-600 opacity-80 flex items-center justify-center rotate-12">
-                                           <div className="w-[120%] h-1 bg-white/30 rounded-full transform -rotate-12 blur-[1px]"></div>
+
+                                    <button onClick={() => onStyleChange({ header: 'default', button: 'default' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'default' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-[#fef3c7] border-2 border-amber-700 rounded-lg flex items-center justify-center">
+                                            <div className="w-10 h-0.5 bg-amber-700/20"></div>
                                         </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md">Vũ trụ</span>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-amber-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-amber-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Mặc định</span></div>
                                     </button>
-                                    <button onClick={() => onStyleChange({ header: 'frog' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'frog' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-[#14532d]"></div>
-                                        <div className="absolute top-2 left-6 w-6 h-6 rounded-full bg-[#14532d] border-2 border-white shadow-sm flex items-center justify-center z-10">
-                                            <div className="w-4 h-4 bg-white rounded-full flex items-end justify-center"><div className="w-2 h-2 bg-slate-900 rounded-full mb-0.5 ml-1"></div></div>
+                                    
+                                    <button onClick={() => onStyleChange({ header: 'waves', button: '3d' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'waves' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-blue-100 border-[2px] border-blue-500 rounded-lg flex items-center justify-center">
+                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1"><div className="w-5 h-5 bg-blue-400 rounded-full flex flex-col items-center justify-center"><div className="w-2.5 h-0.5 bg-blue-800 rounded-full mt-1"></div></div></div>
                                         </div>
-                                        <div className="absolute top-2 right-6 w-6 h-6 rounded-full bg-[#14532d] border-2 border-white shadow-sm flex items-center justify-center z-10">
-                                            <div className="w-4 h-4 bg-white rounded-full flex items-end justify-center"><div className="w-2 h-2 bg-slate-900 rounded-full mb-0.5 -ml-1"></div></div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-blue-600 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-blue-600 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Lượn sóng</span></div>
+                                    </button>
+                                    
+                                    <button onClick={() => onStyleChange({ header: 'clouds', button: 'bubble' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'clouds' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-white border-2 border-sky-300 rounded-3xl flex flex-col items-center justify-center pb-2">
+                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-12 h-6 bg-white rounded-t-full flex justify-center items-end gap-1"><div className="w-1.5 h-0.5 bg-slate-800 rounded-full rotate-12"></div><div className="w-1.5 h-0.5 bg-slate-800 rounded-full -rotate-12"></div></div>
                                         </div>
-                                        <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-[80%] h-12 bg-gradient-to-t from-[#65a30d] to-[#84cc16] border-t-[4px] border-[#4d7c0f] rounded-t-full opacity-90 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]"></div>
-                                        <div className="absolute top-[40%] left-1/2 -translate-x-1/2 w-12 h-6 border-b-[4px] border-[#022c22] rounded-b-full opacity-85"></div>
-                                        <div className="absolute top-[30%] left-[10%] w-8 h-4 bg-pink-500/40 rounded-full blur-md"></div>
-                                        <div className="absolute top-[30%] right-[10%] w-8 h-4 bg-pink-500/40 rounded-full blur-md"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md z-20">Ếch xanh</span>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-slate-300 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-slate-300 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Đám mây</span></div>
                                     </button>
-                                    <button onClick={() => onStyleChange({ header: 'cat' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'cat' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-[#FDBA74]"></div>
-                                        <div className="absolute top-0 left-6 w-4 h-6 bg-[#f97316] rotate-[-20deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)]"></div>
-                                        <div className="absolute top-0 right-6 w-4 h-6 bg-[#f97316] rotate-[20deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)]"></div>
-                                        <div className="absolute top-[40%] left-1/2 -translate-x-1/2 w-4 h-2 bg-[#ea580c] rounded-full opacity-80"></div>
-                                        <div className="absolute top-[50%] left-1/2 -translate-x-1/2 flex gap-0.5 opacity-60">
-                                            <div className="w-6 h-6 rounded-full border-b-[4px] border-r-[4px] border-[#ea580c] rotate-45"></div>
-                                            <div className="w-6 h-6 rounded-full border-b-[4px] border-l-[4px] border-[#ea580c] rotate-[-45deg]"></div>
+
+                                    <button onClick={() => onStyleChange({ header: 'sunset', button: 'glow' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'sunset' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-gradient-to-r from-orange-100 to-rose-100 border-[2px] border-orange-500 rounded-lg flex items-center justify-center">
+                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-yellow-400 rounded-full border border-orange-400 flex flex-col items-center justify-center pt-0.5"><div className="flex gap-1"><div className="w-1 h-1 bg-orange-800 rounded-full"></div><div className="w-1 h-1 bg-orange-800 rounded-full"></div></div><div className="w-2 h-0.5 mt-0.5 bg-orange-800 rounded-full"></div></div>
                                         </div>
-                                        <div className="absolute top-[30%] left-[10%] w-10 h-5 bg-pink-400/40 rounded-full blur-md"></div>
-                                        <div className="absolute top-[30%] right-[10%] w-10 h-5 bg-pink-400/40 rounded-full blur-md"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md z-10">Mèo vàng</span>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-orange-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-orange-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Hoàng hôn</span></div>
                                     </button>
-                                    <button onClick={() => onStyleChange({ header: 'panda' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'panda' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-zinc-800"></div>
-                                        <div className="absolute top-1 left-4 w-6 h-6 rounded-full bg-black"></div>
-                                        <div className="absolute top-1 right-4 w-6 h-6 rounded-full bg-black"></div>
-                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-[70%] bg-white rounded-t-full opacity-30"></div>
-                                        <div className="absolute top-[20%] left-[20%] w-10 h-8 bg-zinc-900 rounded-full blur-[2px]"></div>
-                                        <div className="absolute top-[20%] right-[20%] w-10 h-8 bg-zinc-900 rounded-full blur-[2px]"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md z-10">Gấu trúc</span>
+
+                                    <button onClick={() => onStyleChange({ header: 'forest', button: 'leaf' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'forest' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-[#dcfce7] border-[2px] border-green-600 rounded-lg flex items-center justify-center">
+                                            <div className="absolute -top-3 -left-2 w-8 h-8 bg-green-500 rounded-full border-[2px] border-green-700 flex flex-col items-center justify-center pt-0.5"><div className="flex gap-1"><div className="w-1 h-1 bg-green-900 rounded-full"></div><div className="w-1 h-1 bg-green-900 rounded-full"></div></div><div className="w-1.5 h-0.5 bg-green-800 rounded-full mt-0.5"></div></div>
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-green-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-green-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Rừng xanh</span></div>
                                     </button>
-                                    <button onClick={() => onStyleChange({ header: 'fox' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'fox' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-[#F97316]"></div>
-                                        <div className="absolute top-0 left-4 w-5 h-6 bg-[#C2410C] rotate-[-15deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)]"></div>
-                                        <div className="absolute top-0 right-4 w-5 h-6 bg-[#C2410C] rotate-[15deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)]"></div>
-                                        <div className="absolute bottom-0 left-0 w-[40%] h-[80%] bg-white rounded-tr-full opacity-30"></div>
-                                        <div className="absolute bottom-0 right-0 w-[40%] h-[80%] bg-white rounded-tl-full opacity-30"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md z-10">Cáo</span>
+
+                                    <button onClick={() => onStyleChange({ header: 'magic', button: 'magic_wand' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'magic' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-purple-100 border-[2px] border-purple-500 rounded-lg flex items-center justify-center">
+                                            <div className="absolute -top-4 right-1 flex flex-col items-center"><div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[12px] border-transparent border-b-indigo-500"></div><div className="w-5 h-1.5 bg-indigo-600 rounded-full -mt-1"></div></div>
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-purple-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-purple-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Phép thuật</span></div>
                                     </button>
-                                    <button onClick={() => onStyleChange({ header: 'dragon' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'dragon' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-red-600"></div>
-                                        <div className="absolute top-2 left-4 w-3 h-6 bg-red-700 rotate-[-30deg] [clip-path:polygon(50%_0%,10%_100%,90%_100%)]"></div>
-                                        <div className="absolute top-1 left-8 w-3 h-8 bg-red-700 rotate-[-15deg] [clip-path:polygon(50%_0%,10%_100%,90%_100%)]"></div>
-                                        <div className="absolute top-2 right-4 w-3 h-6 bg-red-700 rotate-[30deg] [clip-path:polygon(50%_0%,10%_100%,90%_100%)]"></div>
-                                        <div className="absolute top-1 right-8 w-3 h-8 bg-red-700 rotate-[15deg] [clip-path:polygon(50%_0%,10%_100%,90%_100%)]"></div>
-                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-1/2 bg-yellow-500 rounded-t-full opacity-30"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md z-10">Rồng</span>
+
+                                    <button onClick={() => onStyleChange({ header: 'ocean', button: 'diamond' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'ocean' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-teal-50 border-[2px] border-teal-500 rounded-lg flex items-center justify-center">
+                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-4 bg-teal-400 rounded-t-full border-[2px] border-b-0 border-teal-600 flex justify-center items-center gap-1 pt-0.5"><div className="w-1 h-1 bg-teal-900 rounded-full"></div><div className="w-1 h-1 bg-teal-900 rounded-full"></div></div>
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-teal-700 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-teal-700 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Đại dương</span></div>
                                     </button>
-                                    <button onClick={() => onStyleChange({ header: 'penguin' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'penguin' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-blue-400"></div>
-                                        <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-16 h-12 bg-white rounded-t-[100%] opacity-90"></div>
-                                        <div className="absolute top-[30%] left-[30%] w-3 h-3 bg-blue-900 rounded-full"></div>
-                                        <div className="absolute top-[30%] right-[30%] w-3 h-3 bg-blue-900 rounded-full"></div>
-                                        <div className="absolute top-[45%] left-1/2 -translate-x-1/2 w-6 h-4 bg-amber-400 rounded-b-full rounded-t-sm shadow-sm border border-amber-500"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md z-10">Cánh cụt</span>
+
+                                    <button onClick={() => onStyleChange({ header: 'space', button: 'rocket' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'space' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-slate-800 border-[2px] border-indigo-400 rounded-lg flex items-center justify-center">
+                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-5 bg-slate-300 rounded-t-full border-[2px] border-slate-500 flex justify-center items-center gap-1 pt-1"><div className="w-1 h-2 bg-slate-800 rounded-full"></div><div className="w-1 h-2 bg-slate-800 rounded-full"></div></div>
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-slate-600 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-slate-600 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Vũ trụ</span></div>
                                     </button>
-                                    <button onClick={() => onStyleChange({ header: 'bear' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'bear' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-amber-700"></div>
-                                        <div className="absolute top-2 left-4 w-6 h-6 rounded-full bg-amber-800"></div>
-                                        <div className="absolute top-2 right-4 w-6 h-6 rounded-full bg-amber-800"></div>
-                                        <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-16 h-12 bg-amber-200 rounded-t-full border-t-4 border-amber-800 opacity-90"></div>
-                                        <div className="absolute top-[50%] left-1/2 -translate-x-1/2 w-4 h-2 bg-amber-900 rounded-[100%] shadow-sm"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md z-10">Gấu nâu</span>
+
+                                    <button onClick={() => onStyleChange({ header: 'frog', button: 'frog' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'frog' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-[#86efac] border-[2px] border-[#4ade80] rounded-[1rem] flex items-center justify-center">
+                                            <div className="absolute -top-3 left-2 w-6 h-6 bg-[#86efac] rounded-full border-[2px] border-[#4ade80] flex justify-center items-center z-[-1]"><div className="w-4 h-4 bg-white rounded-full flex justify-center items-center"><div className="w-2 h-2 bg-slate-900 rounded-full translate-x-[1px]"></div></div></div>
+                                            <div className="absolute -top-3 right-2 w-6 h-6 bg-[#86efac] rounded-full border-[2px] border-[#4ade80] flex justify-center items-center z-[-1]"><div className="w-4 h-4 bg-white rounded-full flex justify-center items-center"><div className="w-2 h-2 bg-slate-900 rounded-full -translate-x-[1px]"></div></div></div>
+                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-2/5 bg-[#bbf7d0] rounded-t-[100%]"></div>
+                                        </div>
+                                        <div className="absolute top-2 left-4 w-2 h-1.5 bg-pink-400/60 rounded-full blur-[1px]"></div><div className="absolute top-2 right-4 w-2 h-1.5 bg-pink-400/60 rounded-full blur-[1px]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Ếch xanh</span></div>
                                     </button>
-                                    <button onClick={() => onStyleChange({ header: 'rabbit' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'rabbit' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-pink-400"></div>
-                                        <div className="absolute -top-2 left-6 w-4 h-10 bg-pink-200 border-2 border-pink-500 rounded-full rotate-[-15deg]"></div>
-                                        <div className="absolute -top-2 right-6 w-4 h-10 bg-pink-200 border-2 border-pink-500 rounded-full rotate-[15deg]"></div>
-                                        <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-12 h-8 bg-white rounded-t-full opacity-30"></div>
-                                        <div className="absolute top-[40%] left-[20%] w-6 h-4 bg-pink-200/50 rounded-full blur-md"></div>
-                                        <div className="absolute top-[40%] right-[20%] w-6 h-4 bg-pink-200/50 rounded-full blur-md"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md z-10">Thỏ hồng</span>
+
+                                    <button onClick={() => onStyleChange({ header: 'cat', button: 'cat' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'cat' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-amber-100 border-[2px] border-amber-600 rounded-lg flex items-center justify-center">
+                                            <div className="absolute -top-2 left-3 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-amber-500 rotate-[-15deg]"></div>
+                                            <div className="absolute -top-2 right-3 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-amber-500 rotate-[15deg]"></div>
+                                            <div className="absolute top-1.5 flex gap-3"><div className="w-1.5 h-1.5 bg-amber-900 rounded-full"></div><div className="w-1.5 h-1.5 bg-amber-900 rounded-full"></div></div>
+                                            <div className="absolute top-3 w-1.5 h-1 border-b-[2px] border-amber-900 rounded-b-full"></div>
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-amber-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-amber-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Mèo vàng</span></div>
                                     </button>
-                                    <button onClick={() => onStyleChange({ header: 'bee' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'bee' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-yellow-400"></div>
-                                        <div className="absolute top-4 w-full h-4 bg-zinc-800/80"></div>
-                                        <div className="absolute bottom-4 w-full h-4 bg-zinc-800/80"></div>
-                                        <div className="absolute top-1 left-[15%] w-6 h-4 bg-white/40 rounded-full backdrop-blur-sm rotate-[-20deg]"></div>
-                                        <div className="absolute top-1 right-[15%] w-6 h-4 bg-white/40 rounded-full backdrop-blur-sm rotate-[20deg]"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-800 drop-shadow-md z-10">Ong vàng</span>
+
+                                    <button onClick={() => onStyleChange({ header: 'panda', button: 'panda' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'panda' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-white border-[2px] border-slate-800 rounded-[1rem] flex items-center justify-center">
+                                            <div className="flex gap-2 mb-2"><div className="w-3 h-2 bg-slate-800 rounded-full flex items-center justify-center rotate-12"><div className="w-1 h-1 bg-white rounded-full"></div></div><div className="w-3 h-2 bg-slate-800 rounded-full flex items-center justify-center -rotate-12"><div className="w-1 h-1 bg-white rounded-full"></div></div></div>
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-slate-700 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-slate-700 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Gấu trúc</span></div>
                                     </button>
-                                    <button onClick={() => onStyleChange({ header: 'whale' })} className={`relative overflow-hidden w-full h-24 rounded-xl border-2 transition-all ${appStyles.header === 'whale' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-0 bg-sky-500"></div>
-                                        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-2 h-8 bg-blue-200/60"></div>
-                                        <div className="absolute top-0 left-1/2 -translate-x-3 w-3 h-2 bg-blue-200/60 rounded-full rotate-[-30deg]"></div>
-                                        <div className="absolute top-0 left-1/2 translate-x-3 w-3 h-2 bg-blue-200/60 rounded-full rotate-[30deg]"></div>
-                                        <div className="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-[80%] h-12 bg-white rounded-t-full opacity-20"></div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-white/90 drop-shadow-md z-10">Cá voi</span>
+
+                                    <button onClick={() => onStyleChange({ header: 'fox', button: 'fox' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'fox' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-orange-100 border-[2px] border-orange-600 rounded-lg flex items-center justify-center">
+                                            <div className="absolute -top-2 left-2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-orange-600 rotate-[-20deg]"></div>
+                                            <div className="absolute -top-2 right-2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-orange-600 rotate-[20deg]"></div>
+                                            <div className="absolute top-1.5 flex gap-4"><div className="w-1.5 h-1.5 bg-orange-900 rounded-full"></div><div className="w-1.5 h-1.5 bg-orange-900 rounded-full"></div></div>
+                                            <div className="absolute top-3 w-1.5 h-1.5 bg-orange-900 rounded-full"></div>
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-orange-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-orange-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cáo nhỏ</span></div>
+                                    </button>
+
+                                    <button onClick={() => onStyleChange({ header: 'dragon', button: 'dragon' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'dragon' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-red-100 border-[2px] border-red-600 rounded-lg flex items-center justify-center">
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-red-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-red-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Rồng nhỏ</span></div>
+                                    </button>
+
+                                    <button onClick={() => onStyleChange({ header: 'penguin', button: 'penguin' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'penguin' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-slate-800 border-[2px] border-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
+                                            <div className="absolute inset-x-2 top-0 bottom-0 bg-white rounded-t-full"></div>
+                                            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[8px] border-transparent border-t-orange-500 z-10"></div>
+                                            <div className="absolute top-1 flex gap-4 z-10"><div className="w-1.5 h-1.5 bg-slate-800 rounded-full"></div><div className="w-1.5 h-1.5 bg-slate-800 rounded-full"></div></div>
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-slate-700 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)] z-0"></div><div className="absolute top-2 right-6 w-1 h-6 bg-slate-700 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)] z-0"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cánh cụt</span></div>
+                                    </button>
+
+                                    <button onClick={() => onStyleChange({ header: 'bear', button: 'bear' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'bear' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-amber-100 border-[2px] border-amber-700 rounded-lg flex items-center justify-center">
+                                            <div className="absolute -top-2 left-2 w-4 h-4 bg-amber-700 rounded-full"></div>
+                                            <div className="absolute -top-2 right-2 w-4 h-4 bg-amber-700 rounded-full"></div>
+                                            <div className="z-10 absolute top-1.5 flex gap-3"><div className="w-1.5 h-1.5 bg-amber-900 rounded-full"></div><div className="w-1.5 h-1.5 bg-amber-900 rounded-full"></div></div>
+                                            <div className="absolute top-0 w-8 h-4 bg-amber-200 rounded-b-full border-[2px] border-amber-400 flex justify-center"><div className="absolute bottom-[2px] w-1.5 h-1 bg-amber-950 rounded-b-full"></div></div>
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-amber-900 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-amber-900 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Gấu mập</span></div>
+                                    </button>
+
+                                    <button onClick={() => onStyleChange({ header: 'rabbit', button: 'rabbit' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'rabbit' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-pink-50 border-[2px] border-pink-400 rounded-lg flex items-center justify-center">
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-pink-600 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-pink-600 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Thỏ trắng</span></div>
+                                    </button>
+
+                                    <button onClick={() => onStyleChange({ header: 'bee', button: 'bee' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'bee' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-yellow-200 border-[2px] border-yellow-600 rounded-lg flex items-center justify-center">
+                                            <div className="absolute -top-2 left-1/2 -translate-x-2 w-0.5 h-4 bg-slate-800 rotate-[-30deg]"></div><div className="absolute -top-2 left-1/2 translate-x-1 w-0.5 h-4 bg-slate-800 rotate-[30deg]"></div>
+                                            <div className="absolute left-[30%] top-0 bottom-0 w-2 bg-slate-800 opacity-20"></div><div className="absolute left-[70%] top-0 bottom-0 w-2 bg-slate-800 opacity-20"></div>
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-yellow-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-yellow-800 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Ong mật</span></div>
+                                    </button>
+
+                                    <button onClick={() => onStyleChange({ header: 'whale', button: 'whale' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group  ${appStyles.header === 'whale' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 sm:inset-x-2 sm:top-4 sm:bottom-2 transform scale-[0.6] sm:scale-100 origin-center pointer-events-none -translate-y-2 sm:translate-y-0"><div className="absolute inset-0 sm:inset-x-0 sm:top-0 sm:bottom-0 bg-sky-100 border-[2px] border-sky-500 rounded-lg flex items-center justify-center">
+                                            <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex flex-col items-center"><div className="w-1.5 h-2 bg-sky-500 rounded-t-full"></div><div className="w-10 h-2 bg-sky-400 rounded-t-full"></div></div>
+                                            <div className="absolute top-1 flex gap-4"><div className="w-1.5 h-1.5 rounded-full bg-blue-900"></div><div className="w-1.5 h-1.5 rounded-full bg-blue-900"></div></div>
+                                        </div>
+                                        <div className="absolute top-2 left-6 w-1 h-6 bg-sky-700 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div><div className="absolute top-2 right-6 w-1 h-6 bg-sky-700 shadow-[inset_1px_0_2px_rgba(0,0,0,0.3)]"></div>
+                                        </div><div className="absolute inset-x-0 bottom-0 py-0.5 bg-white/95 backdrop-blur border-t border-white/50 flex justify-center items-center z-20"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cá voi</span></div>
+                                    </button>
+
+                                </>
+                            )}
+                            {activeTab === 'userBubble' && (
+                                <>
+                                    <button onClick={() => onStyleChange({ userBubble: 'default' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'default' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('default', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Mặc định</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'frog' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'frog' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('frog', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Ếch xanh</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'cat' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'cat' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('cat', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Mèo vàng</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'dog' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'dog' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('dog', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cún con</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'penguin' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'penguin' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('penguin', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cánh cụt</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'bear' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'bear' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('bear', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Gấu nâu</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'rabbit' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'rabbit' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('rabbit', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Thỏ trắng</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'koala' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'koala' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('koala', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Gấu koala</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'duck' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'duck' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('duck', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Vịt con</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'capybara' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'capybara' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('capybara', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Capybara</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'robot' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'robot' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('robot', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Robot</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'alien' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'alien' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('alien', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Người ngoài hành tinh</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'dinosaur' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'dinosaur' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('dinosaur', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Khủng long</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'unicorn' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'unicorn' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('unicorn', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Kỳ lân</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'ghost' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'ghost' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('ghost', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Ma nhỏ</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'ninja' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'ninja' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('ninja', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Ninja</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'dragon' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'dragon' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('dragon', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Rồng lửa</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'fox' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'fox' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('fox', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cáo nhỏ</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'panda' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'panda' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('panda', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Gấu trúc</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'hamster' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'hamster' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('hamster', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Chuột Hamster</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'owl' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'owl' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('owl', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cú mèo</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'sloth' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'sloth' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('sloth', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Lười</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'otter' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'otter' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('otter', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Rái cá</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'turtle' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'turtle' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('turtle', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Rùa biển</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'bee' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'bee' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('bee', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Ong mật</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'whale' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'whale' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('whale', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cá voi</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ userBubble: 'octopus' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.userBubble === 'octopus' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('octopus', true)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Bạch tuộc</span></div>
                                     </button>
                                 </>
                             )}
-
-                            {/* Button Styles */}
-                            {activeTab === 'button' && (
+                            {activeTab === 'aiBubble' && (
                                 <>
-                                    <button onClick={() => onStyleChange({ button: 'default' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'default' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-xl text-white text-[13px] font-bold bg-gradient-to-r from-primary-600 to-primary-800 shadow-sm">Thao tác</div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Mặc định</span>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'default' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'default' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50"><div className="px-4 py-2 bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-sm text-xs shadow-sm">Xin chào!</div></div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Mặc định</span></div>
                                     </button>
-                                    <button onClick={() => onStyleChange({ button: '3d' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === '3d' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-xl text-white text-[13px] font-bold bg-primary-600 border-b-4 border-primary-800 -translate-y-0.5" style={{boxShadow: '0 4px 0 0 var(--tw-border-opacity)'}}>Thao tác</div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Nổi 3D</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'glow' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'glow' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-xl text-white text-[13px] font-bold bg-primary-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]">Thao tác</div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Glow</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'leaf' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'leaf' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 text-white text-[13px] font-bold bg-green-600 shadow-[0_4px_0_theme(colors.green.800)] rounded-tl-[4px] rounded-br-[4px] rounded-tr-[16px] rounded-bl-[16px] relative">
-                                            <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-green-500 rotate-45 pointer-events-none"></div>
-                                            Thao tác
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Chiếc lá</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'diamond' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'diamond' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 text-white text-[13px] font-bold bg-cyan-500 shadow-[0_0_10px_theme(colors.cyan.400)] [clip-path:polygon(10%_0,90%_0,100%_50%,90%_100%,10%_100%,0_50%)] relative">
-                                            <div className="absolute inset-x-0 top-0 h-1/2 bg-white/20 pointer-events-none"></div>
-                                            Thao tác
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Kim cương</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'magic_wand' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'magic_wand' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-xl text-white text-[13px] font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 ring-2 ring-purple-300 ring-offset-1 shadow-sm">
-                                            Thao tác
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Đũa thần</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'bubble' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'bubble' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-full text-white text-[13px] font-bold bg-sky-400 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.2),_0_4px_8px_rgba(56,189,248,0.4)] relative">
-                                            <div className="absolute top-1 left-2 w-4 h-1.5 bg-white/40 rounded-full rotate-[-20deg]"></div>
-                                            Thao tác
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Bong bóng</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'rocket' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'rocket' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-t-[16px] rounded-b-sm text-white text-[13px] font-bold bg-red-500 shadow-[0_5px_0_theme(colors.red.700)] relative">
-                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-1.5 bg-yellow-400 rounded-b-full shadow-[0_2px_4px_theme(colors.orange.500)]"></div>
-                                            Thao tác
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Tên lửa</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'frog' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'frog' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-[24px] border-[2.5px] border-[#064e3b] text-white text-[13px] font-bold bg-[#14532d] shadow-[0_4px_0_theme(colors.emerald.950)] relative overflow-hidden">
-                                            <div className="absolute -top-2 left-[15%] w-5 h-4 bg-[#14532d] border-[2px] border-[#064e3b] rounded-t-full z-[-1]"></div>
-                                            <div className="absolute -top-2 right-[15%] w-5 h-4 bg-[#14532d] border-[2px] border-[#064e3b] rounded-t-full z-[-1]"></div>
-                                            <div className="absolute -top-[2px] left-[18%] w-2 h-2 bg-white rounded-full z-10 pointer-events-none flex items-center justify-center"><div className="w-[3px] h-[3px] bg-slate-900 rounded-full mb-[1px] ml-[1px]"></div></div>
-                                            <div className="absolute -top-[2px] right-[20%] w-2 h-2 bg-white rounded-full z-10 pointer-events-none flex items-center justify-center"><div className="w-[3px] h-[3px] bg-slate-900 rounded-full mb-[1px] -ml-[1px]"></div></div>
-                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[80%] h-4 bg-gradient-to-t from-[#65a30d] to-[#84cc16] border-t-[3px] border-[#4d7c0f] rounded-t-full opacity-90 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] pointer-events-none"></div>
-                                            <div className="absolute top-[40%] left-[10%] w-6 h-3 bg-pink-500/40 rounded-full blur-sm pointer-events-none"></div>
-                                            <div className="absolute top-[40%] right-[10%] w-6 h-3 bg-pink-500/40 rounded-full blur-sm pointer-events-none"></div>
-                                            <span className="relative z-10">Thao tác</span>
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Ếch xanh</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'cat' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'cat' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-[12px] border-2 border-[#EA580C] text-slate-900 text-[13px] font-bold bg-[#FDBA74] relative">
-                                            <div className="absolute -top-2 left-[10%] w-4 h-4 bg-[#FDBA74] border-[2px] border-[#EA580C] rotate-[-25deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)] z-[-1]"></div>
-                                            <div className="absolute -top-2 right-[10%] w-4 h-4 bg-[#FDBA74] border-[2px] border-[#EA580C] rotate-[25deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)] z-[-1]"></div>
-                                            Thao tác
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Mèo vàng</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'panda' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'panda' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-[20px] border-2 border-zinc-900 text-white text-[13px] font-bold bg-zinc-800 shadow-[0_4px_0_theme(colors.zinc.900)] relative">
-                                            <div className="absolute -top-3 left-[10%] w-5 h-5 bg-zinc-900 rounded-full z-[-1]"></div>
-                                            <div className="absolute -top-3 right-[10%] w-5 h-5 bg-zinc-900 rounded-full z-[-1]"></div>
-                                            Thao tác
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Gấu trúc</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'fox' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'fox' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-[12px] border-2 border-[#C2410C] text-white text-[13px] font-bold bg-[#F97316] shadow-[0_4px_0_theme(colors.orange.800)] relative">
-                                            <div className="absolute -top-2 left-[10%] w-4 h-4 bg-[#C2410C] rotate-[-15deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)] z-[-1]"></div>
-                                            <div className="absolute -top-2 right-[10%] w-4 h-4 bg-[#C2410C] rotate-[15deg] [clip-path:polygon(50%_0%,0%_100%,100%_100%)] z-[-1]"></div>
-                                            Thao tác
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Cáo</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'dragon' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'dragon' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 border-2 border-red-900 text-white text-[13px] font-bold bg-red-600 [clip-path:polygon(5%_0%,95%_0%,100%_50%,95%_100%,5%_100%,0%_50%)] relative">
-                                            Thao tác
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Rồng</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'penguin' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'penguin' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-[24px] border-2 border-blue-600 text-white text-[13px] font-bold bg-blue-400 shadow-[0_4px_0_theme(colors.blue.600)] relative overflow-hidden">
-                                            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-[70%] h-1/2 bg-white rounded-t-full"></div>
-                                            <span className="relative z-10">Thao tác</span>
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Cánh cụt</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'bear' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'bear' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-[16px] border-2 border-amber-900 text-amber-50 text-[13px] font-bold bg-amber-700 shadow-[0_4px_0_theme(colors.amber.900)] relative">
-                                            <div className="absolute -top-2 left-[10%] w-4 h-4 bg-amber-800 rounded-full z-[-1]"></div>
-                                            <div className="absolute -top-2 right-[10%] w-4 h-4 bg-amber-800 rounded-full z-[-1]"></div>
-                                            Thao tác
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Gấu nâu</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'rabbit' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'rabbit' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-[24px] border-2 border-pink-600 text-white text-[13px] font-bold bg-pink-400 shadow-[0_4px_0_theme(colors.pink.600)] relative">
-                                            <div className="absolute -top-4 left-[20%] w-3 h-6 bg-pink-500 border-2 border-pink-600 rounded-full rotate-[-15deg] z-[-1] flex items-center justify-center"><div className="w-1.5 h-3 bg-pink-200 rounded-full"></div></div>
-                                            <div className="absolute -top-4 right-[20%] w-3 h-6 bg-pink-500 border-2 border-pink-600 rounded-full rotate-[15deg] z-[-1] flex items-center justify-center"><div className="w-1.5 h-3 bg-pink-200 rounded-full"></div></div>
-                                            Thao tác
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Thỏ hồng</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'bee' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'bee' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-[20px] border-2 border-yellow-600 text-slate-900 text-[13px] font-bold bg-yellow-400 shadow-[0_4px_0_theme(colors.yellow.600)] relative overflow-hidden">
-                                            <div className="absolute inset-0 bg-[repeating-linear-gradient(90deg,transparent,transparent_8px,rgba(0,0,0,0.15)_8px,rgba(0,0,0,0.15)_16px)] pointer-events-none"></div>
-                                            <span className="relative z-10">Thao tác</span>
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Ong vàng</span>
-                                    </button>
-                                    <button onClick={() => onStyleChange({ button: 'whale' })} className={`relative overflow-visible w-full h-24 rounded-xl border-2 transition-all flex items-center justify-center bg-slate-50 ${appStyles.button === 'whale' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="px-6 py-3 rounded-[20px] border-2 border-sky-700 text-white text-[13px] font-bold bg-sky-500 shadow-[0_4px_0_theme(colors.sky.700)] relative overflow-hidden">
-                                            <div className="absolute bottom-0 left-0 w-full h-1.5 bg-sky-600/50"></div>
-                                            <span className="relative z-10">Thao tác</span>
-                                        </div>
-                                        <span className="absolute bottom-1 right-2 text-xs font-bold text-slate-400">Cá voi</span>
-                                    </button>
-                                </>
-                            )}
-                            
-                            {/* Bubble Styles */}
-                            {(activeTab === 'userBubble' || activeTab === 'aiBubble') && (
-                                <>
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'default' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'default' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className={`${activeTab === 'userBubble' ? 'bg-indigo-600 text-white rounded-l-xl rounded-tr-xl' : 'bg-white border border-slate-200 text-slate-800 rounded-r-lg rounded-tl-lg'} text-xs px-4 py-2 shadow-sm`}>{activeTab === 'userBubble' ? 'Nội dung...' : 'AI trả lời...'}</div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Mặc định</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'frog' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'frog' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-3 w-4/5">
-                                                <div className="absolute -top-3 left-4 w-5 h-5 bg-[#14532d] border-[1.5px] border-white rounded-full flex items-end justify-center z-10"><div className="w-2.5 h-2.5 bg-white rounded-full flex items-end justify-center mb-0.5"><div className="w-1 h-1 bg-slate-900 rounded-full mb-px" /></div></div>
-                                                <div className="absolute -top-3 right-4 w-5 h-5 bg-[#14532d] border-[1.5px] border-white rounded-full flex items-end justify-center z-10"><div className="w-2.5 h-2.5 bg-white rounded-full flex items-end justify-center mb-0.5"><div className="w-1 h-1 bg-slate-900 rounded-full mb-px" /></div></div>
-                                                <div className="bg-[#14532d] text-white text-xs px-4 py-2 rounded-[20px] shadow-[0_3px_0_theme(colors.emerald.950)] border-b-[3px] border-[#064e3b] leading-relaxed w-full text-center relative overflow-hidden">
-                                                    <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-16 h-8 bg-gradient-to-t from-[#65a30d] to-[#84cc16] border-t-[3px] border-[#4d7c0f] rounded-t-full opacity-90 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]"></div>
-                                                    <div className="absolute top-[30%] left-[5%] w-6 h-3 bg-pink-500/40 rounded-full blur-[3px]"></div>
-                                                    <div className="absolute top-[30%] right-[5%] w-6 h-3 bg-pink-500/40 rounded-full blur-[3px]"></div>
-                                                    <span className="relative z-10">Ếch xanh</span>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'frog' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'frog' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50">
+                                            <div className="relative mt-2">
+                                                <div className="absolute -top-3 left-2 w-5 h-5 bg-[#86efac] border-[1.5px] border-[#4ade80] rounded-full flex justify-center items-center z-10"><div className="w-3 h-3 bg-white rounded-full flex justify-center items-center"><div className="w-1.5 h-1.5 bg-slate-900 rounded-full translate-x-[1px]"></div></div></div>
+                                                <div className="absolute -top-3 right-2 w-5 h-5 bg-[#86efac] border-[1.5px] border-[#4ade80] rounded-full flex justify-center items-center z-10"><div className="w-3 h-3 bg-white rounded-full flex justify-center items-center"><div className="w-1.5 h-1.5 bg-slate-900 rounded-full -translate-x-[1px]"></div></div></div>
+                                                <div className="bg-[#86efac] text-[#064e3b] font-medium border-b-[3px] border-[#4ade80] px-3 py-1.5 rounded-xl rounded-tl-sm shadow-sm relative overflow-hidden text-xs">
+                                                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3/4 h-5 bg-[#bbf7d0] rounded-t-[100%] pointer-events-none"></div>
+                                                    <div className="relative z-10">Xin chào!</div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Ếch xanh</div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Ếch xanh</span></div>
                                     </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'cat' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'cat' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
+                                    <button onClick={() => onStyleChange({ aiBubble: 'cat' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'cat' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50">
                                             <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-transparent border-b-[#fcd34d] rotate-[-20deg]"></div>
-                                                <div className="absolute -top-2 right-2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[8px] border-transparent border-b-[#fcd34d] rotate-[20deg]"></div>
-                                                <div className="bg-[#fcd34d] text-slate-800 font-medium text-xs px-4 py-2 rounded-[12px] shadow-sm border-b-[3px] border-amber-600 leading-relaxed max-w-[120px] text-left">Meow mèo</div>
+                                                <div className="absolute -top-2 left-2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-[#fcd34d] rotate-[-20deg]"></div>
+                                                <div className="absolute -top-2 right-2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-[#fcd34d] rotate-[20deg]"></div>
+                                                <div className="px-3 py-1.5 rounded-xl rounded-tl-sm text-xs shadow-sm bg-[#fcd34d] text-slate-800 border-b-[3px] border-amber-500 font-medium">Xin chào!</div>
                                             </div>
                                         </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Mèo con</div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Mèo vàng</span></div>
                                     </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'dog' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'dog' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
+                                    <button onClick={() => onStyleChange({ aiBubble: 'panda' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'panda' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50">
                                             <div className="relative mt-2">
-                                                <div className="absolute -top-2 -left-1 w-3 h-5 bg-[#d97706] rounded-full rotate-[-45deg]"></div>
-                                                <div className="absolute -top-2 -right-1 w-3 h-5 bg-[#d97706] rounded-full rotate-[45deg]"></div>
-                                                <div className="bg-[#fbbf24] text-amber-900 font-medium text-xs px-4 py-2 rounded-[12px] shadow-sm border-b-[3px] border-amber-700 leading-relaxed max-w-[120px] text-left">Gâu gâu</div>
+                                                <div className="absolute -top-2 left-1/2 -translate-x-[15px] w-4 h-3 bg-zinc-800 rounded-full rotate-[-20deg]"></div>
+                                                <div className="absolute -top-2 right-1/2 translate-x-[15px] w-4 h-3 bg-zinc-800 rounded-full rotate-[20deg]"></div>
+                                                <div className="px-3 py-1.5 rounded-xl rounded-tl-sm text-xs shadow-sm bg-white text-slate-800 border-[2px] border-zinc-800 font-medium">Xin chào!</div>
                                             </div>
                                         </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Chó Shiba</div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Gấu trúc</span></div>
                                     </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'penguin' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'penguin' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
+                                    <button onClick={() => onStyleChange({ aiBubble: 'penguin' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'penguin' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50">
                                             <div className="relative mt-2">
-                                                <div className="bg-[#1e293b] text-white font-medium text-xs px-4 py-2 rounded-[12px] shadow-sm border-b-[3px] border-blue-500 leading-relaxed max-w-[120px] text-left">Cánh cụt nhỏ</div>
-                                                <div className="absolute -bottom-1 left-2 w-3 h-2 bg-orange-500 rounded-full"></div>
-                                                <div className="absolute -bottom-1 right-2 w-3 h-2 bg-orange-500 rounded-full"></div>
+                                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-r-[4px] border-t-[6px] border-transparent border-t-orange-500 z-10"></div>
+                                                <div className="px-3 py-1.5 rounded-xl rounded-tl-sm text-xs shadow-sm bg-slate-800 text-white border-[2px] border-slate-900 font-medium relative overflow-hidden"><div className="absolute inset-x-2 top-0 bottom-0 bg-white rounded-t-[100%] opacity-20"></div><span className="relative z-10">Xin chào!</span></div>
                                             </div>
                                         </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Chim Cánh Cụt</div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cánh cụt</span></div>
                                     </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'bear' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'bear' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
+                                    <button onClick={() => onStyleChange({ aiBubble: 'bear' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'bear' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50">
                                             <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-1 w-4 h-4 bg-[#78350f] rounded-full"></div>
-                                                <div className="absolute -top-2 right-1 w-4 h-4 bg-[#78350f] rounded-full"></div>
-                                                <div className="bg-[#92400e] text-orange-50 font-medium text-xs px-4 py-2 rounded-[12px] shadow-sm border-b-[3px] border-[#451a03] leading-relaxed max-w-[120px] text-left">Gấu nâu đây</div>
+                                                <div className="absolute -top-2 left-1.5 w-4 h-4 bg-amber-700 rounded-full"></div>
+                                                <div className="absolute -top-2 right-1.5 w-4 h-4 bg-amber-700 rounded-full"></div>
+                                                <div className="px-3 py-1.5 rounded-xl rounded-tl-sm text-xs shadow-sm bg-amber-100 text-amber-900 border-[2px] border-amber-700 font-medium relative z-10">Xin chào!</div>
                                             </div>
                                         </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Gấu Béo</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'rabbit' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'rabbit' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-4 left-3 w-2.5 h-6 bg-pink-100 border border-slate-200 rounded-t-full rotate-[-15deg]"></div>
-                                                <div className="absolute -top-4 right-3 w-2.5 h-6 bg-pink-100 border border-slate-200 rounded-t-full rotate-[15deg]"></div>
-                                                <div className="bg-white text-slate-700 font-medium text-xs px-4 py-2 rounded-[12px] shadow-sm border border-slate-200 border-b-[3px] border-b-slate-300 leading-relaxed max-w-[120px] text-left">Thỏ nhảy</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Thỏ Trắng</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'koala' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'koala' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-1 -left-2 w-5 h-5 bg-slate-400 rounded-full"></div>
-                                                <div className="absolute -top-1 -right-2 w-5 h-5 bg-slate-400 rounded-full"></div>
-                                                <div className="bg-slate-300 text-slate-800 font-medium text-xs px-4 py-2 rounded-[12px] shadow-sm border-b-[3px] border-slate-500 leading-relaxed max-w-[120px] text-left z-10 relative">Ngủ khò khò</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Koala</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'duck' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'duck' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute top-1/2 -left-2 transform -translate-y-1/2 w-3 h-2 bg-orange-400 rounded-l-full"></div>
-                                                <div className="bg-[#fef08a] text-yellow-900 font-medium text-xs px-4 py-2 rounded-[12px] shadow-sm border-b-[3px] border-yellow-500 leading-relaxed max-w-[120px] text-left">Cạp cạp!</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Vịt Con</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'capybara' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'capybara' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-4 left-4 w-10 h-5 bg-[#C69C6D] rounded-t-full flex items-center justify-center">
-                                                    <div className="absolute top-1 left-2 w-1.5 h-1.5 bg-slate-800 rounded-full"></div>
-                                                    <div className="absolute top-1 right-2 w-1.5 h-1.5 bg-slate-800 rounded-full"></div>
-                                                    <div className="absolute -top-1 left-0 w-2.5 h-2.5 bg-[#a37e54] rounded-full"></div>
-                                                    <div className="absolute -top-1 right-0 w-2.5 h-2.5 bg-[#a37e54] rounded-full"></div>
-                                                    <div className="absolute top-2 w-2 h-1 bg-pink-300 rounded-full"></div>
-                                                </div>
-                                                <div className="bg-[#FFD6E4] text-slate-800 border-2 border-pink-200 font-medium text-xs px-4 py-2 rounded-xl rounded-tl-none shadow-sm relative leading-relaxed max-w-[120px] text-left z-10 w-full">
-                                                    <span className="absolute -left-1.5 top-0 text-xs rotate-12">💖</span>
-                                                    Capybara!
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Capybara</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'robot' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'robot' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-4 w-4 h-4 bg-slate-300 rounded-sm border border-slate-400 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div></div>
-                                                <div className="bg-slate-800 text-green-400 border border-slate-700 font-mono text-xs px-4 py-2 rounded-lg shadow-sm leading-relaxed max-w-[120px] text-left">010011...</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Robot</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'alien' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'alien' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-3 left-4 w-5 h-5 bg-lime-400 rounded-t-full flex items-center gap-1 justify-center"><div className="w-1 h-1 bg-black rounded-full"></div><div className="w-1 h-1 bg-black rounded-full"></div></div>
-                                                <div className="bg-lime-900 text-lime-400 font-mono text-xs px-4 py-2 rounded-[12px] rounded-tl-none shadow-sm border border-lime-700 leading-relaxed max-w-[120px] text-left">👽 Chào bạn</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Alien</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'dinosaur' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'dinosaur' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-2 w-3 h-3 bg-emerald-600 rounded-t-md rotate-[-45deg]"></div>
-                                                <div className="absolute -top-2 left-6 w-3 h-3 bg-emerald-600 rounded-t-md rotate-[-45deg]"></div>
-                                                <div className="bg-emerald-100 text-emerald-900 font-medium text-xs px-4 py-2 rounded-xl shadow-sm border-2 border-emerald-500 leading-relaxed max-w-[120px] text-left">Grừ grừ...</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Khủng Long</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'unicorn' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'unicorn' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-4 left-4 w-0 h-0 border-l-[4px] border-r-[4px] border-b-[12px] border-transparent border-b-yellow-400"></div>
-                                                <div className="bg-gradient-to-r from-pink-100 via-purple-100 to-blue-100 text-purple-900 font-medium text-xs px-4 py-2 rounded-xl shadow-sm border border-purple-200 leading-relaxed max-w-[120px] text-left">Phép thuật 🌈</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Kỳ Lân</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'ghost' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'ghost' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="bg-slate-100 text-slate-800 font-medium text-xs px-4 py-2 rounded-t-xl rounded-bl-sm rounded-br-3xl shadow-sm border border-slate-200 leading-relaxed max-w-[120px] text-left">Ú òa! 👻</div>
-                                                <div className="absolute -bottom-2 left-2 w-2 h-2 bg-slate-100 rounded-full"></div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Ma Ú Òa</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'ninja' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'ninja' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-1 left-4 w-12 h-2 bg-red-500 transform -skew-x-12"></div>
-                                                <div className="bg-slate-900 text-slate-200 font-medium text-xs px-4 py-2 rounded-xl shadow-sm border border-slate-700 leading-relaxed max-w-[120px] text-left z-10 relative">Ẩn thân 🥷</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Ninja Rùa</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'dragon' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'dragon' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-3 left-3 w-4 h-5 bg-red-600 rounded-t-full rotate-[-20deg]"></div>
-                                                <div className="absolute -top-3 left-6 w-4 h-5 bg-red-600 rounded-t-full rotate-[20deg]"></div>
-                                                <div className="bg-orange-100 text-red-900 font-medium text-xs px-4 py-2 rounded-xl shadow-sm border-2 border-red-500 leading-relaxed max-w-[120px] text-left z-10 relative">Phun lửa 🔥</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Rồng Nhỏ</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'fox' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'fox' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-3 -left-1 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[12px] border-transparent border-b-orange-600 rotate-[-25deg]"></div>
-                                                <div className="absolute -top-3 -right-1 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[12px] border-transparent border-b-orange-600 rotate-[25deg]"></div>
-                                                <div className="bg-orange-500 text-white font-medium text-xs px-4 py-2 rounded-[14px] shadow-sm border-b-[3px] border-orange-700 leading-relaxed max-w-[120px] text-left z-10 relative">Cáo nhỏ 🦊</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Cáo Nhỏ</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'panda' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'panda' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-1 w-5 h-5 bg-slate-800 rounded-full"></div>
-                                                <div className="absolute -top-2 right-1 w-5 h-5 bg-slate-800 rounded-full"></div>
-                                                <div className="bg-white text-slate-800 font-medium text-xs px-4 py-2 rounded-2xl shadow-sm border-[2px] border-slate-800 leading-relaxed max-w-[120px] text-left z-10 relative">Gấu trúc 🐼</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Gấu Trúc</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'hamster' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'hamster' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-2 w-4 h-4 bg-amber-200 rounded-full"></div>
-                                                <div className="absolute -top-2 right-2 w-4 h-4 bg-amber-200 rounded-full"></div>
-                                                <div className="bg-amber-100 text-amber-900 font-medium text-xs px-4 py-2 rounded-3xl shadow-sm border-[2px] border-amber-300 leading-relaxed max-w-[120px] text-left z-10 relative">Hamster 🐹</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Hamster</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'owl' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'owl' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-2 w-0 h-0 border-l-[4px] border-r-[4px] border-b-[8px] border-transparent border-b-[#451a03]"></div>
-                                                <div className="absolute -top-2 right-2 w-0 h-0 border-l-[4px] border-r-[4px] border-b-[8px] border-transparent border-b-[#451a03]"></div>
-                                                <div className="bg-[#78350f] text-[#fef3c7] font-medium text-xs px-4 py-2 rounded-[14px] shadow-sm border-b-[3px] border-[#451a03] leading-relaxed max-w-[120px] text-left z-10 relative">Cú mèo 🦉</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Cú Mèo</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'sloth' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'sloth' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-1 left-2 w-8 h-4 bg-[#a1a1aa] rounded-t-full"></div>
-                                                <div className="bg-[#d4d4d8] text-slate-800 font-medium text-xs px-4 py-2 rounded-2xl shadow-sm border-b-[3px] border-[#a1a1aa] leading-relaxed max-w-[120px] text-left z-10 relative">Lười quá 🦥</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Lười Bay</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'otter' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'otter' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-1 w-3 h-3 bg-[#52525b] rounded-full"></div>
-                                                <div className="absolute -top-2 right-1 w-3 h-3 bg-[#52525b] rounded-full"></div>
-                                                <div className="bg-[#71717a] text-white font-medium text-xs px-4 py-2 rounded-[16px] shadow-sm border-b-[3px] border-[#3f3f46] leading-relaxed max-w-[120px] text-left z-10 relative">Rái cá 🦦</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Rái Cá</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'turtle' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'turtle' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-6 w-5 h-5 bg-[#166534] rounded-t-full"></div>
-                                                <div className="bg-[#22c55e] text-[#14532d] font-medium text-xs px-4 py-2 rounded-[16px] shadow-sm border-[2px] border-[#16a34a] leading-relaxed max-w-[120px] text-left z-10 relative">Rùa biển 🐢</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Rùa Biển</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'bee' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'bee' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-3 left-3 w-1.5 h-3.5 bg-slate-900 rounded-full rotate-[-30deg]"></div>
-                                                <div className="absolute -top-3 right-3 w-1.5 h-3.5 bg-slate-900 rounded-full rotate-[30deg]"></div>
-                                                <div className="bg-[#fde047] text-slate-900 font-medium text-xs px-4 py-2 rounded-2xl shadow-sm border-[2px] border-[#eab308] border-dashed leading-relaxed max-w-[120px] text-left z-10 relative">Ong mật 🐝</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Ong Mật</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'whale' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'whale' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-4 left-6 w-1 h-4 bg-sky-200"></div>
-                                                <div className="absolute -top-4 left-4 w-1 h-3 bg-sky-300 rotate-[-30deg]"></div>
-                                                <div className="absolute -top-4 left-8 w-1 h-3 bg-sky-300 rotate-[30deg]"></div>
-                                                <div className="bg-[#0ea5e9] text-white font-medium text-xs px-4 py-2 rounded-[20px] shadow-sm border-b-[4px] border-[#0284c7] leading-relaxed max-w-[120px] text-left z-10 relative">Cá voi 🐳</div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Cá Voi</div>
-                                    </button>
-
-                                    <button onClick={() => onStyleChange({ [activeTab]: 'octopus' })} className={`relative w-full h-28 rounded-xl border-2 transition-all flex flex-col justify-center bg-slate-50 ${appStyles[activeTab] === 'octopus' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="relative mt-0 mb-4 z-10 w-full flex justify-center px-2">
-                                            <div className="relative mt-2">
-                                                <div className="bg-[#c084fc] text-white font-medium text-xs px-4 py-2 rounded-t-[20px] shadow-sm border border-[#a855f7] leading-relaxed max-w-[120px] text-left z-10 relative">Bạch tuộc 🐙</div>
-                                                <div className="flex gap-1 justify-center mt-[-1px]">
-                                                    <div className="w-2 h-4 bg-[#c084fc] rounded-b-full"></div>
-                                                    <div className="w-2 h-3 bg-[#c084fc] rounded-b-full"></div>
-                                                    <div className="w-2 h-4 bg-[#c084fc] rounded-b-full"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[11px] font-bold text-slate-400 w-full text-center">Bạch Tuộc</div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Gấu nâu</span></div>
                                     </button>
                                 </>
                             )}
 
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>,
