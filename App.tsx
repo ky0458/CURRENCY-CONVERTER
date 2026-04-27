@@ -1267,7 +1267,7 @@ const AppContent: React.FC = () => {
       <div className="relative z-20 pb-4 text-center">
           <p className={`text-xs font-bold uppercase tracking-widest ${hasBackground ? 'text-white/80 text-shadow-sm' : 'text-slate-400'}`}>Powered By ZiQi</p>
           <p className={`text-[10px] font-medium mt-0.5 ${hasBackground ? 'text-white/60 text-shadow-sm' : 'text-slate-300'}`}>
-              Lastest update: 11:24 26/04/2026
+              Lastest update: 11:54 27/04/2026
           </p>
       </div>
 

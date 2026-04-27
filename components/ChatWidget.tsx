@@ -1586,8 +1586,8 @@ ${text}`;
 
                     <div className="p-3 sm:p-5 z-20 bg-white border-t border-slate-200/60 shadow-[0_-12px_24px_-12px_rgba(0,0,0,0.1)] relative shrink-0">
                         {/* Mode Toggle */}
-                        <div className="flex items-center justify-between gap-2 mb-3 max-w-4xl mx-auto w-full relative z-20">
-                            <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-between gap-1 sm:gap-2 mb-3 max-w-4xl mx-auto w-full relative z-20">
+                            <div className="flex items-center gap-1 sm:gap-2">
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider hidden sm:inline">Chế độ:</span>
                                     <div className="relative">
@@ -1601,7 +1601,7 @@ ${text}`;
                                         </button>
                                     </div>
                                 </div>
-                                <div className="flex relative bg-slate-100/80 p-1 rounded-xl ring-1 ring-slate-200/50 w-[300px]">
+                                <div className="flex relative bg-slate-100/80 p-1 rounded-xl ring-1 ring-slate-200/50 w-[240px] sm:w-[300px]">
                                     <div 
                                         className={`absolute inset-y-1 left-1 w-[calc(33.333%-4px)] rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
                                             ${chatMode === 'normal' 
@@ -1641,7 +1641,7 @@ ${text}`;
                                 <button
                                     type="button"
                                     onClick={() => showPrompts ? closePrompts() : setShowPrompts(true)}
-                                    className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-xl transition-all shadow-sm border border-transparent bg-clip-padding relative before:absolute before:inset-0 before:-z-10 before:rounded-xl before:bg-gradient-to-r before:from-indigo-400 before:to-purple-400 before:-m-[1.5px] ${showPrompts ? 'bg-indigo-50 text-indigo-700' : 'bg-white text-indigo-600 hover:bg-slate-50'}`}
+                                    className={`flex items-center gap-1.5 px-2 sm:px-4 py-1.5 text-xs font-bold rounded-xl transition-all shadow-sm border border-transparent bg-clip-padding relative before:absolute before:inset-0 before:-z-10 before:rounded-xl before:bg-gradient-to-r before:from-indigo-400 before:to-purple-400 before:-m-[1.5px] shrink-0 ${showPrompts ? 'bg-indigo-50 text-indigo-700' : 'bg-white text-indigo-600 hover:bg-slate-50'}`}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.821 1.508-2.363A5.965 5.965 0 0018 11.25c0-3.313-2.687-6-6-6s-6 2.687-6 6c0 1.616.7 3.128 1.842 4.145.85.742 1.508 1.58 1.508 2.363v.192" /></svg>
                                     <span className="hidden sm:inline">Prompt thường dùng</span>
@@ -1649,7 +1649,7 @@ ${text}`;
                                 {showPrompts && (
                                     <>
                                         <div className="fixed inset-0 z-40" onClick={closePrompts}></div>
-                                        <div className={`absolute right-0 bottom-full mb-3 w-[320px] sm:w-[480px] bg-white rounded-2xl shadow-[0_12px_40px_-10px_rgba(79,70,229,0.2)] border border-indigo-100 overflow-hidden z-50 transition-all duration-300 origin-bottom-right ${isClosingPrompts ? 'opacity-0 scale-95 translate-y-2' : 'opacity-100 scale-100 translate-y-0 animate-fade-in-up'}`}>
+                                        <div className={`absolute right-0 bottom-full mb-3 w-[320px] sm:w-[480px] max-w-[calc(100vw-24px)] bg-white rounded-2xl shadow-[0_12px_40px_-10px_rgba(79,70,229,0.2)] border border-indigo-100 overflow-hidden z-50 transition-all duration-300 origin-bottom-right ${isClosingPrompts ? 'opacity-0 scale-95 translate-y-2' : 'opacity-100 scale-100 translate-y-0 animate-fade-in-up'}`}>
                                             <div className="px-4 py-3 border-b border-slate-100 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 flex justify-between items-center">
                                                 <h4 className="text-sm font-bold text-indigo-900 tracking-tight flex items-center gap-2">
                                                     <span className="p-1 bg-indigo-100 text-indigo-600 rounded-md">

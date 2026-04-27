@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-const CURRENT_VERSION = 'v1.0.5'; // Change this to show modal again in future updates
+const CURRENT_VERSION = 'v1.0.6'; // Change this to show modal again in future updates
 
 export const ChangelogModal: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -52,7 +52,7 @@ export const ChangelogModal: React.FC = () => {
                         </div>
                         <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight">Cập nhật mới!</h2>
                     </div>
-                    <p className="text-indigo-100 font-medium text-sm sm:text-base">Bản cập nhật ngày 27/04/2026 - 11:04</p>
+                    <p className="text-indigo-100 font-medium text-sm sm:text-base">Bản cập nhật ngày 27/04/2026 - 11:54</p>
                 </div>
 
                 <div className="p-4 sm:p-6 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
