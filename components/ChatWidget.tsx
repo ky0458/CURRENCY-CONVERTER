@@ -15,6 +15,14 @@ const FALLBACK_MODELS = [
   "gemma-3-12b-it"
 ];
 
+const COMMON_PROMPTS = [
+    "Dịch đoạn văn bản này sang tiếng Anh tự nhiên nhất.",
+    "Tóm tắt ngắn gọn các điểm chính của bài viết.",
+    "Viết một email chuyên nghiệp về việc...",
+    "Hãy giải thích khái niệm này một cách dễ hiểu.",
+    "Kiểm tra và sửa lỗi chính tả, ngữ pháp giúp tôi:"
+];
+
 const SYSTEM_INSTRUCTION = `Bạn là trợ lý AI của Gia Hân, một trợ lý thân thiện, thông minh và hữu ích. Hãy xưng hô là 'em' và gọi người dùng là 'chị' trong giao tiếp thông thường.
 LƯU Ý QUAN TRỌNG: Khi nhận prompt yêu cầu dịch thuật, phần nội dung bản dịch trả về PHẢI được đổi ngôi xưng hô sao cho phù hợp với ngữ cảnh của văn bản gốc (ví dụ: giao tiếp chuyên nghiệp giữa Headhunter và Khách hàng/Ứng viên). Tuyệt đối không áp dụng quy tắc xưng hô 'em-chị' vào bên trong nội dung của bản dịch. LUÔN LUÔN tự kiểm tra lại câu trả lời để đảm bảo tính chính xác.`;
 
@@ -53,6 +61,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState<'normal' | 'deep_translate'>('normal');
   const [showModeGuide, setShowModeGuide] = useState(false);
+  const [showPrompts, setShowPrompts] = useState(false);
   const [isClosingModeGuide, setIsClosingModeGuide] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(true);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -69,6 +78,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
+  const chatImageInputRef = useRef<HTMLInputElement>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -77,6 +87,11 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const currentModelIndexRef = useRef(0);
   const activeModelRef = useRef(FALLBACK_MODELS[0]);
+
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const isCancelingRef = useRef(false);
+  const [touchStartX, setTouchStartX] = useState(0);
+  const [recordingOffset, setRecordingOffset] = useState(0);
 
   useEffect(() => {
     const savedAvatar = localStorage.getItem('ai_avatar');
@@ -93,6 +108,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
         recognitionRef.current.lang = 'vi-VN';
 
         recognitionRef.current.onresult = (event: any) => {
+            if (isCancelingRef.current) {
+                isCancelingRef.current = false;
+                return;
+            }
             const transcript = event.results[0][0].transcript;
             setNewMessage(prev => prev ? `${prev} ${transcript}` : transcript);
         };
@@ -100,6 +119,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
         recognitionRef.current.onerror = (event: any) => {
             console.error("Speech recognition error", event.error);
             setIsRecording(false);
+            setRecordingOffset(0);
             if (event.error === 'not-allowed') {
                 alert("Không thể truy cập Micro. Vui lòng cấp quyền sử dụng Micro cho trình duyệt.");
             }
@@ -107,12 +127,45 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
 
         recognitionRef.current.onend = () => {
             setIsRecording(false);
+            setRecordingOffset(0);
+            isCancelingRef.current = false;
         };
     }
   }, []);
 
+  const handleMicTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
+      if ('touches' in e) {
+          setTouchStartX(e.touches[0].clientX);
+      }
+      startRecording(e);
+  };
+
+  const handleMicTouchMove = (e: React.TouchEvent) => {
+      if (!isRecording) return;
+      const currentX = e.touches[0].clientX;
+      const diff = currentX - touchStartX;
+      if (diff < 0) {
+          setRecordingOffset(diff);
+          if (diff < -100) { // Cancel recording threshold
+              cancelRecording();
+          }
+      }
+  };
+
+  const cancelRecording = () => {
+      isCancelingRef.current = true;
+      if (isRecording && recognitionRef.current) {
+          try {
+              recognitionRef.current.stop();
+          } catch (e) {
+              console.error(e);
+          }
+          setIsRecording(false);
+          setRecordingOffset(0);
+      }
+  };
+
   const startRecording = (e?: React.MouseEvent | React.TouchEvent) => {
-      // Prevent default touch behavior to avoid selecting text or triggering context menus
       if (e && e.type === 'touchstart') {
           if (e.cancelable) {
               e.preventDefault();
@@ -124,6 +177,8 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
       }
       if (!isRecording) {
           try {
+              isCancelingRef.current = false;
+              setRecordingOffset(0);
               recognitionRef.current.start();
               setIsRecording(true);
           } catch (e) {
@@ -146,6 +201,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
               console.error(e);
           }
           setIsRecording(false);
+          setRecordingOffset(0);
       }
   };
 
@@ -172,6 +228,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
       
       if (chatFileInputRef.current) {
           chatFileInputRef.current.value = '';
+      }
+      if (chatImageInputRef.current) {
+          chatImageInputRef.current.value = '';
       }
   };
 
@@ -210,6 +269,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
       const items = e.clipboardData.items;
       for (let i = 0; i < items.length; i++) {
           if (items[i].type.indexOf('image/') !== -1 || items[i].type === 'application/pdf' || items[i].type.includes('word')) {
+              e.preventDefault();
               const file = items[i].getAsFile();
               if (file) {
                   if (file.size > 5 * 1024 * 1024) {
@@ -826,18 +886,19 @@ ${text}`;
 
       {/* Main Chat Window */}
       {isOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center sm:p-6 overflow-hidden">
+        <div className={`fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden ${isFullScreen ? 'p-0' : 'sm:p-6'}`}>
             <div 
                 className={`absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100 animate-fade-in'}`}
                 onClick={() => { if (window.innerWidth < 640) toggleChat() }}
             />
             
             <div 
-                className={`bg-white/95 backdrop-blur-xl w-full max-w-full h-[100dvh] sm:h-[85vh] sm:max-w-5xl sm:rounded-3xl shadow-2xl overflow-hidden flex relative z-10 origin-bottom-left sm:border border-white/60
+                className={`bg-white/95 backdrop-blur-xl w-full max-w-full h-[100dvh] overflow-hidden flex relative z-10 origin-bottom-left sm:border border-white/60
+                    ${isFullScreen ? 'sm:h-[100dvh] sm:max-w-full sm:rounded-none' : 'sm:h-[85vh] sm:max-w-5xl sm:rounded-3xl shadow-2xl'}
                     ${isClosing ? 'animate-scale-out' : 'animate-scale-in'}
                 `}
                 style={{
-                    maxHeight: typeof window !== 'undefined' && window.innerWidth < 640 ? '100dvh' : '85vh',
+                    maxHeight: isFullScreen ? '100dvh' : (typeof window !== 'undefined' && window.innerWidth < 640 ? '100dvh' : '85vh'),
                     animationDuration: '0.3s'
                 }}
             >
@@ -946,6 +1007,11 @@ ${text}`;
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                                                             <line x1="12" y1="17" x2="12" y2="22"></line>
                                                             <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path>
+                                                        </svg>
+                                                    </button>
+                                                    <button onClick={(e) => confirmDeleteSession(session.id, e)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors shrink-0" title="Xóa">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                                                         </svg>
                                                     </button>
                                                 </div>
@@ -1087,11 +1153,20 @@ ${text}`;
                                 </div>
                             </div>
                         </div>
-                        <button onClick={toggleChat} className={`p-2 sm:p-2.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors ${showSidebar ? 'hidden sm:block' : ''}`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        <div className={`flex flex-row items-center sm:gap-1.5 ${showSidebar ? 'hidden sm:flex' : 'flex'}`}>
+                            <button onClick={() => setIsFullScreen(!isFullScreen)} className="hidden sm:flex p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 transition-colors" title={isFullScreen ? "Thu nhỏ (Restore)" : "Phóng to (Maximize)"}>
+                                {isFullScreen ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25" /></svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
+                                )}
+                            </button>
+                            <button onClick={toggleChat} className="p-2 sm:p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-colors" title="Thu gọn widget (Minimize)">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12h-15" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Content: Chat Tab */}
@@ -1411,46 +1486,89 @@ ${text}`;
 
                     <div className="p-4 sm:p-5 bg-white border-t border-slate-100 relative shrink-0">
                         {/* Mode Toggle */}
-                        <div className="flex items-center gap-2 mb-3 max-w-4xl mx-auto">
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chế độ:</span>
-                                <div className="relative">
+                        <div className="flex items-center justify-between gap-2 mb-3 max-w-4xl mx-auto w-full relative z-20">
+                            <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chế độ:</span>
+                                    <div className="relative">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setShowModeGuide(true)} 
+                                            className="text-slate-400 hover:text-indigo-500 transition-colors p-1" 
+                                            title="Hướng dẫn chế độ"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex relative bg-slate-100/80 p-1 rounded-xl ring-1 ring-slate-200/50">
+                                    <div 
+                                        className={`absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
+                                            ${chatMode === 'normal' 
+                                                ? 'translate-x-0 bg-white shadow-[0_2px_8px_-2px_rgba(79,70,229,0.15)] ring-1 ring-indigo-100' 
+                                                : 'translate-x-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_2px_10px_-2px_rgba(99,102,241,0.4)] ring-1 ring-indigo-500/50'
+                                            }`}
+                                    />
                                     <button 
-                                        type="button" 
-                                        onClick={() => setShowModeGuide(true)} 
-                                        className="text-slate-400 hover:text-indigo-500 transition-colors p-1" 
-                                        title="Hướng dẫn chế độ"
+                                        type="button"
+                                        onClick={() => setChatMode('normal')}
+                                        className={`relative z-10 w-1/2 flex justify-center items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors duration-300 ${chatMode === 'normal' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+                                        </svg>
+                                        Đa dụng
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setChatMode('deep_translate')}
+                                        className={`relative z-10 w-1/2 flex justify-center items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors duration-300 ${chatMode === 'deep_translate' ? 'text-white' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
+                                        </svg>
+                                        Dịch chuyên sâu
                                     </button>
                                 </div>
                             </div>
-                            <div className="flex relative bg-slate-100/80 p-1 rounded-xl ring-1 ring-slate-200/50">
-                                <div 
-                                    className={`absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
-                                        ${chatMode === 'normal' 
-                                            ? 'translate-x-0 bg-white shadow-[0_2px_8px_-2px_rgba(79,70,229,0.15)] ring-1 ring-indigo-100' 
-                                            : 'translate-x-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_2px_10px_-2px_rgba(99,102,241,0.4)] ring-1 ring-indigo-500/50'
-                                        }`}
-                                />
-                                <button 
-                                    onClick={() => setChatMode('normal')}
-                                    className={`relative z-10 w-1/2 flex justify-center items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-300 ${chatMode === 'normal' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPrompts(!showPrompts)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
-                                    </svg>
-                                    Bình thường
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.821 1.508-2.363A5.965 5.965 0 0018 11.25c0-3.313-2.687-6-6-6s-6 2.687-6 6c0 1.616.7 3.128 1.842 4.145.85.742 1.508 1.58 1.508 2.363v.192" /></svg>
+                                    <span className="hidden sm:inline">Prompt thường dùng</span>
                                 </button>
-                                <button 
-                                    onClick={() => setChatMode('deep_translate')}
-                                    className={`relative z-10 w-1/2 flex justify-center items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors duration-300 ${chatMode === 'deep_translate' ? 'text-white' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
-                                    </svg>
-                                    Dịch chuyên sâu
-                                </button>
+                                {showPrompts && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setShowPrompts(false)}></div>
+                                        <div className="absolute right-0 bottom-full mb-2 w-[280px] sm:w-[320px] bg-white rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.15)] border border-slate-200 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+                                            <div className="px-3 py-2 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                                                <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Prompt thường dùng</h4>
+                                                <button type="button" onClick={() => setShowPrompts(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200/50">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                                                </button>
+                                            </div>
+                                            <div className="max-h-60 overflow-y-auto">
+                                                {COMMON_PROMPTS.map((prompt, idx) => (
+                                                    <button
+                                                        type="button"
+                                                        key={idx}
+                                                        onClick={() => {
+                                                            setNewMessage(prompt);
+                                                            setShowPrompts(false);
+                                                        }}
+                                                        className="w-full text-left px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors hover:text-indigo-600 group flex justify-between items-center gap-2"
+                                                    >
+                                                        <span className="line-clamp-2">{prompt}</span>
+                                                        <span className="shrink-0 text-xs font-medium text-white bg-indigo-500 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">Sử dụng</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                         <form onSubmit={handleSendMessage} className="flex flex-col gap-2 max-w-4xl mx-auto relative">
@@ -1479,34 +1597,45 @@ ${text}`;
                                     </div>
                                 </div>
                             )}
-                            <div className="flex items-center gap-2">
-                                <div className={`flex items-center overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${!showMobileActions ? 'max-w-0 opacity-0 sm:max-w-[140px] sm:opacity-100' : 'max-w-[140px] opacity-100 gap-2 mr-2'}`}>
-                                    <input type="file" ref={chatFileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*,.pdf,.doc,.docx" />
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                                <div className={`flex items-center gap-1.5 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${!showMobileActions ? 'max-w-0 opacity-0 sm:max-w-none sm:opacity-100' : 'max-w-[200px] sm:max-w-none opacity-100 mr-1.5 sm:mr-0'}`}>
+                                    <input type="file" ref={chatImageInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
+                                    <button
+                                        type="button"
+                                        onClick={() => chatImageInputRef.current?.click()}
+                                        className="p-2.5 sm:p-3 rounded-xl transition-colors border shrink-0 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200"
+                                        title="Chèn ảnh"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                        </svg>
+                                    </button>
+                                    <input type="file" ref={chatFileInputRef} onChange={handleFileSelect} className="hidden" accept=".pdf,.doc,.docx" />
                                     <button
                                         type="button"
                                         onClick={() => chatFileInputRef.current?.click()}
-                                        className="p-3 sm:p-4 rounded-2xl transition-colors border shrink-0 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200"
-                                        title="Đính kèm tệp, ảnh"
+                                        className="p-2.5 sm:p-3 rounded-xl transition-colors border shrink-0 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200"
+                                        title="Đính kèm tệp"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13" />
                                         </svg>
                                     </button>
 
                                     <button 
                                         type="button"
-                                        onMouseDown={startRecording}
+                                        onMouseDown={handleMicTouchStart}
                                         onMouseUp={stopRecording}
                                         onMouseLeave={stopRecording}
-                                        onTouchStart={startRecording}
+                                        onTouchStart={handleMicTouchStart}
                                         onTouchEnd={stopRecording}
                                         onContextMenu={(e) => e.preventDefault()}
-                                        className={`p-3 sm:p-4 rounded-2xl transition-colors border shrink-0 select-none
+                                        className={`p-2.5 sm:p-3 rounded-xl transition-colors border shrink-0 select-none
                                             ${isRecording ? 'bg-rose-100 text-rose-600 border-rose-200' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-indigo-600 border-slate-200'}
                                         `}
                                         title="Nhấn giữ để nói"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 pointer-events-none">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
                                         </svg>
                                     </button>
@@ -1516,7 +1645,7 @@ ${text}`;
                                     <button
                                         type="button"
                                         onClick={() => setShowMobileActions(true)}
-                                        className="p-3 sm:hidden mr-2 rounded-2xl transition-colors border shrink-0 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-200 shadow-sm animate-fade-in-up"
+                                        className="p-2.5 sm:hidden mr-1.5 rounded-xl transition-colors border shrink-0 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-indigo-200 shadow-sm animate-fade-in-up"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -1525,21 +1654,42 @@ ${text}`;
                                 )}
 
                                 {isRecording ? (
-                                    <div className="flex-1 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl flex items-center justify-center gap-4 shadow-inner min-w-0">
-                                        <style>{`
-                                            @keyframes sound-wave {
-                                                0%, 100% { height: 6px; }
-                                                50% { height: 24px; }
-                                            }
-                                        `}</style>
-                                        <div className="flex items-center gap-1.5 h-6">
-                                            <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0s' }}></div>
-                                            <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0.2s' }}></div>
-                                            <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0.4s' }}></div>
-                                            <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0.1s' }}></div>
-                                            <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0.3s' }}></div>
+                                    <div 
+                                        className="flex-1 bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl flex items-center justify-between gap-2 sm:gap-4 shadow-inner min-w-0 relative overflow-hidden select-none"
+                                        onTouchMove={handleMicTouchMove}
+                                    >
+                                        <div 
+                                            className="flex items-center gap-2 sm:gap-3 w-full"
+                                            style={{ transform: `translateX(${recordingOffset}px)`, transition: recordingOffset === 0 ? 'transform 0.2s' : 'none' }}
+                                        >
+                                            <style>{`
+                                                @keyframes sound-wave {
+                                                    0%, 100% { height: 6px; }
+                                                    50% { height: 24px; }
+                                                }
+                                            `}</style>
+                                            <div className="flex items-center gap-1.5 h-6">
+                                                <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0s' }}></div>
+                                                <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0.2s' }}></div>
+                                                <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0.4s' }}></div>
+                                                <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0.1s' }}></div>
+                                                <div className="w-1.5 bg-rose-500 rounded-full" style={{ animation: 'sound-wave 1.2s ease-in-out infinite 0.3s' }}></div>
+                                            </div>
+                                            <span className="text-rose-600 font-semibold text-[14px] sm:text-[15px] animate-pulse truncate flex-1 text-center sm:text-left">
+                                                <span className="hidden sm:inline">Đang thu âm thanh... thả tay để gửi</span>
+                                                <span className="sm:hidden">Vuốt trái để hủy</span>
+                                            </span>
                                         </div>
-                                        <span className="text-rose-600 font-semibold text-[15px] animate-pulse truncate">Đang thu âm thanh... thả tay để gửi</span>
+                                        <button 
+                                            type="button"
+                                            onClick={cancelRecording}
+                                            className="hidden sm:flex shrink-0 p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-100 rounded-lg transition-colors absolute right-2 z-10"
+                                            title="Hủy ghi âm"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
                                     </div>
                                 ) : (
                                     <input 
@@ -1549,7 +1699,7 @@ ${text}`;
                                         onFocus={() => { if (window.innerWidth < 640) setShowMobileActions(false) }}
                                         onPaste={handlePaste}
                                         placeholder="Hỏi AI bất cứ điều gì (Nhấn Ctrl+V để dán ảnh)..." 
-                                        className="flex-1 bg-slate-50 border border-slate-200 outline-none px-4 sm:px-5 py-3 sm:py-4 rounded-2xl text-[15px] font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-300 transition-all text-slate-800 placeholder:text-slate-400 shadow-inner min-w-0"
+                                        className={chatMode === 'deep_translate' ? 'flex-1 bg-white outline-none px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-[14px] sm:text-[15px] font-medium border-none transition-all text-slate-800 placeholder:text-purple-300 shadow-[0_0_20px_rgba(99,102,241,0.4),_0_0_20px_rgba(168,85,247,0.4)] ring-2 ring-purple-300/80 focus:ring-4 focus:ring-purple-400/50' : 'flex-1 bg-slate-50 border border-slate-200 outline-none px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-[14px] sm:text-[15px] font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-300 transition-all text-slate-800 placeholder:text-slate-400 shadow-inner min-w-0'}
                                         disabled={isLoading}
                                     />
                                 )}
@@ -1557,11 +1707,11 @@ ${text}`;
                                 <button 
                                     type="submit" 
                                     disabled={(!newMessage.trim() && !attachment) || isLoading}
-                                    className={`p-3 sm:p-4 rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-center shrink-0
+                                    className={`p-2.5 sm:p-3 rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center shrink-0
                                         ${(newMessage.trim() || attachment) && !isLoading ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}
                                     `}
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 sm:w-6 sm:h-6">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                                         <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
                                     </svg>
                                 </button>
@@ -1593,7 +1743,7 @@ ${text}`;
                                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                                     <div className="font-semibold text-slate-800 mb-1 flex items-center gap-1.5">
                                         <span className="w-2 h-2 rounded-full bg-slate-400"></span>
-                                        Chế độ "Bình thường"
+                                        Chế độ "Đa dụng"
                                     </div>
                                     <p>Sử dụng cho hệ thống hỏi đáp, làm việc thông thường. Trợ lý AI sẽ xưng hô thân thiện "em-chị".</p>
                                     <div className="mt-3 bg-white p-3 rounded-lg border border-slate-200">

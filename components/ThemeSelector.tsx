@@ -775,60 +775,166 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                             {activeTab === 'aiBubble' && (
                                 <>
                                     <button onClick={() => onStyleChange({ aiBubble: 'default' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'default' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50"><div className="px-4 py-2 bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-sm text-xs shadow-sm">Xin chào!</div></div>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('default', false)}
+                                        </div>
                                         <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Mặc định</span></div>
                                     </button>
                                     <button onClick={() => onStyleChange({ aiBubble: 'frog' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'frog' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-3 left-2 w-5 h-5 bg-[#86efac] border-[1.5px] border-[#4ade80] rounded-full flex justify-center items-center z-10"><div className="w-3 h-3 bg-white rounded-full flex justify-center items-center"><div className="w-1.5 h-1.5 bg-slate-900 rounded-full translate-x-[1px]"></div></div></div>
-                                                <div className="absolute -top-3 right-2 w-5 h-5 bg-[#86efac] border-[1.5px] border-[#4ade80] rounded-full flex justify-center items-center z-10"><div className="w-3 h-3 bg-white rounded-full flex justify-center items-center"><div className="w-1.5 h-1.5 bg-slate-900 rounded-full -translate-x-[1px]"></div></div></div>
-                                                <div className="bg-[#86efac] text-[#064e3b] font-medium border-b-[3px] border-[#4ade80] px-3 py-1.5 rounded-xl rounded-tl-sm shadow-sm relative overflow-hidden text-xs">
-                                                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3/4 h-5 bg-[#bbf7d0] rounded-t-[100%] pointer-events-none"></div>
-                                                    <div className="relative z-10">Xin chào!</div>
-                                                </div>
-                                            </div>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('frog', false)}
                                         </div>
                                         <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Ếch xanh</span></div>
                                     </button>
                                     <button onClick={() => onStyleChange({ aiBubble: 'cat' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'cat' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-[#fcd34d] rotate-[-20deg]"></div>
-                                                <div className="absolute -top-2 right-2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-transparent border-b-[#fcd34d] rotate-[20deg]"></div>
-                                                <div className="px-3 py-1.5 rounded-xl rounded-tl-sm text-xs shadow-sm bg-[#fcd34d] text-slate-800 border-b-[3px] border-amber-500 font-medium">Xin chào!</div>
-                                            </div>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('cat', false)}
                                         </div>
                                         <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Mèo vàng</span></div>
                                     </button>
-                                    <button onClick={() => onStyleChange({ aiBubble: 'panda' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'panda' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-1/2 -translate-x-[15px] w-4 h-3 bg-zinc-800 rounded-full rotate-[-20deg]"></div>
-                                                <div className="absolute -top-2 right-1/2 translate-x-[15px] w-4 h-3 bg-zinc-800 rounded-full rotate-[20deg]"></div>
-                                                <div className="px-3 py-1.5 rounded-xl rounded-tl-sm text-xs shadow-sm bg-white text-slate-800 border-[2px] border-zinc-800 font-medium">Xin chào!</div>
-                                            </div>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'dog' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'dog' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('dog', false)}
                                         </div>
-                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Gấu trúc</span></div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cún con</span></div>
                                     </button>
                                     <button onClick={() => onStyleChange({ aiBubble: 'penguin' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'penguin' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[4px] border-r-[4px] border-t-[6px] border-transparent border-t-orange-500 z-10"></div>
-                                                <div className="px-3 py-1.5 rounded-xl rounded-tl-sm text-xs shadow-sm bg-slate-800 text-white border-[2px] border-slate-900 font-medium relative overflow-hidden"><div className="absolute inset-x-2 top-0 bottom-0 bg-white rounded-t-[100%] opacity-20"></div><span className="relative z-10">Xin chào!</span></div>
-                                            </div>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('penguin', false)}
                                         </div>
                                         <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cánh cụt</span></div>
                                     </button>
                                     <button onClick={() => onStyleChange({ aiBubble: 'bear' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'bear' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
-                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50">
-                                            <div className="relative mt-2">
-                                                <div className="absolute -top-2 left-1.5 w-4 h-4 bg-amber-700 rounded-full"></div>
-                                                <div className="absolute -top-2 right-1.5 w-4 h-4 bg-amber-700 rounded-full"></div>
-                                                <div className="px-3 py-1.5 rounded-xl rounded-tl-sm text-xs shadow-sm bg-amber-100 text-amber-900 border-[2px] border-amber-700 font-medium relative z-10">Xin chào!</div>
-                                            </div>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('bear', false)}
                                         </div>
                                         <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Gấu nâu</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'rabbit' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'rabbit' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('rabbit', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Thỏ trắng</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'koala' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'koala' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('koala', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Gấu koala</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'duck' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'duck' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('duck', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Vịt con</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'capybara' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'capybara' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('capybara', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Capybara</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'robot' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'robot' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('robot', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Robot</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'alien' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'alien' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('alien', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Người ngoài hành tinh</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'dinosaur' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'dinosaur' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('dinosaur', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Khủng long</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'unicorn' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'unicorn' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('unicorn', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Kỳ lân</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'ghost' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'ghost' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('ghost', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Ma nhỏ</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'ninja' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'ninja' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('ninja', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Ninja</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'dragon' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'dragon' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('dragon', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Rồng lửa</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'fox' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'fox' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('fox', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cáo nhỏ</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'panda' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'panda' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('panda', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Gấu trúc</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'hamster' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'hamster' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('hamster', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Chuột Hamster</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'owl' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'owl' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('owl', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cú mèo</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'sloth' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'sloth' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('sloth', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Lười</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'otter' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'otter' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('otter', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Rái cá</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'turtle' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'turtle' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('turtle', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Rùa biển</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'bee' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'bee' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('bee', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Ong mật</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'whale' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'whale' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('whale', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Cá voi</span></div>
+                                    </button>
+                                    <button onClick={() => onStyleChange({ aiBubble: 'octopus' })} className={`relative overflow-hidden w-full h-[70px] sm:h-24 rounded-xl border-2 transition-all group ${appStyles.aiBubble === 'octopus' ? 'border-primary-500 ring-4 ring-primary-500/20 shadow-md' : 'border-slate-200 hover:border-slate-300'}`}>
+                                        <div className="absolute inset-x-0 top-0 bottom-6 flex items-center justify-center bg-slate-50 overflow-hidden">
+                                            {renderBubblePreview('octopus', false)}
+                                        </div>
+                                        <div className="absolute inset-x-0 bottom-0 py-0.5 bg-white border-t border-slate-100 flex justify-center items-center"><span className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest">Bạch tuộc</span></div>
                                     </button>
                                 </>
                             )}
