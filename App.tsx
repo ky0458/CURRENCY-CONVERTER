@@ -1274,7 +1274,7 @@ const AppContent: React.FC = () => {
       {/* Notes Manager Button/UI */}
       <NotesManager />
       {/* Chat Widget */}
-      <ChatWidget appStyles={appStyles} />
+      <ChatWidget appStyles={appStyles} theme={theme} />
     </div>
   );
 };

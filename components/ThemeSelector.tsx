@@ -428,8 +428,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                          <div className="flex flex-wrap gap-2 sm:gap-3 mb-6 pb-4 border-b border-slate-100">
                              {[
                                  { id: 'header', label: 'Chủ đề' },
-                                  { id: 'userBubble', label: 'Hộp thoại (Bạn)' },
-                                 { id: 'aiBubble', label: 'Hộp thoại (AI)' }
+                                  { id: 'userBubble', label: 'Hộp thoại (Bạn)' }
                              ].map(tab => (
                                  <button
                                      key={tab.id}

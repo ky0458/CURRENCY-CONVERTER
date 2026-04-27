@@ -4,6 +4,7 @@ import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
 import { AppStyles } from '../types';
+import { THEME_COLORS } from '../constants';
 
 // Initialize Gemini API
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -16,11 +17,8 @@ const FALLBACK_MODELS = [
 ];
 
 const COMMON_PROMPTS = [
-    "Dịch đoạn văn bản này sang tiếng Anh tự nhiên nhất.",
-    "Tóm tắt ngắn gọn các điểm chính của bài viết.",
-    "Viết một email chuyên nghiệp về việc...",
-    "Hãy giải thích khái niệm này một cách dễ hiểu.",
-    "Kiểm tra và sửa lỗi chính tả, ngữ pháp giúp tôi:"
+    "Viết một bài đăng tuyển dụng thu hút ứng viên, đầy đủ thông tin, tránh bị vi phạm, không được duyệt bài theo chính sách của Facebook",
+    "Viết 1 đoạn tin nhắn bằng tiếng Trung thể hiện đã cố gắng đẩy tuyển dụng nhưng vẫn chưa có ứng viên phù hợp và đề xuất hoàn lại tiền cọc nếu quý khách cảm thấy hiệu quả chưa như mong muốn và có thể thử tìm phương án tuyển dụng khác."
 ];
 
 const SYSTEM_INSTRUCTION = `Bạn là trợ lý AI của Gia Hân, một trợ lý thân thiện, thông minh và hữu ích. Hãy xưng hô là 'em' và gọi người dùng là 'chị' trong giao tiếp thông thường.
@@ -31,6 +29,9 @@ interface ChatMessage {
   text: string;
   sender: 'user' | 'ai';
   timestamp: number;
+  attachmentData?: string;
+  attachmentMimeType?: string;
+  attachmentName?: string;
 }
 
 interface ChatSession {
@@ -45,9 +46,10 @@ interface ChatSession {
 
 interface ChatWidgetProps {
   appStyles: AppStyles;
+  theme: string;
 }
 
-export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
+export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -59,9 +61,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [chatMode, setChatMode] = useState<'normal' | 'deep_translate'>('normal');
+  const [chatMode, setChatMode] = useState<'normal' | 'deep_translate' | 'writing'>('normal');
   const [showModeGuide, setShowModeGuide] = useState(false);
   const [showPrompts, setShowPrompts] = useState(false);
+  const [isClosingPrompts, setIsClosingPrompts] = useState(false);
   const [isClosingModeGuide, setIsClosingModeGuide] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(true);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -70,6 +73,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
   const [editingTitle, setEditingTitle] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [aiName, setAiName] = useState('Trợ lý AI của Gia Hân');
+  const [isEditingAiName, setIsEditingAiName] = useState(false);
+  const aiNameInputRef = useRef<HTMLInputElement>(null);
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [isDeletingMultiple, setIsDeletingMultiple] = useState(false);
   
@@ -97,6 +103,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
     const savedAvatar = localStorage.getItem('ai_avatar');
     if (savedAvatar) {
       setAvatarUrl(savedAvatar);
+    }
+    const savedAiName = localStorage.getItem('ai_name');
+    if (savedAiName) {
+      setAiName(savedAiName);
     }
 
     // Initialize Speech Recognition
@@ -266,35 +276,41 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
 
   const handlePaste = (e: React.ClipboardEvent) => {
       if (attachment) return; // Only one file allowed
-      const items = e.clipboardData.items;
-      for (let i = 0; i < items.length; i++) {
-          if (items[i].type.indexOf('image/') !== -1 || items[i].type === 'application/pdf' || items[i].type.includes('word')) {
-              e.preventDefault();
-              const file = items[i].getAsFile();
-              if (file) {
-                  if (file.size > 5 * 1024 * 1024) {
-                      alert("Vui lòng dán file nhỏ hơn 5MB.");
-                      return;
-                  }
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                      const base64String = reader.result as string;
-                      const base64Data = base64String.split(',')[1];
-                      let nameFallback = 'document';
-                      if (items[i].type.indexOf('image/') !== -1) nameFallback = 'image.png';
-                      else if (items[i].type === 'application/pdf') nameFallback = 'document.pdf';
-                      else nameFallback = 'document.docx';
-
-                      setAttachment({
-                          data: base64Data,
-                          mimeType: file.type || items[i].type,
-                          name: file.name || nameFallback
-                      });
-                  };
-                  reader.readAsDataURL(file);
+      let file: File | null = null;
+      if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+          file = e.clipboardData.files[0];
+      } else {
+          const items = e.clipboardData.items;
+          for (let i = 0; i < items.length; i++) {
+              if (items[i].kind === 'file') {
+                  file = items[i].getAsFile();
+                  break;
               }
-              break; // Prevent multiple file pastes at once
           }
+      }
+
+      if (file && (file.type.indexOf('image/') !== -1 || file.type.includes('pdf') || file.type.includes('word') || file.name?.endsWith('.docx') || file.name?.endsWith('.pdf') || file.name?.endsWith('.txt'))) {
+          e.preventDefault();
+          if (file.size > 5 * 1024 * 1024) {
+              alert("Vui lòng dán file nhỏ hơn 5MB.");
+              return;
+          }
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              const base64String = reader.result as string;
+              const base64Data = base64String.split(',')[1];
+              let nameFallback = 'document';
+              if (file!.type.indexOf('image/') !== -1) nameFallback = 'image.png';
+              else if (file!.type === 'application/pdf') nameFallback = 'document.pdf';
+              else nameFallback = 'document.docx';
+
+              setAttachment({
+                  data: base64Data,
+                  mimeType: file!.type || 'application/octet-stream',
+                  name: file!.name || nameFallback
+              });
+          };
+          reader.readAsDataURL(file);
       }
   };
 
@@ -412,13 +428,19 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
   }, [messages, isOpen, isLoading]);
 
   const saveSession = async (sessionId: string, title: string, newMessages: ChatMessage[], isPinned: boolean = false) => {
+    // Không lưu base64 của file đính kèm vào localStorage để tránh tràn bộ nhớ
+    const messagesToSave = newMessages.map(msg => {
+        const { attachmentData, ...rest } = msg;
+        return rest;
+    });
+
     const sessionData = {
       id: sessionId,
       title,
       isPinned,
       updatedAt: Date.now(),
       createdAt: sessions.find(s => s.id === sessionId)?.createdAt || Date.now(),
-      messages: newMessages
+      messages: messagesToSave
     };
 
     // Save to local storage
@@ -459,7 +481,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles }) => {
       id: Date.now().toString(),
       text: uiText,
       sender: 'user',
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      attachmentData: currentAttachment?.data,
+      attachmentMimeType: currentAttachment?.mimeType,
+      attachmentName: currentAttachment?.name
     };
     
     let currentMessages = [...messages, userMsg];
@@ -504,6 +529,26 @@ Nghĩa tiếng Việt: Nghĩa tiếng Việt tương ứng
 3. TUYỆT ĐỐI KHÔNG giải thích, KHÔNG thêm chữ thừa. Chỉ trả về kết quả dịch theo đúng định dạng.
 
 Input cần dịch:
+${text}`;
+    } else if (chatMode === 'writing') {
+        promptText = `[TẠO BÀI VIẾT TUYỂN DỤNG]
+Bạn là một headhunter hoặc chuyên gia tuyển dụng chuyên nghiệp và luôn xưng 'em', gọi người dùng là 'chị'. Hãy viết một bài đăng tuyển dụng để đăng Facebook hoặc Threads hoặc content ngắn, hấp dẫn, thu hút ứng viên dựa trên thông tin sau.
+Bài viết TUYỆT ĐỐI TUÂN THỦ cấu trúc sau (nếu thông tin được cung cấp không có thì có thể bỏ qua phần đó):
+1. Tiêu đề hấp dẫn (bao gồm tên vị trí hoặc mức lương tùy theo độ nổi bật).
+2. Tên công ty (nếu có).
+3. Mô tả công việc ngắn gọn, súc tích.
+4. Yêu cầu công việc.
+5. Quyền lợi ứng viên.
+6. Thời gian và địa điểm làm việc.
+7. Thông tin liên hệ ứng tuyển rõ ràng.
+
+Lưu ý quan trọng: 
+- Viết nội dung làm sao để tránh vi phạm các điều khoản nền tảng, tránh các từ khóa nhạy cảm làm bài viết không được duyệt.
+- Hạn chế lạm dụng quá nhiều biểu tượng cảm xúc (emoji), chỉ dùng vừa phải để làm điểm nhấn.
+- Trình bày rõ ràng, chuyên nghiệp, tạo cảm giác đáng tin cậy. Chú ý phân bổ xuống dòng, dấu cách và thụt dòng phù hợp để phân tầng nội dung cho dễ quan sát và đọc hiểu.
+- Không giải thích thêm, chỉ trả về nội dung bài viết.
+
+Thông tin công việc:
 ${text}`;
     } else {
         promptText = `[HÃY KIỂM TRA KỸ LẠI CÂU TRẢ LỜI CỦA BẠN TRƯỚC KHI XUẤT KẾT QUẢ. TRẢ LỜI TỰ NHIÊN, NGẮN GỌN VÀ ĐÚNG TRỌNG TÂM]
@@ -629,6 +674,31 @@ ${text}`;
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  useEffect(() => {
+      if (isEditingAiName && aiNameInputRef.current) {
+          aiNameInputRef.current.focus();
+      }
+  }, [isEditingAiName]);
+
+  const handleAiNameSave = () => {
+      setIsEditingAiName(false);
+      localStorage.setItem('ai_name', aiName);
+  };
+  
+  const handleAiNameKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+          handleAiNameSave();
+      }
+  };
+
+  const closePrompts = () => {
+      setIsClosingPrompts(true);
+      setTimeout(() => {
+          setShowPrompts(false);
+          setIsClosingPrompts(false);
+      }, 300);
   };
 
   const createNewChat = () => {
@@ -933,7 +1003,8 @@ ${text}`;
                     <div className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] p-3 space-y-4 w-full sm:w-72">
                         <button 
                             onClick={createNewChat}
-                            className="w-full flex items-center gap-2 p-3.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 font-medium text-sm"
+                            className="w-full flex items-center gap-2 p-3.5 rounded-xl text-white transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 font-medium text-sm hover:brightness-110"
+                            style={{ backgroundColor: THEME_COLORS.find(c => c.id === theme)?.hex || '#4f46e5' }}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -1094,9 +1165,9 @@ ${text}`;
                 </div>
 
                 {/* Main Chat Area */}
-                <div className="flex-1 flex flex-col min-w-0 bg-white relative z-10">
+                <div className={`flex-1 flex flex-col min-w-0 relative z-10 transition-colors duration-300 bg-slate-50`}>
                     {/* Header */}
-                    <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 bg-white/50 backdrop-blur-md shrink-0">
+                    <div className="flex items-center justify-between p-3 sm:p-5 border-b border-slate-100 bg-white/50 backdrop-blur-md shrink-0 relative z-20">
                         <div className="flex items-center gap-3 sm:gap-4">
                             <button 
                                 id="chat-sidebar-toggle"
@@ -1145,7 +1216,30 @@ ${text}`;
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 className="font-extrabold text-slate-800 text-base sm:text-lg tracking-tight">Trợ lý AI của Gia Hân</h3>
+                                    {isEditingAiName ? (
+                                        <div className="flex items-center gap-2">
+                                            <input 
+                                                ref={aiNameInputRef}
+                                                type="text" 
+                                                value={aiName}
+                                                onChange={(e) => setAiName(e.target.value)}
+                                                onKeyDown={handleAiNameKeyDown}
+                                                onBlur={handleAiNameSave}
+                                                className="font-extrabold text-slate-800 text-base sm:text-lg tracking-tight bg-slate-100 border border-slate-200 rounded px-2 py-0.5 outline-none focus:ring-2 focus:ring-indigo-500 w-[180px] sm:w-[240px]"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 group/title">
+                                            <h3 className="font-extrabold text-slate-800 text-base sm:text-lg tracking-tight">{aiName}</h3>
+                                            <button 
+                                                onClick={() => setIsEditingAiName(true)}
+                                                className="p-1 text-slate-400 opacity-0 group-hover/title:opacity-100 hover:text-indigo-600 transition-all rounded hover:bg-slate-100"
+                                                title="Đổi tên"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                                            </button>
+                                        </div>
+                                    )}
                                     <p className="text-[10px] sm:text-xs text-emerald-600 font-semibold flex items-center gap-1.5">
                                         <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
                                         Đang hoạt động
@@ -1170,33 +1264,44 @@ ${text}`;
                     </div>
 
                     {/* Content: Chat Tab */}
-                    <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] space-y-6 transition-colors duration-300 ${chatMode === 'deep_translate' ? 'bg-gradient-to-b from-indigo-50/30 to-purple-50/30' : 'bg-slate-50/30'}`} ref={scrollRef}>
+                    <div className={`flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] space-y-6 transition-colors duration-300 ${chatMode === 'deep_translate' ? 'bg-gradient-to-b from-indigo-50/30 to-purple-50/30' : chatMode === 'writing' ? 'bg-gradient-to-b from-amber-50/30 to-orange-50/30' : 'bg-transparent'}`} ref={scrollRef}>
                         {messages.map((msg) => {
                             const isMe = msg.sender === 'user';
                             
                             return (
-                                <div key={msg.id} className={`flex gap-3 sm:gap-4 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                    {!isMe && (
-                                        <div className="w-10 h-10 shrink-0 flex items-end">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md ring-2 ring-white overflow-hidden">
-                                                {avatarUrl ? (
-                                                    <img src={avatarUrl} alt="AI Avatar" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M5.25 12h13.5m-13.5 3H3m18 0h-1.5m-11.25 6v-1.5m4.5 1.5v-1.5M12 3v1.5m-3.75 3h7.5A2.25 2.25 0 0 1 18 9.75v4.5a2.25 2.25 0 0 1-2.25 2.25h-7.5A2.25 2.25 0 0 1 6 14.25v-4.5A2.25 2.25 0 0 1 8.25 7.5Z" />
-                                                    </svg>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                    <div className={`max-w-[85%] sm:max-w-[75%] flex flex-col min-w-0 ${isMe ? 'items-end' : 'items-start'}`}>
-                                        <div className="group relative min-w-0 w-full">
+                                <div key={msg.id} className={`flex gap-3 sm:gap-4 ${isMe ? 'justify-end' : 'justify-start w-full'}`}>
+                                    <div className={`flex flex-col min-w-0 ${isMe ? 'items-end max-w-[85%] sm:max-w-[75%]' : 'items-start w-full max-w-[100%] sm:max-w-[95%]'}`}>
+                                        <div className={`group relative min-w-0 ${isMe ? 'w-auto' : 'w-full'}`}>
                                                                                         {(() => {
                                                 const style = isMe ? appStyles.userBubble : appStyles.aiBubble;
+                                                const hasImage = msg.attachmentMimeType?.startsWith('image/');
+                                                const hasOtherFile = !!msg.attachmentMimeType && !hasImage;
+
                                                 const content = isMe ? (
-                                                    <div className="break-words whitespace-pre-wrap leading-relaxed relative z-10 font-medium">{msg.text}</div>
+                                                    <div className="flex flex-col gap-2 relative z-10">
+                                                        {hasImage && (
+                                                            <div className="bg-white/10 p-1.5 rounded-xl border border-white/20 inline-block">
+                                                                <img 
+                                                                    src={`data:${msg.attachmentMimeType};base64,${msg.attachmentData}`} 
+                                                                    alt="attachment" 
+                                                                    className="max-w-full max-h-[250px] rounded-lg object-contain" 
+                                                                />
+                                                            </div>
+                                                        )}
+                                                        {hasOtherFile && (
+                                                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-black/10 border border-black/5">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-white/80 shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                                                                <span className="text-xs font-semibold text-white truncate min-w-0">{msg.attachmentName || 'Tệp đính kèm'}</span>
+                                                            </div>
+                                                        )}
+                                                        {msg.text && (
+                                                            <div className="break-words whitespace-pre-wrap leading-relaxed font-medium">
+                                                                {msg.text.startsWith('[Đã đính kèm tệp:') ? msg.text.replace(/\[Đã đính kèm tệp: .*\]\n/, '') : msg.text}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 ) : (
-                                                    <div className={`markdown-body prose prose-sm sm:prose-base max-w-none w-full prose-p:leading-relaxed prose-pre:overflow-x-auto relative z-10 ${
+                                                    <div className={`markdown-body prose prose-slate sm:prose-base max-w-3xl w-full leading-loose prose-p:mb-5 prose-li:mb-2 prose-ul:mb-5 prose-ol:mb-5 prose-pre:overflow-x-auto relative z-10 p-2 sm:p-4 rounded-xl ${
                                                         style === 'robot' ? 'prose-pre:bg-slate-900 prose-pre:text-green-400 prose-headings:text-slate-100 prose-a:text-green-500 prose-pre:border prose-pre:border-slate-700' :
                                                         style === 'alien' ? 'prose-pre:bg-lime-950 prose-pre:text-lime-400 prose-headings:text-lime-300 prose-a:text-lime-500 prose-pre:border prose-pre:border-lime-800' :
                                                         style === 'dinosaur' ? 'prose-pre:bg-emerald-900 prose-pre:text-emerald-100 prose-headings:text-emerald-800 prose-a:text-emerald-600' :
@@ -1215,11 +1320,13 @@ ${text}`;
                                                         style === 'bee' ? 'prose-pre:bg-yellow-950 prose-pre:text-yellow-200 prose-headings:text-yellow-900 prose-a:text-yellow-700' :
                                                         style === 'whale' ? 'prose-pre:bg-sky-950 prose-pre:text-sky-200 prose-headings:text-sky-100 prose-a:text-sky-300' :
                                                         style === 'octopus' ? 'prose-pre:bg-purple-950 prose-pre:text-purple-200 prose-headings:text-purple-100 prose-a:text-purple-300' :
-                                                        'prose-pre:bg-slate-800 prose-pre:text-slate-100 prose-headings:text-slate-800 prose-a:text-indigo-600'
+                                                        'prose-pre:bg-slate-50 prose-pre:text-slate-800 prose-headings:text-slate-800 prose-a:text-indigo-600'
                                                     }`}>
                                                         <ReactMarkdown>{msg.text}</ReactMarkdown>
                                                     </div>
                                                 );
+
+                                                if (!isMe) return content;
 
                                                 if (style === 'frog') return (
                                                     <div className="relative mt-4">
@@ -1465,31 +1572,24 @@ ${text}`;
                             );
                         })}
                         {isLoading && (
-                            <div className="flex gap-3 sm:gap-4 justify-start">
-                                <div className="w-10 h-10 shrink-0 flex items-end">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md ring-2 ring-white overflow-hidden">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div className="max-w-[80%] flex flex-col items-start animate-fade-in-up" style={{ animationDuration: '0.3s' }}>
-                                    <div className="px-5 py-4 rounded-2xl bg-white text-slate-700 rounded-bl-none border border-slate-200/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex items-center gap-2">
-                                        <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.5s' }}></span>
-                                        <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1.5s' }}></span>
-                                        <span className="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '600ms', animationDuration: '1.5s' }}></span>
+                            <div className="flex gap-3 sm:gap-4 justify-start w-full">
+                                <div className="w-full flex flex-col items-start animate-fade-in-up mt-1 px-2 sm:px-4 max-w-3xl" style={{ animationDuration: '0.3s' }}>
+                                    <div className="py-2 flex items-center gap-2">
+                                        <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.5s' }}></span>
+                                        <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '1.5s' }}></span>
+                                        <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '600ms', animationDuration: '1.5s' }}></span>
                                     </div>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    <div className="p-4 sm:p-5 bg-white border-t border-slate-100 relative shrink-0">
+                    <div className="p-3 sm:p-5 z-20 bg-white border-t border-slate-200/60 shadow-[0_-12px_24px_-12px_rgba(0,0,0,0.1)] relative shrink-0">
                         {/* Mode Toggle */}
                         <div className="flex items-center justify-between gap-2 mb-3 max-w-4xl mx-auto w-full relative z-20">
                             <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chế độ:</span>
+                                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider hidden sm:inline">Chế độ:</span>
                                     <div className="relative">
                                         <button 
                                             type="button" 
@@ -1501,68 +1601,79 @@ ${text}`;
                                         </button>
                                     </div>
                                 </div>
-                                <div className="flex relative bg-slate-100/80 p-1 rounded-xl ring-1 ring-slate-200/50">
+                                <div className="flex relative bg-slate-100/80 p-1 rounded-xl ring-1 ring-slate-200/50 w-[300px]">
                                     <div 
-                                        className={`absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
+                                        className={`absolute inset-y-1 left-1 w-[calc(33.333%-4px)] rounded-lg transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
                                             ${chatMode === 'normal' 
                                                 ? 'translate-x-0 bg-white shadow-[0_2px_8px_-2px_rgba(79,70,229,0.15)] ring-1 ring-indigo-100' 
-                                                : 'translate-x-full bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_2px_10px_-2px_rgba(99,102,241,0.4)] ring-1 ring-indigo-500/50'
+                                                : chatMode === 'deep_translate'
+                                                ? 'translate-x-[102%] bg-gradient-to-r from-indigo-500 to-purple-500 shadow-[0_2px_10px_-2px_rgba(99,102,241,0.4)] ring-1 ring-indigo-500/50'
+                                                : 'translate-x-[208%] bg-gradient-to-r from-amber-500 to-orange-500 shadow-[0_2px_10px_-2px_rgba(245,158,11,0.4)] ring-1 ring-amber-500/50'
                                             }`}
                                     />
                                     <button 
                                         type="button"
                                         onClick={() => setChatMode('normal')}
-                                        className={`relative z-10 w-1/2 flex justify-center items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors duration-300 ${chatMode === 'normal' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                                        className={`relative z-10 w-1/3 flex justify-center items-center gap-1.5 px-1 py-1 text-[11px] font-semibold rounded-lg transition-colors duration-300 ${chatMode === 'normal' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
-                                        </svg>
-                                        Đa dụng
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" /></svg>
+                                        <span className="truncate">Đa dụng</span>
                                     </button>
                                     <button 
                                         type="button"
                                         onClick={() => setChatMode('deep_translate')}
-                                        className={`relative z-10 w-1/2 flex justify-center items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors duration-300 ${chatMode === 'deep_translate' ? 'text-white' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                                        className={`relative z-10 w-1/3 flex justify-center items-center gap-1.5 px-1 py-1 text-[11px] font-semibold rounded-lg transition-colors duration-300 ${chatMode === 'deep_translate' ? 'text-white' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
-                                        </svg>
-                                        Dịch chuyên sâu
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" /></svg>
+                                        <span className="truncate">Dịch thuật</span>
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setChatMode('writing')}
+                                        className={`relative z-10 w-1/3 flex justify-center items-center gap-1.5 px-1 py-1 text-[11px] font-semibold rounded-lg transition-colors duration-300 ${chatMode === 'writing' ? 'text-white' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5 shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                                        <span className="truncate">Viết bài</span>
                                     </button>
                                 </div>
                             </div>
                             <div className="relative">
                                 <button
                                     type="button"
-                                    onClick={() => setShowPrompts(!showPrompts)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+                                    onClick={() => showPrompts ? closePrompts() : setShowPrompts(true)}
+                                    className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-xl transition-all shadow-sm border border-transparent bg-clip-padding relative before:absolute before:inset-0 before:-z-10 before:rounded-xl before:bg-gradient-to-r before:from-indigo-400 before:to-purple-400 before:-m-[1.5px] ${showPrompts ? 'bg-indigo-50 text-indigo-700' : 'bg-white text-indigo-600 hover:bg-slate-50'}`}
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.821 1.508-2.363A5.965 5.965 0 0018 11.25c0-3.313-2.687-6-6-6s-6 2.687-6 6c0 1.616.7 3.128 1.842 4.145.85.742 1.508 1.58 1.508 2.363v.192" /></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.821 1.508-2.363A5.965 5.965 0 0018 11.25c0-3.313-2.687-6-6-6s-6 2.687-6 6c0 1.616.7 3.128 1.842 4.145.85.742 1.508 1.58 1.508 2.363v.192" /></svg>
                                     <span className="hidden sm:inline">Prompt thường dùng</span>
                                 </button>
                                 {showPrompts && (
                                     <>
-                                        <div className="fixed inset-0 z-40" onClick={() => setShowPrompts(false)}></div>
-                                        <div className="absolute right-0 bottom-full mb-2 w-[280px] sm:w-[320px] bg-white rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.15)] border border-slate-200 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
-                                            <div className="px-3 py-2 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                                                <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Prompt thường dùng</h4>
-                                                <button type="button" onClick={() => setShowPrompts(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200/50">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                                        <div className="fixed inset-0 z-40" onClick={closePrompts}></div>
+                                        <div className={`absolute right-0 bottom-full mb-3 w-[320px] sm:w-[480px] bg-white rounded-2xl shadow-[0_12px_40px_-10px_rgba(79,70,229,0.2)] border border-indigo-100 overflow-hidden z-50 transition-all duration-300 origin-bottom-right ${isClosingPrompts ? 'opacity-0 scale-95 translate-y-2' : 'opacity-100 scale-100 translate-y-0 animate-fade-in-up'}`}>
+                                            <div className="px-4 py-3 border-b border-slate-100 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 flex justify-between items-center">
+                                                <h4 className="text-sm font-bold text-indigo-900 tracking-tight flex items-center gap-2">
+                                                    <span className="p-1 bg-indigo-100 text-indigo-600 rounded-md">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.821 1.508-2.363A5.965 5.965 0 0018 11.25c0-3.313-2.687-6-6-6s-6 2.687-6 6c0 1.616.7 3.128 1.842 4.145.85.742 1.508 1.58 1.508 2.363v.192" /></svg>
+                                                    </span>
+                                                    Gợi ý Prompt mẫu
+                                                </h4>
+                                                <button type="button" onClick={closePrompts} className="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg hover:bg-white/60 transition-colors">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
                                                 </button>
                                             </div>
-                                            <div className="max-h-60 overflow-y-auto">
+                                            <div className="max-h-72 overflow-y-auto p-2 space-y-1">
                                                 {COMMON_PROMPTS.map((prompt, idx) => (
                                                     <button
                                                         type="button"
                                                         key={idx}
                                                         onClick={() => {
                                                             setNewMessage(prompt);
-                                                            setShowPrompts(false);
+                                                            closePrompts();
                                                         }}
-                                                        className="w-full text-left px-3 py-2.5 text-sm text-slate-600 hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors hover:text-indigo-600 group flex justify-between items-center gap-2"
+                                                        className="w-full text-left px-3 py-2.5 text-sm text-slate-700 bg-transparent hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-xl transition-all hover:text-indigo-700 group flex justify-between items-center gap-3"
                                                     >
-                                                        <span className="line-clamp-2">{prompt}</span>
-                                                        <span className="shrink-0 text-xs font-medium text-white bg-indigo-500 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">Sử dụng</span>
+                                                        <span className="line-clamp-2 leading-relaxed flex-1">{prompt}</span>
+                                                        <span className="shrink-0 text-[11px] font-bold text-white bg-indigo-500 px-2.5 py-1 rounded-md opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all shadow-sm">Sử dụng</span>
                                                     </button>
                                                 ))}
                                             </div>
@@ -1698,8 +1809,14 @@ ${text}`;
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         onFocus={() => { if (window.innerWidth < 640) setShowMobileActions(false) }}
                                         onPaste={handlePaste}
-                                        placeholder="Hỏi AI bất cứ điều gì (Nhấn Ctrl+V để dán ảnh)..." 
-                                        className={chatMode === 'deep_translate' ? 'flex-1 bg-white outline-none px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-[14px] sm:text-[15px] font-medium border-none transition-all text-slate-800 placeholder:text-purple-300 shadow-[0_0_20px_rgba(99,102,241,0.4),_0_0_20px_rgba(168,85,247,0.4)] ring-2 ring-purple-300/80 focus:ring-4 focus:ring-purple-400/50' : 'flex-1 bg-slate-50 border border-slate-200 outline-none px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-[14px] sm:text-[15px] font-medium focus:ring-4 focus:ring-indigo-50 focus:border-indigo-300 transition-all text-slate-800 placeholder:text-slate-400 shadow-inner min-w-0'}
+                                        placeholder="Hỏi AI bất cứ điều gì..." 
+                                        className={`flex-1 outline-none px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl text-[14px] sm:text-[15px] font-medium transition-all text-slate-800 focus:ring-4 min-w-0 border ${
+                                            chatMode === 'deep_translate' 
+                                                ? 'bg-white border-transparent shadow-[0_0_20px_rgba(168,85,247,0.4)] ring-2 ring-purple-300/80 focus:ring-purple-400/50 placeholder:text-purple-300' 
+                                                : chatMode === 'writing'
+                                                ? 'bg-white border-transparent shadow-[0_0_20px_rgba(245,158,11,0.4)] ring-2 ring-orange-300/80 focus:ring-orange-400/50 placeholder:text-orange-300'
+                                                : 'bg-slate-50 border-slate-200 focus:ring-indigo-50 focus:border-indigo-300 placeholder:text-slate-400 shadow-inner'
+                                        }`}
                                         disabled={isLoading}
                                     />
                                 )}
@@ -1758,17 +1875,32 @@ ${text}`;
                                 <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                                     <div className="font-semibold text-indigo-700 mb-1 flex items-center gap-1.5">
                                         <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                        Chế độ "Dịch chuyên sâu"
+                                        Chế độ "Dịch thuật"
                                     </div>
-                                    <p>Tự động khử xưng hô "em-chị", tinh chỉnh văn phong dịch thuật tự nhiên nhất cho giao tiếp <strong>Headhunter - Đối tác/Ứng viên</strong>.</p>
+                                    <p>Tối ưu hóa để dịch văn bản chuyên ngành nhân sự, khử xưng hô không phù hợp, giữ nguyên văn phong chuyên nghiệp khi giao tiếp với <strong>Ứng viên</strong> hoặc <strong>Khách hàng/Đối tác nước ngoài</strong>.</p>
                                     <div className="mt-3 bg-white/60 p-3 rounded-lg border border-indigo-100">
-                                        <p className="font-semibold text-[13px] text-indigo-800 mb-1">💡 Mẹo prompt hiệu quả:</p>
+                                        <p className="font-semibold text-[13px] text-indigo-800 mb-1">💡 Hướng dẫn sử dụng hiệu quả:</p>
                                         <ul className="list-disc pl-4 text-[13px] space-y-1 text-indigo-700/80">
-                                            <li>Chỉ cần <strong>dán trực tiếp</strong> đoạn văn bản cần dịch, không cần thêm lệnh "Hãy dịch..."</li>
-                                            <li>Ghi chú thêm mức độ trang trọng nếu cần (vd: <i>"Dùng từ ngữ lịch sự nịnh nọt ứng viên C-level"</i>)</li>
+                                            <li>Chỉ cần <strong>dán văn bản</strong> cần dịch (Tiếng Việt, Anh, Trung, Nhật, Hàn...), AI sẽ tự động nhận diện ngôn ngữ và dịch qua lại một cách tự nhiên.</li>
+                                            <li>Để độ chính xác cao hơn, dán JD (Job Description) vào trước để AI học ngữ cảnh trước khi dịch.</li>
                                         </ul>
                                     </div>
-                                    <p className="mt-2 text-xs italic text-indigo-600 font-medium">Lưu ý: Chỉ dịch thuần túy, nội dung AI không tự chèn thêm bình luận.</p>
+                                    <p className="mt-2 text-xs italic text-indigo-600 font-medium">Lưu ý: Chế độ này tập trung 100% vào việc dịch, AI sẽ không tự ý thêm các câu dư thừa như "Dưới đây là phần dịch của em:".</p>
+                                </div>
+
+                                <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                                    <div className="font-semibold text-amber-700 mb-1 flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                                        Chế độ "Viết bài"
+                                    </div>
+                                    <p>Tối ưu hóa để viết post tuyển dụng đăng Facebook, Threads, content ngắn gọn, thu hút, chuẩn cấu trúc.</p>
+                                    <div className="mt-3 bg-white/60 p-3 rounded-lg border border-amber-100">
+                                        <p className="font-semibold text-[13px] text-amber-800 mb-1">💡 Mẹo prompt hiệu quả:</p>
+                                        <ul className="list-disc pl-4 text-[13px] space-y-1 text-amber-700/80">
+                                            <li>Chỉ cần dán <strong>JD (Mô tả công việc)</strong> hoặc thông tin ngắn gọn, AI sẽ tự động phân tích và tạo bài hoàn chỉnh.</li>
+                                            <li>Yêu cầu thêm (vd: <i>"Thêm câu call-to-action hài hước"</i>).</li>
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                             
