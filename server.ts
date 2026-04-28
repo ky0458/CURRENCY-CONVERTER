@@ -17,15 +17,14 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://giahanconverter.vercel.app'
+  ],
+  credentials: true
+}));
 app.use(express.json({ limit: '50mb' }));
-
-// Tweak Cross-Origin headers to allow Firebase Auth Popups when deployed
-app.use((req, res, next) => {
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
-  next();
-});
 
 // Connect to MongoDB
 if (process.env.MONGODB_URI) {

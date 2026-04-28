@@ -2,10 +2,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   onAuthStateChanged, 
-  signInWithRedirect,
-  signInWithPopup,
-  signOut,
-  getRedirectResult,
+  signInWithPopup, 
+  signOut, 
   User,
   AuthError
 } from 'firebase/auth';
@@ -34,15 +32,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [notification, setNotification] = useState<NotificationState | null>(null);
 
   useEffect(() => {
-    // Check for redirect result upon returning to app
-    getRedirectResult(auth).then((result) => {
-      if (result) {
-        showNotification('Đăng nhập Google thành công!', 'success');
-      }
-    }).catch((error) => {
-      handleAuthError(error, 'Google');
-    });
-
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
@@ -157,15 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await signInWithPopup(auth, googleProvider);
       showNotification('Đăng nhập Google thành công!', 'success');
     } catch (error: any) {
-      if (error.code === 'auth/unauthorized-domain' || error.message.includes('Cross-Origin-Opener-Policy')) {
-        try {
-          await signInWithRedirect(auth, googleProvider);
-        } catch (redirectError: any) {
-          handleAuthError(redirectError, 'Google');
-        }
-      } else {
-        handleAuthError(error, 'Google');
-      }
+      handleAuthError(error, 'Google');
     }
   };
 
