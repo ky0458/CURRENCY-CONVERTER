@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-const CURRENT_VERSION = 'v1.0.6'; // Change this to show modal again in future updates
+const CURRENT_VERSION = 'v1.0.7'; // Change this to show modal again in future updates
 
 export const ChangelogModal: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -52,11 +52,27 @@ export const ChangelogModal: React.FC = () => {
                         </div>
                         <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight">Cập nhật mới!</h2>
                     </div>
-                    <p className="text-indigo-100 font-medium text-sm sm:text-base">Bản cập nhật ngày 27/04/2026 - 11:54</p>
+                    <p className="text-indigo-100 font-medium text-sm sm:text-base">Bản cập nhật ngày 29/04/2026 - 00:06</p>
                 </div>
 
                 <div className="p-4 sm:p-6 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]">
                     <ul className="space-y-4">
+                        <li className="flex gap-4">
+                            <div className="shrink-0 mt-1">
+                                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-800 text-lg mb-1">Đồng Bộ Dữ Liệu Đám Mây Đa Nền Tảng</h3>
+                                <p className="text-slate-600 text-sm leading-relaxed">
+                                    Giờ đây toàn bộ lịch sử <b>Trợ lý AI, Ghi chú (Take Note), Lịch sử Quy đổi ngoại tệ, Lịch sử Doanh thu và Thống kê tính phí</b> đã được sao lưu an toàn trên Cloud! Đăng nhập bằng Google để <b>trải nghiệm liền mạch</b> trên tất cả thiết bị của bạn. Dữ liệu khi chưa đăng nhập cũng sẽ tự động được gộp lại khi bạn bắt đầu liên kết tài khoản.
+                                </p>
+                            </div>
+                        </li>
+
                         <li className="flex gap-4">
                             <div className="shrink-0 mt-1">
                                 <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">

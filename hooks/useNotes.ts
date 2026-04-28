@@ -18,20 +18,64 @@ export const useNotes = () => {
 
   // Load Data
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
       setIsLoading(true);
       try {
-        const savedNotes = localStorage.getItem('app_notes');
-        const savedTags = localStorage.getItem('app_note_tags');
+        const savedNotesStr = localStorage.getItem('app_notes');
+        const savedTagsStr = localStorage.getItem('app_note_tags');
         
-        let parsedNotes = [];
-        let parsedTags = DEFAULT_TAGS;
+        let localNotes = savedNotesStr ? JSON.parse(savedNotesStr) : [];
+        let localTags = savedTagsStr ? JSON.parse(savedTagsStr) : DEFAULT_TAGS;
 
-        if (savedNotes) parsedNotes = JSON.parse(savedNotes);
-        if (savedTags) parsedTags = JSON.parse(savedTags);
+        if (user && user.uid) {
+          try {
+            const response = await fetch(`/api/notes?uid=${user.uid}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data) {
+                // Merge DB data with local data
+                const dbNotes = data.notes || [];
+                const dbTags = data.tags || [];
+
+                // Simple merge logic: DB takes precedence, but we keep local items that are not in DB
+                // This is a naive merge, assuming local items not in DB were created offline/before login
+                const mergedNotesMap = new Map();
+                localNotes.forEach((n: Note) => mergedNotesMap.set(n.id, n));
+                dbNotes.forEach((n: Note) => mergedNotesMap.set(n.id, n));
+                
+                const mergedTagsMap = new Map();
+                localTags.forEach((t: NoteTag) => mergedTagsMap.set(t.id, t));
+                dbTags.forEach((t: NoteTag) => mergedTagsMap.set(t.id, t));
+
+                const finalNotes = Array.from(mergedNotesMap.values()).sort((a, b) => b.timestamp - a.timestamp);
+                const finalTags = Array.from(mergedTagsMap.values());
+
+                setNotes(finalNotes);
+                setTags(finalTags);
+
+                // Persist the merged data to storage
+                localStorage.setItem('app_notes', JSON.stringify(finalNotes));
+                localStorage.setItem('app_note_tags', JSON.stringify(finalTags));
+
+                // Sync the merged result back to DB
+                await fetch('/api/notes', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ uid: user.uid, notes: finalNotes, tags: finalTags })
+                });
+                
+                setIsLoading(false);
+                return;
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching notes from DB', err);
+          }
+        }
         
-        setNotes(parsedNotes);
-        setTags(parsedTags);
+        // Fallback to local if not logged in or DB fetch failed
+        setNotes(localNotes);
+        setTags(localTags);
       } catch (e) {
         console.error("Failed to load notes", e);
       } finally {
@@ -41,10 +85,22 @@ export const useNotes = () => {
     loadData();
   }, [user]);
 
-  // Helper to save everything to LocalStorage
-  const persistData = (newNotes: Note[], newTags: NoteTag[]) => {
+  // Helper to save everything to LocalStorage & DB
+  const persistData = async (newNotes: Note[], newTags: NoteTag[]) => {
     localStorage.setItem('app_notes', JSON.stringify(newNotes));
     localStorage.setItem('app_note_tags', JSON.stringify(newTags));
+    
+    if (user && user.uid) {
+      try {
+        await fetch('/api/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: user.uid, notes: newNotes, tags: newTags })
+        });
+      } catch (err) {
+        console.error('Error syncing notes to DB', err);
+      }
+    }
   };
 
   const saveNotes = (newNotes: Note[]) => {

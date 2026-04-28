@@ -8,27 +8,71 @@ export const useRevenueTracker = () => {
 
   // Load Data & Sync Logic
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
+      let localRecords: RevenueRecord[] = [];
       try {
         const savedRecords = localStorage.getItem('app_revenue_records');
         if (savedRecords) {
-          const parsed = JSON.parse(savedRecords);
-          setRecords(parsed);
+          localRecords = JSON.parse(savedRecords);
         }
       } catch (e) {
         console.error("Failed to load revenue records", e);
       }
+
+      if (user && user.uid) {
+        try {
+          const response = await fetch(`/api/statistics-history?uid=${user.uid}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.revenues) {
+              const dbRevenues = data.revenues;
+              
+              const mergedMap = new Map();
+              localRecords.forEach((i: RevenueRecord) => mergedMap.set(i.id, i));
+              dbRevenues.forEach((i: RevenueRecord) => mergedMap.set(i.id, i));
+              
+              const finalRecords = Array.from(mergedMap.values()).sort((a: any, b: any) => b.timestamp - a.timestamp);
+              
+              setRecords(finalRecords);
+              localStorage.setItem('app_revenue_records', JSON.stringify(finalRecords));
+              
+              fetch('/api/statistics-history/revenues', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uid: user.uid, revenues: finalRecords })
+              }).catch(console.error);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch revenue records from DB", err);
+        }
+      }
+      setRecords(localRecords);
     };
     loadData();
   }, [user]);
 
   // Unified Persist Function
-  const persistData = (newRecords: RevenueRecord[]) => {
+  const persistData = async (newRecords: RevenueRecord[]) => {
     // 1. Update State
     setRecords(newRecords);
 
     // 2. Always save to LocalStorage (as cache/backup)
     localStorage.setItem('app_revenue_records', JSON.stringify(newRecords));
+    
+    // 3. Save to DB
+    if (user && user.uid) {
+      try {
+        await fetch('/api/statistics-history/revenues', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: user.uid, revenues: newRecords })
+        });
+      } catch (err) {
+        console.error("Failed to sync revenues to DB", err);
+      }
+    }
   };
 
   const addRecord = (

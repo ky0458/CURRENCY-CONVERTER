@@ -327,16 +327,34 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
     }
   };
 
-  // Fetch sessions from local storage
+  // Fetch sessions from local storage and sync with DB
   useEffect(() => {
-    const loadSessions = () => {
-      const localSessions = localStorage.getItem('app_chat_sessions');
-      if (localSessions) {
-        const parsed = JSON.parse(localSessions);
-        setSessions(parsed);
-      } else {
-        setSessions([]);
+    const loadSessions = async () => {
+      const localSessionsStr = localStorage.getItem('app_chat_sessions');
+      const parsedLocal = localSessionsStr ? JSON.parse(localSessionsStr) : [];
+      
+      if (user && user.uid) {
+        try {
+          const localOnly = parsedLocal.filter((s: ChatSession) => !s.userId || s.userId === 'local');
+          const response = await fetch('/api/chat/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uid: user.uid, localSessions: localOnly })
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data) && data.length > 0) {
+              setSessions(data);
+              localStorage.setItem('app_chat_sessions', JSON.stringify(data));
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('Failed to sync chat history', err);
+        }
       }
+      
+      setSessions(parsedLocal);
     };
     loadSessions();
   }, [user]);
@@ -434,8 +452,12 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
         return rest;
     });
 
-    const sessionData = {
+    const isLocal = !user || !user.uid;
+    const sessionUserId = isLocal ? 'local' : user.uid;
+
+    const sessionData: ChatSession = {
       id: sessionId,
+      userId: sessionUserId,
       title,
       isPinned,
       updatedAt: Date.now(),
@@ -443,23 +465,36 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
       messages: messagesToSave
     };
 
-    // Save to local storage
+    // Save to local storage state
     const updatedSessions = [...sessions];
     const existingIndex = updatedSessions.findIndex(s => s.id === sessionId);
     if (existingIndex >= 0) {
-      updatedSessions[existingIndex] = { ...updatedSessions[existingIndex], ...sessionData, userId: 'local' };
+      updatedSessions[existingIndex] = sessionData;
     } else {
-      updatedSessions.push({ ...sessionData, userId: 'local' });
+      updatedSessions.push(sessionData);
     }
     
     // Sort by updatedAt desc
     updatedSessions.sort((a, b) => b.updatedAt - a.updatedAt);
     
-    // Keep only last 50 sessions to save memory
+    // Keep only last 50 sessions to save memory locally
     const trimmedSessions = updatedSessions.slice(0, 50);
     
     setSessions(trimmedSessions);
     localStorage.setItem('app_chat_sessions', JSON.stringify(trimmedSessions));
+
+    // Save to DB if user is logged in
+    if (!isLocal) {
+      try {
+        await fetch('/api/chat/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: sessionUserId, session: sessionData })
+        });
+      } catch (err) {
+        console.error('Failed to sync session to DB', err);
+      }
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -726,10 +761,28 @@ ${text}`;
 
   const togglePin = async (session: ChatSession, e: React.MouseEvent) => {
     e.stopPropagation();
-    const updatedSessions = sessions.map(s => 
-      s.id === session.id ? { ...s, isPinned: !s.isPinned } : s
-    );
-    persistSessions(updatedSessions);
+    const updatedSessions = [...sessions];
+    const index = updatedSessions.findIndex(s => s.id === session.id);
+    if (index >= 0) {
+      updatedSessions[index] = { ...updatedSessions[index], isPinned: !updatedSessions[index].isPinned };
+      
+      // Update local storage via persistSessions
+      setSessions(updatedSessions);
+      localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+      
+      // Update DB if authenticated
+      if (user && user.uid && updatedSessions[index].userId !== 'local') {
+          try {
+              await fetch('/api/chat/sessions', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ uid: user.uid, session: updatedSessions[index] })
+              });
+          } catch (err) {
+              console.error('Failed to update pin state in DB', err);
+          }
+      }
+    }
   };
 
   const handleSessionClick = (sessionId: string) => {
@@ -771,10 +824,29 @@ ${text}`;
         return;
     }
     
-    const updatedSessions = sessions.map(s => 
-        s.id === sessionId ? { ...s, title: editingTitle.trim() } : s
-    );
-    persistSessions(updatedSessions);
+    let updatedSessionToSave: ChatSession | null = null;
+    const updatedSessions = sessions.map(s => {
+        if (s.id === sessionId) {
+            updatedSessionToSave = { ...s, title: editingTitle.trim() };
+            return updatedSessionToSave;
+        }
+        return s;
+    });
+    
+    setSessions(updatedSessions);
+    localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+    
+    if (updatedSessionToSave && user && user.uid && (updatedSessionToSave as ChatSession).userId !== 'local') {
+        try {
+            await fetch('/api/chat/sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uid: user.uid, session: updatedSessionToSave })
+            });
+        } catch (err) {
+            console.error('Failed to update session title in DB', err);
+        }
+    }
     
     setEditingSessionId(null);
   };
@@ -793,18 +865,33 @@ ${text}`;
 
   const executeDelete = async () => {
     if (isDeletingMultiple) {
+        const deletedIds = Array.from(selectedSessions);
         const updatedSessions = sessions.filter(s => !selectedSessions.has(s.id));
-        persistSessions(updatedSessions);
+        setSessions(updatedSessions);
+        localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
         if (currentSessionId && selectedSessions.has(currentSessionId)) {
             createNewChat();
         }
         setIsSelectionMode(false);
         setSelectedSessions(new Set());
+        
+        // Delete from DB if authenticated
+        if (user && user.uid) {
+            deletedIds.forEach(id => {
+                fetch(`/api/chat/sessions/${id}?uid=${user.uid}`, { method: 'DELETE' }).catch(console.error);
+            });
+        }
     } else if (sessionToDelete) {
         const updatedSessions = sessions.filter(s => s.id !== sessionToDelete);
-        persistSessions(updatedSessions);
+        setSessions(updatedSessions);
+        localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
         if (currentSessionId === sessionToDelete) {
           createNewChat();
+        }
+        
+        // Delete from DB if authenticated
+        if (user && user.uid) {
+            fetch(`/api/chat/sessions/${sessionToDelete}?uid=${user.uid}`, { method: 'DELETE' }).catch(console.error);
         }
     }
     setShowDeleteConfirm(false);

@@ -31,16 +31,47 @@ export const useCurrencyConverter = () => {
     };
     loadSettings();
 
-    const loadHistory = () => {
+    const loadHistory = async () => {
       const savedHistory = localStorage.getItem('conversion_history');
+      let localHistory: ConversionHistoryItem[] = [];
       if (savedHistory) {
         const parsed = JSON.parse(savedHistory);
-        const migrated = parsed.map((item: any) => ({
+        localHistory = parsed.map((item: any) => ({
             ...item,
             type: item.type || 'convert'
         }));
-        setHistory(migrated);
       }
+
+      if (user && user.uid) {
+        try {
+          const response = await fetch(`/api/convert-history?uid=${user.uid}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.conversions) {
+              const dbConversions = data.conversions;
+              
+              const mergedMap = new Map();
+              localHistory.forEach((i: ConversionHistoryItem) => mergedMap.set(i.id, i));
+              dbConversions.forEach((i: ConversionHistoryItem) => mergedMap.set(i.id, i));
+              
+              const finalHistory = Array.from(mergedMap.values()).sort((a: any, b: any) => b.timestamp - a.timestamp);
+              
+              setHistory(finalHistory);
+              localStorage.setItem('conversion_history', JSON.stringify(finalHistory));
+              
+              fetch('/api/convert-history/conversions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uid: user.uid, conversions: finalHistory })
+              }).catch(console.error);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch convert history from DB", err);
+        }
+      }
+      setHistory(localHistory);
     };
     loadHistory();
   }, [user]);
@@ -55,9 +86,21 @@ export const useCurrencyConverter = () => {
       localStorage.setItem('cny_use_custom_mode', String(useCustom));
   };
 
-  const saveHistory = (newHistory: ConversionHistoryItem[]) => {
+  const saveHistory = async (newHistory: ConversionHistoryItem[]) => {
     setHistory(newHistory);
     localStorage.setItem('conversion_history', JSON.stringify(newHistory));
+    
+    if (user && user.uid) {
+      try {
+        await fetch('/api/convert-history/conversions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: user.uid, conversions: newHistory })
+        });
+      } catch (err) {
+        console.error("Failed to sync conversions to DB", err);
+      }
+    }
   };
 
   const addToHistory = (
