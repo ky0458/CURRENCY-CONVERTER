@@ -18,22 +18,51 @@ const app = express();
 const PORT = 3000;
 
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://giahanconverter.vercel.app'
-  ],
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:3000', 
+      'https://giahanconverter.vercel.app'
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn('Blocked by CORS for origin:', origin);
+      callback(null, false); // Allow it conditionally or return an error depending on strictness. Let's return error so it fails properly if wrong domain
+      // callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
 
-// Connect to MongoDB
-if (process.env.MONGODB_URI) {
-  mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('Connected to MongoDB Atlas'))
-    .catch((err) => console.error('Failed to connect to MongoDB', err));
-} else {
-  console.warn('MONGODB_URI environment variable is not set. MongoDB will not be connected.');
+// Database connection helper for serverless environment
+async function connectToDatabase() {
+  if (mongoose.connection.readyState === 1) {
+    return; // Already connected
+  }
+  if (!process.env.MONGODB_URI) {
+    console.warn('MONGODB_URI is not set. Skipping DB connection.');
+    return;
+  }
+  try {
+    console.log('Connecting to MongoDB Atlas...');
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('Successfully connected to MongoDB Atlas');
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    throw error;
+  }
 }
+
+// Ensure DB connection before handling API requests
+app.use('/api', async (req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error: Database connection failed' });
+  }
+});
 
 // API Routes
 app.get('/api/db-status', (req, res) => {
