@@ -66,7 +66,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } catch (error: any) {
           // Suppress permission errors to avoid console noise if Firestore rules are strict
-          if (error.code !== 'permission-denied') {
+          // Also suppress 'Failed to fetch' which often occurs on tab close/visibility change
+          if (error.code !== 'permission-denied' && error.message !== 'Failed to fetch') {
              console.error("Presence update error:", error);
           }
         }

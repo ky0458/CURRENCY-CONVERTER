@@ -12,7 +12,7 @@ import { NotesManager } from './components/NotesManager';
 import { ChatWidget } from './components/ChatWidget'; // Import ChatWidget
 import { UserMenu } from './components/UserMenu';
 import { DocumentSection } from './components/DocumentSection';
-import { ChangelogModal } from './components/ChangelogModal'; // Added import
+import { UpdateNotifications } from './components/UpdateNotifications';
 import { useCurrencyConverter } from './hooks/useCurrencyConverter';
 import { useRevenueTracker } from './hooks/useRevenueTracker';
 import { RevenueStatsSection } from './components/RevenueStatsSection';
@@ -532,7 +532,7 @@ const AppContent: React.FC = () => {
         }}
     >
       <ToastNotification />
-      <ChangelogModal />
+
 
       {/* History Modal */}
       {showHistory && createPortal(
@@ -560,7 +560,10 @@ const AppContent: React.FC = () => {
 
       {/* GLOBAL FIXED CONTROLS */}
       <div className="absolute top-3 right-3 sm:top-5 sm:right-6 z-[100] flex items-center gap-3 animate-fade-in-up">
-            {/* CNY Rate Configuration Button (Absolute Position) */}
+        {/* Notifications */}
+        <UpdateNotifications hasBackground={hasBackground} />
+
+        {/* CNY Rate Configuration Button (Absolute Position) */}
         <div className="relative" ref={rateConfigRef}>
             <button
                 onClick={() => setShowRateConfig(!showRateConfig)}

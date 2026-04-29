@@ -3,6 +3,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ThemeColor } from '../types';
+import { ProfileModal } from './ProfileModal';
+import { doc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 interface UserMenuProps {
   hasBackgroundImage?: boolean;
@@ -13,7 +16,35 @@ export const UserMenu: React.FC<UserMenuProps> = ({ hasBackgroundImage = false, 
   const { user, loginGoogle, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [dbPhotoUrl, setDbPhotoUrl] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let unsubscribe: () => void;
+    if (user) {
+        const path = `users/${user.uid}`;
+        const userRef = doc(db, 'users', user.uid);
+        import('firebase/firestore').then(({ onSnapshot }) => {
+            unsubscribe = onSnapshot(userRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.photoUrl) setDbPhotoUrl(data.photoUrl);
+                }
+            }, (error: any) => {
+                const isPermissionDenied = error.code === 'permission-denied' || error.message?.includes('permission') || error.message?.includes('Missing or insufficient permissions');
+                if (!isPermissionDenied) {
+                    import('../utils/firestoreErrorHandler').then(({ handleFirestoreError, OperationType }) => {
+                        handleFirestoreError(error, OperationType.GET, path);
+                    });
+                }
+            });
+        });
+    }
+    return () => {
+        if (unsubscribe) unsubscribe();
+    };
+  }, [user]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -85,13 +116,13 @@ export const UserMenu: React.FC<UserMenuProps> = ({ hasBackgroundImage = false, 
           <>
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className={`w-10 h-10 rounded-full p-0.5 transition-all duration-300 overflow-hidden flex items-center justify-center border
+              className={`w-10 h-10 rounded-full p-[2px] transition-all duration-300 overflow-hidden flex items-center justify-center border
                 ${hasBackgroundImage 
-                  ? 'bg-white/20 backdrop-blur-md hover:bg-white/30 text-white shadow-lg shadow-black/5 border-white/20' 
-                  : 'bg-white hover:bg-primary-50 text-primary-600 shadow-md hover:shadow-xl hover:-translate-y-0.5 border-transparent'}`}
+                  ? `bg-white/20 backdrop-blur-md hover:bg-white/30 text-white shadow-lg shadow-black/5 border-white/20`
+                  : `bg-white hover:bg-primary-50 text-primary-600 shadow-md hover:shadow-xl hover:-translate-y-0.5 border-transparent`}`}
             >
-              {user.photoURL ? (
-                  <img src={user.photoURL} alt={user.displayName || "User"} className="w-full h-full rounded-full object-cover ring-2 ring-white/50" />
+              {dbPhotoUrl || user.photoURL ? (
+                  <img src={dbPhotoUrl || user.photoURL || undefined} alt={user.displayName || "User"} className="w-full h-full rounded-full object-cover" />
               ) : (
                   <div 
                     className={`w-full h-full rounded-full flex items-center justify-center font-bold text-sm
@@ -109,6 +140,18 @@ export const UserMenu: React.FC<UserMenuProps> = ({ hasBackgroundImage = false, 
                     <p className="text-xs text-slate-400 truncate">{user.email}</p>
                 </div>
                 
+                <button
+                    onClick={() => { setIsOpen(false); setShowProfileModal(true); }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 text-slate-700 rounded-xl transition-colors font-medium text-sm mt-1 group"
+                  >
+                    <div className="p-1.5 bg-slate-100 rounded-full group-hover:bg-slate-200 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                      </svg>
+                    </div>
+                    Hồ sơ của tôi
+                </button>
+
                 <button
                     onClick={handleLogoutClick}
                     className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-red-50 text-red-500 rounded-xl transition-colors font-medium text-sm mt-1 group"
@@ -159,6 +202,14 @@ export const UserMenu: React.FC<UserMenuProps> = ({ hasBackgroundImage = false, 
               </div>
           </div>,
           document.body
+      )}
+
+      {showProfileModal && user && (
+          <ProfileModal 
+            onClose={() => setShowProfileModal(false)} 
+            user={user} 
+            theme={theme} 
+          />
       )}
     </>
   );

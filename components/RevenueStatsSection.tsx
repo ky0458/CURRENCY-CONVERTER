@@ -72,6 +72,8 @@ export const RevenueStatsSection: React.FC<RevenueStatsSectionProps> = ({
       selectionSetRef.current = selectedIds;
   }, [selectedIds]);
 
+  const [showAllList, setShowAllList] = useState(false);
+
   // Filter Logic - Only Month
   const filteredRecords = useMemo(() => {
       return records.filter(r => {
@@ -246,6 +248,15 @@ export const RevenueStatsSection: React.FC<RevenueStatsSectionProps> = ({
       return `Tháng ${m}/${y}`;
   }, [selectedMonth]);
 
+  useEffect(() => {
+      setShowAllList(false);
+  }, [selectedMonth]);
+
+  const displayedRecords = useMemo(() => {
+      if (isSelectionMode) return filteredRecords; // Always show all when selecting
+      return showAllList ? filteredRecords : filteredRecords.slice(0, 3);
+  }, [filteredRecords, showAllList, isSelectionMode]);
+
   return (
     <div className="animate-fade-in-up space-y-6 relative pb-20">
        
@@ -309,7 +320,7 @@ export const RevenueStatsSection: React.FC<RevenueStatsSectionProps> = ({
        )}
 
        {/* Detail List */}
-       <div className="space-y-3">
+       <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
             {filteredRecords.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 opacity-50">
@@ -319,7 +330,7 @@ export const RevenueStatsSection: React.FC<RevenueStatsSectionProps> = ({
                 </div>
             ) : (
                 <>
-                    {filteredRecords.map((record) => {
+                    {displayedRecords.map((record) => {
                         const tag = getTag(record.tagId);
                         const finalColor = record.badgeColor || (tag ? tag.color : themeHex);
                         const stageRevenue = Math.floor(record.totalRevenue / 2);
@@ -435,6 +446,27 @@ export const RevenueStatsSection: React.FC<RevenueStatsSectionProps> = ({
                             </div>
                         )
                     })}
+                    
+                    {!isSelectionMode && filteredRecords.length > 3 && (
+                        <div className="pt-2">
+                            <button 
+                                onClick={() => setShowAllList(!showAllList)}
+                                className="w-full py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 shadow-sm active:scale-95"
+                            >
+                                {showAllList ? (
+                                    <>
+                                        Thu gọn
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z" clipRule="evenodd" /></svg>
+                                    </>
+                                ) : (
+                                    <>
+                                        Xem tất cả {filteredRecords.length} bản ghi
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </>
             )}
        </div>

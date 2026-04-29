@@ -10,6 +10,7 @@ import { NotebookContent } from './models/NotebookContent.js';
 
 import { ConvertHistory } from './models/ConvertHistory.js';
 import { StatisticsHistory } from './models/StatisticsHistory.js';
+import { UpdateVersion } from './models/UpdateVersion.js';
 
 dotenv.config();
 
@@ -279,6 +280,19 @@ app.post('/api/statistics-history/revenues', async (req, res) => {
     res.json(content);
   } catch (err) {
     console.error('Error saving statistics records:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/updater-versions', async (req, res) => {
+  try {
+    if (!process.env.MONGODB_URI) {
+      return res.json([]);
+    }
+    const versions = await UpdateVersion.find().sort({ timestamp: -1 }).lean();
+    res.json(versions);
+  } catch (err) {
+    console.error('Error fetching updater versions:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
