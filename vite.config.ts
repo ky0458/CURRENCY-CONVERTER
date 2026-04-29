@@ -20,27 +20,27 @@ export default defineConfig(({ mode }) => {
             maximumFileSizeToCacheInBytes: 10 * 1024 * 1024 // 10MB
           },
           manifest: {
-            name: 'Currency Converter',
-            short_name: 'CurrencyConv',
-            description: 'A modern, AI-powered currency converter.',
+            name: 'Gia Hân Converter',
+            short_name: 'Gia Hân',
+            description: 'Ứng dụng Gia Hân Converter',
             theme_color: '#ffffff',
             background_color: '#ffffff',
             display: 'standalone',
             icons: [
               {
-                src: 'pwa-192x192.svg',
+                src: 'app-icon-192.png',
                 sizes: '192x192',
-                type: 'image/svg+xml'
+                type: 'image/png'
               },
               {
-                src: 'pwa-512x512.svg',
+                src: 'app-icon-512.png',
                 sizes: '512x512',
-                type: 'image/svg+xml'
+                type: 'image/png'
               },
               {
-                src: 'pwa-512x512.svg',
+                src: 'app-icon-512.png',
                 sizes: '512x512',
-                type: 'image/svg+xml',
+                type: 'image/png',
                 purpose: 'any maskable'
               }
             ]

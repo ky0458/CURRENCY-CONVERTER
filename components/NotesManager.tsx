@@ -55,6 +55,9 @@ export const NotesManager: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isItemsPerPageOpen, setIsItemsPerPageOpen] = useState(false);
   
+  // Search Collapse State
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+
   // Selection & Delete State (Notes)
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set<string>());
@@ -280,13 +283,6 @@ export const NotesManager: React.FC = () => {
       setNewTagColor(tag.color);
       // Auto scroll to top to show edit form
       scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-      // Auto focus input AND Select All Text
-      setTimeout(() => {
-          if (tagInputRef.current) {
-              tagInputRef.current.focus();
-              tagInputRef.current.select(); // Added select() here
-          }
-      }, 100);
   };
 
   const cancelEditTag = () => {
@@ -646,6 +642,15 @@ export const NotesManager: React.FC = () => {
             {viewMode === 'list' && !isSelectionMode && (
                 <>
                     <button 
+                        onClick={() => setIsSearchExpanded(!isSearchExpanded)}
+                        className={`p-2.5 rounded-xl transition-colors flex items-center justify-center ${isSearchExpanded ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
+                        title={isSearchExpanded ? "Thu gọn tìm kiếm" : "Mở tìm kiếm"}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                        </svg>
+                    </button>
+                    <button 
                         onClick={() => setViewMode('add-tag')}
                         className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors flex items-center gap-2 px-4"
                         title="Quản lý thẻ"
@@ -783,7 +788,7 @@ export const NotesManager: React.FC = () => {
                                             className="w-full text-sm px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-white transition-all text-slate-800" 
                                             value={newTagName} 
                                             onChange={(e) => setNewTagName(e.target.value)} 
-                                            autoFocus 
+                                            autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="off" name="tag_input_name"
                                             placeholder="Nhập tên thẻ..." 
                                         />
                                     </div>
@@ -906,7 +911,7 @@ export const NotesManager: React.FC = () => {
                                         placeholder="Nhập nội dung ghi chú của bạn..." 
                                         value={newNoteContent} 
                                         onChange={(e) => setNewNoteContent(e.target.value)} 
-                                        autoFocus 
+                                        autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="off" name="note_input_name"
                                     />
                                 </div>
                                 <div className="relative shrink-0 mt-4" ref={tagDropdownRef}>
@@ -941,42 +946,45 @@ export const NotesManager: React.FC = () => {
                     {viewMode === 'list' && (
                         <div className="flex flex-col h-full overflow-hidden animate-fade-in-up bg-slate-50/50">
                             {/* Search & Filter Bar */}
-                            <div className="bg-white border-b border-slate-100 shadow-sm shrink-0 z-20 p-3 sm:px-4 flex items-center gap-2">
-                                <div className="relative flex-1">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-slate-400">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                                        </svg>
+                            <div className={`transition-all duration-300 overflow-hidden ${isSearchExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                <div className="bg-white border-b border-slate-100 shadow-sm shrink-0 z-20 p-3 sm:px-4 flex items-center gap-2">
+                                    <div className="relative flex-1">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-slate-400">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                            </svg>
+                                        </div>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Tìm kiếm theo nội dung đã ghi chú" 
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="off" name="search_input_name"
+                                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800 font-medium placeholder:text-slate-400"
+                                        />
+                                        {searchQuery && (
+                                            <button 
+                                                onClick={() => setSearchQuery('')}
+                                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" /></svg>
+                                            </button>
+                                        )}
                                     </div>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Tìm kiếm theo nội dung đã ghi chú" 
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800 font-medium placeholder:text-slate-400"
-                                    />
-                                    {searchQuery && (
-                                        <button 
-                                            onClick={() => setSearchQuery('')}
-                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" /></svg>
-                                        </button>
-                                    )}
+                                    <button 
+                                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                                        className={`shrink-0 flex items-center justify-center p-2 rounded-xl border transition-all ${showAdvancedFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" /></svg>
+                                        {(selectedTags.length > 0 || selectedStatuses.length > 0 || selectedDates.length > 0) && (
+                                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
+                                        )}
+                                    </button>
                                 </div>
-                                <button 
-                                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                                    className={`shrink-0 flex items-center justify-center p-2 rounded-xl border transition-all ${showAdvancedFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" /></svg>
-                                    {(selectedTags.length > 0 || selectedStatuses.length > 0 || selectedDates.length > 0) && (
-                                        <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
-                                    )}
-                                </button>
                             </div>
 
                             {/* Quick Filters (Swiper) */}
-                            {!showAdvancedFilters && (
+                            {(!showAdvancedFilters && isSearchExpanded) && (
                                 <div className="bg-white border-b border-slate-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] shrink-0 z-10 pb-2">
                                     {/* Tags Quick Filter */}
                                     <div className="px-4 py-2 overflow-x-auto hide-scrollbar flex items-center gap-3 snap-x snap-mandatory scroll-pl-4 select-none touch-pan-x">
@@ -1007,7 +1015,7 @@ export const NotesManager: React.FC = () => {
                             )}
 
                             {/* Advanced Filters Dropdown/Panel */}
-                            {showAdvancedFilters && (
+                            {(showAdvancedFilters && isSearchExpanded) && (
                                 <div className="bg-white border-b border-slate-100 shadow-inner px-4 py-3 text-sm animate-fade-in flex flex-col gap-3">
                                     <div className="flex flex-col gap-1.5">
                                         <span className="font-bold text-slate-700 text-xs uppercase tracking-wide">Trạng thái</span>
@@ -1127,12 +1135,11 @@ export const NotesManager: React.FC = () => {
                                                         }
                                                     }}
                                                     className={`
-                                                        px-4 py-3 border-l-4 group transition-all relative overflow-hidden flex items-start touch-manipulation select-none animate-fade-in-up rounded-xl
+                                                        px-4 py-3 border-l-4 group transition-all relative overflow-hidden flex items-start touch-manipulation select-none rounded-xl
                                                         ${isSelectionMode ? 'cursor-pointer' : ''}
                                                         ${isSelectionMode && isSelected ? 'bg-indigo-50 border-indigo-500 ring-1 ring-indigo-500 rounded-lg' : 'border-y border-transparent border-b-slate-100'}
                                                     `}
                                                     style={{ 
-                                                        animationDelay: `${index * 50}ms`, 
                                                         ...(isSelectionMode && isSelected ? {} : { 
                                                             borderLeftColor: tagColor, 
                                                             background: `linear-gradient(to right, ${statusColor}05, ${statusColor}25)` 
