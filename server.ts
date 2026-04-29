@@ -1,16 +1,15 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import mongoose from 'mongoose';
-import { User } from './models/User';
-import { ChatSession } from './models/ChatSession';
+import { User } from './models/User.js';
+import { ChatSession } from './models/ChatSession.js';
 
-import { NotebookContent } from './models/NotebookContent';
+import { NotebookContent } from './models/NotebookContent.js';
 
-import { ConvertHistory } from './models/ConvertHistory';
-import { StatisticsHistory } from './models/StatisticsHistory';
+import { ConvertHistory } from './models/ConvertHistory.js';
+import { StatisticsHistory } from './models/StatisticsHistory.js';
 
 dotenv.config();
 
@@ -23,7 +22,7 @@ app.use(cors({
       'http://localhost:3000', 
       'https://giahanconverter.vercel.app'
     ];
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.run.app')) {
       callback(null, true);
     } else {
       console.warn('Blocked by CORS for origin:', origin);
@@ -96,7 +95,7 @@ app.post('/api/users/presence', async (req, res) => {
         lastSeen, 
         status 
       },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
     
     res.json({ success: true, user });
@@ -159,7 +158,7 @@ app.post('/api/chat/sessions', async (req, res) => {
     const updatedSession = await ChatSession.findOneAndUpdate(
       { id: session.id },
       { $set: { ...session, userId: uid } },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     ).lean();
     res.json(updatedSession);
   } catch (err) {
@@ -208,7 +207,7 @@ app.post('/api/notes', async (req, res) => {
     const content = await NotebookContent.findOneAndUpdate(
       { userId: uid as string },
       { $set: { notes: notes || [], tags: tags || [] } },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     ).lean();
     
     res.json(content);
@@ -241,7 +240,7 @@ app.post('/api/convert-history/conversions', async (req, res) => {
     const content = await ConvertHistory.findOneAndUpdate(
       { userId: uid as string },
       { $set: { conversions: conversions || [] } },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     ).lean();
     
     res.json(content);
@@ -274,7 +273,7 @@ app.post('/api/statistics-history/revenues', async (req, res) => {
     const content = await StatisticsHistory.findOneAndUpdate(
       { userId: uid as string },
       { $set: { revenues: revenues || [] } },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     ).lean();
     
     res.json(content);
@@ -287,6 +286,7 @@ app.post('/api/statistics-history/revenues', async (req, res) => {
 async function startServer() {
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
