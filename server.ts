@@ -77,46 +77,84 @@ app.get('/api/db-status', (req, res) => {
 
 app.post('/api/app-config/icon', async (req, res) => {
   try {
-    const { iconDataUrl } = req.body;
+    const { icon192, icon512, iconDataUrl } = req.body;
     if (!iconDataUrl) {
-      return res.status(400).json({ error: 'Missing iconDataUrl' });
+      return res.status(400).json({ error: 'Missing icon data' });
     }
+    
+    // Store original just in case we need it
     await AppConfig.findOneAndUpdate(
       { key: 'app-icon' },
       { key: 'app-icon', value: iconDataUrl },
       { upsert: true }
     );
+    
+    if (icon192) {
+      await AppConfig.findOneAndUpdate(
+        { key: 'app-icon-192' },
+        { key: 'app-icon-192', value: icon192 },
+        { upsert: true }
+      );
+    }
+    
+    if (icon512) {
+      await AppConfig.findOneAndUpdate(
+        { key: 'app-icon-512' },
+        { key: 'app-icon-512', value: icon512 },
+        { upsert: true }
+      );
+    }
+    
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to save icon' });
   }
 });
 
-const serveCustomIcon = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const serveCustomIcon192 = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   try {
     await connectToDatabase();
-    const config = await AppConfig.findOne({ key: 'app-icon' });
+    const config = await AppConfig.findOne({ key: 'app-icon-192' }) || await AppConfig.findOne({ key: 'app-icon' });
     if (config && config.value) {
-      // The value is expected to be a data URL, e.g. "data:image/png;base64,iVBORw0KGgo..."
       const dataUrl = config.value as string;
       const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
       if (matches && matches.length === 3) {
         const mimeType = matches[1];
         const buffer = Buffer.from(matches[2], 'base64');
         res.set('Content-Type', mimeType);
-        res.set('Cache-Control', 'public, max-age=60'); // short cache so changes propagate reasonably quickly
+        res.set('Cache-Control', 'public, max-age=60');
         return res.send(buffer);
       }
     }
-    // Fall back to Vite/static file
     next();
   } catch (error) {
     next();
   }
 };
 
-app.get('/app-icon-192.png', serveCustomIcon);
-app.get('/app-icon-512.png', serveCustomIcon);
+const serveCustomIcon512 = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    await connectToDatabase();
+    const config = await AppConfig.findOne({ key: 'app-icon-512' }) || await AppConfig.findOne({ key: 'app-icon' });
+    if (config && config.value) {
+      const dataUrl = config.value as string;
+      const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        const buffer = Buffer.from(matches[2], 'base64');
+        res.set('Content-Type', mimeType);
+        res.set('Cache-Control', 'public, max-age=60');
+        return res.send(buffer);
+      }
+    }
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
+app.get('/app-icon-192.png', serveCustomIcon192);
+app.get('/app-icon-512.png', serveCustomIcon512);
 
 app.post('/api/users/presence', async (req, res) => {
   try {

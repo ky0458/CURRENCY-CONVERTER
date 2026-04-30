@@ -48,6 +48,28 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
     }
   }, [isOpen]);
 
+  const resizeImage = (file: File, width: number, height: number): Promise<string> => {
+      return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+              const img = new Image();
+              img.onload = () => {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = width;
+                  canvas.height = height;
+                  const ctx = canvas.getContext('2d');
+                  if (!ctx) return reject('No context');
+                  ctx.drawImage(img, 0, 0, width, height);
+                  resolve(canvas.toDataURL('image/png'));
+              };
+              img.onerror = reject;
+              img.src = e.target?.result as string;
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+      });
+  };
+
   const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
           const file = e.target.files[0];
@@ -56,10 +78,13 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
               const dataUrl = event.target?.result as string;
               if (dataUrl) {
                   try {
+                      const icon192 = await resizeImage(file, 192, 192);
+                      const icon512 = await resizeImage(file, 512, 512);
+                      
                       await fetch('/api/app-config/icon', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ iconDataUrl: dataUrl })
+                          body: JSON.stringify({ iconDataUrl: dataUrl, icon192, icon512 })
                       });
                       setCurrentAppIcon(dataUrl);
                       alert('Cập nhật icon ứng dụng thành công. Vui lòng cài đặt lại ứng dụng để thấy thay đổi trên màn hình chính.');
