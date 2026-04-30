@@ -26,21 +26,23 @@ export default defineConfig(({ mode }) => {
             theme_color: '#ffffff',
             background_color: '#ffffff',
             display: 'standalone',
+            start_url: '/',
+            id: '/',
             icons: [
               {
-                src: 'app-icon-192.png',
+                src: '/app-icon-192.png',
                 sizes: '192x192',
                 type: 'image/png',
                 purpose: 'any'
               },
               {
-                src: 'app-icon-512.png',
+                src: '/app-icon-512.png',
                 sizes: '512x512',
                 type: 'image/png',
                 purpose: 'any'
               },
               {
-                src: 'app-icon-512.png',
+                src: '/app-icon-512.png',
                 sizes: 'any',
                 type: 'image/png',
                 purpose: 'any maskable'
