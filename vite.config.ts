@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
           registerType: 'autoUpdate',
           includeAssets: ['app-icon-192.png', 'app-icon-512.png'],
           workbox: {
-            maximumFileSizeToCacheInBytes: 10 * 1024 * 1024 // 10MB
+            maximumFileSizeToCacheInBytes: 50 * 1024 * 1024 // 50MB
           },
           manifest: {
             name: 'Gia Hân Converter',
@@ -30,16 +30,18 @@ export default defineConfig(({ mode }) => {
               {
                 src: 'app-icon-192.png',
                 sizes: '192x192',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any'
               },
               {
                 src: 'app-icon-512.png',
                 sizes: '512x512',
-                type: 'image/png'
+                type: 'image/png',
+                purpose: 'any'
               },
               {
                 src: 'app-icon-512.png',
-                sizes: '512x512',
+                sizes: 'any',
                 type: 'image/png',
                 purpose: 'any maskable'
               }
