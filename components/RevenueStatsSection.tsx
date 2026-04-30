@@ -512,7 +512,7 @@ export const RevenueStatsSection: React.FC<RevenueStatsSectionProps> = ({
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Nội dung (Badge)</label>
-                        <input type="text" className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-sm font-medium transition-all" placeholder="VD: Đã thanh toán..." value={tempNote} onChange={(e) => setTempNote(e.target.value)} maxLength={20} />
+                        <input type="text" inputMode="text" role="presentation" autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="none" name="rev_stat_note_q" data-1p-ignore="true" data-lpignore="true" data-form-type="other" className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-sm font-medium transition-all" placeholder="VD: Đã thanh toán..." value={tempNote} onChange={(e) => setTempNote(e.target.value)} maxLength={20} />
                         <p className="text-[10px] text-slate-400 mt-1 text-right">{tempNote.length}/20 ký tự</p>
                     </div>
                     <div className="flex gap-3 mt-2">

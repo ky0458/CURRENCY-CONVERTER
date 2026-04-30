@@ -7,8 +7,15 @@ export const usePWAInstall = () => {
 
   useEffect(() => {
     // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) {
       setIsInstalled(true);
+      return;
+    }
+
+    // Always show install button on mobile browsers to provide instructions if prompt is missing
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (isMobile) {
+        setIsInstallable(true);
     }
 
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -33,13 +40,23 @@ export const usePWAInstall = () => {
   }, []);
 
   const triggerInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstallable(false);
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstallable(false);
+        setIsInstalled(true);
+      }
+      setDeferredPrompt(null);
+    } else {
+      // Provide manual instruction fallback
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIOS) {
+          alert('Để cài đặt ứng dụng: Nhấn vào biểu tượng Chia sẻ (Share) ở Safari và chọn "Thêm vào MH chính" (Add to Home Screen).');
+      } else {
+          alert('Để cài đặt ứng dụng: Nhấn vào Menu trình duyệt (ba chấm) và chọn "Thêm vào màn hình chính" (Add to Home screen) hoặc "Cài đặt ứng dụng".');
+      }
     }
-    setDeferredPrompt(null);
   };
 
   return { isInstallable, isInstalled, triggerInstall };

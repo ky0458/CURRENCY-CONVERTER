@@ -182,7 +182,7 @@ export const CurrencyRow: React.FC<CurrencyRowProps> = ({
         <div className={`absolute top-[calc(100%+8px)] w-full sm:w-72 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden transition-all z-[100] 
             ${inputPlacement === 'right' ? 'left-0 origin-top-left' : 'right-0 origin-top-right'}
             ${isActive ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'}`}>
-            <div className="p-3 border-b border-slate-100"><input ref={searchInputRef} type="text" className={`w-full px-3 py-2 border rounded-lg bg-slate-50 text-sm outline-none focus:border-primary-500`} placeholder="Tìm kiếm..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onClick={(e) => e.stopPropagation()} /></div>
+            <div className="p-3 border-b border-slate-100"><input ref={searchInputRef} type="search" inputMode="search" role="searchbox" autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="none" name="search_currency_q" data-1p-ignore="true" data-lpignore="true" data-form-type="other" className={`w-full px-3 py-2 border rounded-lg bg-slate-50 text-sm outline-none focus:border-primary-500`} placeholder="Tìm kiếm..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onClick={(e) => e.stopPropagation()} /></div>
             <div className="max-h-64 overflow-y-auto p-1 custom-scrollbar">
               {displayCurrencies.map((c) => (
                 <div key={c.code} onClick={(e) => { e.stopPropagation(); onCurrencyChange(c); onCloseDropdown?.(); }} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer ${c.code === currency.code ? `bg-primary-50 text-primary-700` : 'hover:bg-slate-50'}`}>

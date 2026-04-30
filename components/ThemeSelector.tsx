@@ -27,6 +27,50 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
   const [activeTab, setActiveTab] = useState<'header' | 'button' | 'userBubble' | 'aiBubble'>('header');
   const containerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const iconInputRef = useRef<HTMLInputElement>(null);
+  const [currentAppIcon, setCurrentAppIcon] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load app icon from backend or variable
+    const loadIcon = async () => {
+        try {
+            const res = await fetch('/app-icon-192.png');
+            if (res.ok) {
+                // To avoid caching issues
+                setCurrentAppIcon('/app-icon-192.png?t=' + Date.now());
+            }
+        } catch (e) {
+            console.error('Failed to load app icon', e);
+        }
+    };
+    if (isOpen) {
+        loadIcon();
+    }
+  }, [isOpen]);
+
+  const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+          const file = e.target.files[0];
+          const reader = new FileReader();
+          reader.onload = async (event) => {
+              const dataUrl = event.target?.result as string;
+              if (dataUrl) {
+                  try {
+                      await fetch('/api/app-config/icon', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ iconDataUrl: dataUrl })
+                      });
+                      setCurrentAppIcon(dataUrl);
+                      alert('Cập nhật icon ứng dụng thành công. Vui lòng cài đặt lại ứng dụng để thấy thay đổi trên màn hình chính.');
+                  } catch (e) {
+                      console.error('Lỗi khi tải lên icon', e);
+                  }
+              }
+          };
+          reader.readAsDataURL(file);
+      }
+  };
 
   const renderBubblePreview = (style: string, isUser: boolean) => {
     const content = <div className="text-[9px] font-medium">{isUser ? 'Oh!' : 'Chào bạn!'}</div>;
@@ -325,15 +369,15 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                 {/* Modal Body */}
                 <div className="p-4 sm:p-6 overflow-y-auto space-y-6 sm:space-y-8 flex-1">
                     
-                    {/* Colors & Background */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                    {/* Colors & Background & Icon */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
                         {/* Section: Colors */}
-                        <div>
+                        <div className="flex flex-col">
                             <div className="flex items-center justify-between mb-3">
                                 <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Màu Tông</h3>
                                 {!isPreset && <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-mono font-bold">{currentTheme}</span>}
                             </div>
-                            <div className="grid grid-cols-5 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                            <div className="grid grid-cols-5 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 flex-1 h-[140px] sm:h-[160px] content-start overflow-y-auto custom-scrollbar">
                                 {THEME_COLORS.map((theme) => (
                                 <button
                                     key={theme.id}
@@ -373,9 +417,9 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                         </div>
 
                         {/* Section: Background */}
-                        <div>
+                        <div className="flex flex-col">
                             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">Hình nền</h3>
-                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 h-[104px] sm:h-auto sm:aspect-video flex items-center justify-center overflow-hidden relative group">
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex-1 h-[140px] sm:h-[160px] flex items-center justify-center overflow-hidden relative group">
                                 {currentBackground ? (
                                     <>
                                         <img src={currentBackground} alt="Current background" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
@@ -414,6 +458,42 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = ({
                                     </button>
                                 )}
                                 <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleFileChange} />
+                            </div>
+                        </div>
+
+                        {/* Section: App Icon */}
+                        <div className="flex flex-col">
+                            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">Avatar ứng dụng</h3>
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex-1 h-[140px] sm:h-[160px] flex flex-col items-center justify-center overflow-hidden relative group">
+                                {currentAppIcon ? (
+                                    <>
+                                        <img src={currentAppIcon} alt="Current App Icon" className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-2xl shadow-sm transition-transform duration-700 group-hover:scale-110 bg-white" />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px] rounded-2xl">
+                                            <button 
+                                                onClick={() => iconInputRef.current?.click()}
+                                                className="p-3 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white hover:text-primary-600 transition-colors shadow-lg"
+                                                title="Thay đổi ảnh"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <button 
+                                        onClick={() => iconInputRef.current?.click()}
+                                        className="w-full h-full border-2 border-dashed border-slate-200 hover:border-primary-400 hover:bg-white transition-all flex flex-col items-center justify-center gap-2 group cursor-pointer rounded-xl"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-primary-500 group-hover:scale-110 shadow-sm transition-all">
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                                            </svg>
+                                        </div>
+                                        <span className="text-xs font-bold text-slate-500 group-hover:text-primary-600 text-center">Tải lên</span>
+                                    </button>
+                                )}
+                                <input type="file" ref={iconInputRef} accept="image/*" className="hidden" onChange={handleIconUpload} />
                             </div>
                         </div>
                     </div>

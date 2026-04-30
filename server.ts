@@ -11,6 +11,7 @@ import { NotebookContent } from './models/NotebookContent.js';
 import { ConvertHistory } from './models/ConvertHistory.js';
 import { StatisticsHistory } from './models/StatisticsHistory.js';
 import { UpdateVersion } from './models/UpdateVersion.js';
+import { AppConfig } from './models/AppConfig.js';
 
 dotenv.config();
 
@@ -73,6 +74,49 @@ app.get('/api/db-status', (req, res) => {
     readyState: mongoose.connection.readyState
   });
 });
+
+app.post('/api/app-config/icon', async (req, res) => {
+  try {
+    const { iconDataUrl } = req.body;
+    if (!iconDataUrl) {
+      return res.status(400).json({ error: 'Missing iconDataUrl' });
+    }
+    await AppConfig.findOneAndUpdate(
+      { key: 'app-icon' },
+      { key: 'app-icon', value: iconDataUrl },
+      { upsert: true }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save icon' });
+  }
+});
+
+const serveCustomIcon = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    await connectToDatabase();
+    const config = await AppConfig.findOne({ key: 'app-icon' });
+    if (config && config.value) {
+      // The value is expected to be a data URL, e.g. "data:image/png;base64,iVBORw0KGgo..."
+      const dataUrl = config.value as string;
+      const matches = dataUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mimeType = matches[1];
+        const buffer = Buffer.from(matches[2], 'base64');
+        res.set('Content-Type', mimeType);
+        res.set('Cache-Control', 'public, max-age=60'); // short cache so changes propagate reasonably quickly
+        return res.send(buffer);
+      }
+    }
+    // Fall back to Vite/static file
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
+app.get('/app-icon-192.png', serveCustomIcon);
+app.get('/app-icon-512.png', serveCustomIcon);
 
 app.post('/api/users/presence', async (req, res) => {
   try {

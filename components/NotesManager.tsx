@@ -788,7 +788,7 @@ export const NotesManager: React.FC = () => {
                                             className="w-full text-sm px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-white transition-all text-slate-800" 
                                             value={newTagName} 
                                             onChange={(e) => setNewTagName(e.target.value)} 
-                                            autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="off" name="tag_input_name"
+                                            type="text" inputMode="text" role="presentation" autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="none" name="search_tag_q" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
                                             placeholder="Nhập tên thẻ..." 
                                         />
                                     </div>
@@ -911,7 +911,7 @@ export const NotesManager: React.FC = () => {
                                         placeholder="Nhập nội dung ghi chú của bạn..." 
                                         value={newNoteContent} 
                                         onChange={(e) => setNewNoteContent(e.target.value)} 
-                                        autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="off" name="note_input_name"
+                                        inputMode="text" role="presentation" autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="none" name="search_note_q" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
                                     />
                                 </div>
                                 <div className="relative shrink-0 mt-4" ref={tagDropdownRef}>
@@ -946,77 +946,82 @@ export const NotesManager: React.FC = () => {
                     {viewMode === 'list' && (
                         <div className="flex flex-col h-full overflow-hidden animate-fade-in-up bg-slate-50/50">
                             {/* Search & Filter Bar */}
-                            <div className={`transition-all duration-300 overflow-hidden ${isSearchExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                <div className="bg-white border-b border-slate-100 shadow-sm shrink-0 z-20 p-3 sm:px-4 flex items-center gap-2">
-                                    <div className="relative flex-1">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-slate-400">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                                            </svg>
+                            {isSearchExpanded && (
+                                <div className="transition-all duration-300 animate-fade-in flex flex-col shrink-0 bg-white border-b border-slate-100 shadow-sm z-20">
+                                    <div className="p-3 sm:px-4 flex items-center gap-2">
+                                        <div className="relative flex-1">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-slate-400">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                                                </svg>
+                                            </div>
+                                            <input 
+                                                type="search" 
+                                                inputMode="search"
+                                                role="searchbox"
+                                                placeholder="Tìm kiếm theo nội dung đã ghi chú" 
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="none" name="search_query_q" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
+                                                className="w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800 font-medium placeholder:text-slate-400"
+                                            />
+                                            {searchQuery && (
+                                                <button 
+                                                    onClick={() => setSearchQuery('')}
+                                                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" /></svg>
+                                                </button>
+                                            )}
                                         </div>
-                                        <input 
-                                            type="text" 
-                                            placeholder="Tìm kiếm theo nội dung đã ghi chú" 
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="off" name="search_input_name"
-                                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-slate-800 font-medium placeholder:text-slate-400"
-                                        />
-                                        {searchQuery && (
-                                            <button 
-                                                onClick={() => setSearchQuery('')}
-                                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" /></svg>
-                                            </button>
-                                        )}
+                                        <button 
+                                            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                                            className={`shrink-0 flex items-center justify-center p-2 rounded-xl border transition-all relative ${showAdvancedFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" /></svg>
+                                            {(selectedTags.length > 0 || selectedStatuses.length > 0 || selectedDates.length > 0) && (
+                                                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white"></span>
+                                            )}
+                                        </button>
                                     </div>
-                                    <button 
-                                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                                        className={`shrink-0 flex items-center justify-center p-2 rounded-xl border transition-all ${showAdvancedFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" /></svg>
-                                        {(selectedTags.length > 0 || selectedStatuses.length > 0 || selectedDates.length > 0) && (
-                                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
 
-                            {/* Quick Filters (Swiper) */}
-                            {(!showAdvancedFilters && isSearchExpanded) && (
-                                <div className="bg-white border-b border-slate-100 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] shrink-0 z-10 pb-2">
+                                    {/* Quick Filters (Swiper) */}
+                                    {!showAdvancedFilters && (
+                                        <div className="bg-white border-t border-slate-50 shrink-0 z-10 pb-5 pt-2 flex flex-col gap-1 w-full max-w-full shadow-[0_4px_16px_-8px_rgba(0,0,0,0.05)]">
                                     {/* Tags Quick Filter */}
-                                    <div className="px-4 py-2 overflow-x-auto hide-scrollbar flex items-center gap-3 snap-x snap-mandatory scroll-pl-4 select-none touch-pan-x">
-                                        <button onClick={() => setSelectedTags([])} className={`snap-start shrink-0 h-8 px-5 rounded-full text-[11px] font-bold transition-all duration-300 flex items-center justify-center ${selectedTags.length === 0 ? 'bg-slate-800 text-white shadow-md scale-100 ring-2 ring-slate-800 ring-offset-1' : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300 hover:text-slate-700 hover:bg-slate-50'}`}>Tất cả thẻ</button>
-                                        <div className="w-px h-5 bg-slate-200 shrink-0 mx-1"></div>
+                                    <div className="px-4 py-2.5 overflow-x-auto hide-scrollbar flex items-center sm:flex-wrap gap-2.5 snap-x snap-mandatory scroll-pl-4 select-none touch-pan-x w-full">
+                                        <button onClick={() => setSelectedTags([])} className={`snap-start shrink-0 h-8 px-4 rounded-full text-[11px] font-bold transition-all duration-300 flex items-center justify-center ${selectedTags.length === 0 ? 'bg-slate-800 text-white shadow-md scale-100 ring-2 ring-slate-800 ring-offset-2' : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300 hover:text-slate-800 hover:bg-slate-50'}`}>Tất cả thẻ</button>
+                                        <div className="hidden sm:block w-px h-5 bg-slate-200 shrink-0 mx-0.5"></div>
                                         {tags.map(tag => {
                                             const isActive = selectedTags.length === 1 && selectedTags[0] === tag.id;
                                             return (
-                                                <div key={tag.id} className={`snap-start shrink-0 h-8 flex items-center rounded-full transition-all duration-300 group overflow-hidden ${isActive ? 'bg-white shadow-sm ring-1 ring-offset-1 ring-white scale-100' : 'bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`} style={isActive ? { borderColor: tag.color, '--tw-ring-color': tag.color } as React.CSSProperties : {}}>
-                                                    <button onClick={() => setSelectedTags([tag.id])} className={`px-3 h-full flex items-center gap-1.5 text-[11px] font-bold transition-colors ${isActive ? 'text-white' : 'text-slate-600'}`} style={{ backgroundColor: isActive ? tag.color : 'transparent' }}>
+                                                <div key={tag.id} className={`snap-start shrink-0 h-8 flex items-center rounded-full transition-all duration-300 group overflow-hidden ${isActive ? 'bg-white shadow-sm ring-2 ring-offset-2 scale-100 ring-slate-300' : 'bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`} style={isActive ? { borderColor: tag.color, '--tw-ring-color': tag.color } as React.CSSProperties : {}}>
+                                                    <button onClick={() => setSelectedTags([tag.id])} className={`px-3 h-full flex items-center gap-1.5 text-[11px] font-bold transition-colors ${isActive ? 'text-white' : 'text-slate-600 hover:text-slate-800'}`} style={{ backgroundColor: isActive ? tag.color : 'transparent' }}>
                                                         {!isActive && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }}></span>}{tag.name}
                                                     </button>
                                                 </div>
                                             )
                                         })}
+                                        {/* Spacer to fix horizontal scroll cutoff padding issue on mobile */}
+                                        <div className="w-2 shrink-0 sm:hidden"></div>
                                     </div>
                                     {/* Status Quick Filter */}
-                                    <div className="px-4 pb-2 pt-1 overflow-x-auto hide-scrollbar flex items-center gap-2 snap-x snap-mandatory scroll-pl-4 select-none touch-pan-x">
-                                         <button onClick={() => setSelectedStatuses([])} className={`snap-start shrink-0 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${selectedStatuses.length === 0 ? 'bg-slate-800 border-slate-800 text-white shadow-md scale-100 ring-1 ring-slate-800 ring-offset-1' : 'bg-white border-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}>Tất cả trạng thái</button>
+                                    <div className="px-4 py-2.5 overflow-x-auto hide-scrollbar flex items-center sm:flex-wrap gap-2.5 snap-x snap-mandatory scroll-pl-4 select-none touch-pan-x w-full">
+                                         <button onClick={() => setSelectedStatuses([])} className={`snap-start shrink-0 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border ${selectedStatuses.length === 0 ? 'bg-slate-800 border-slate-800 text-white shadow-md scale-100 ring-2 ring-slate-800 ring-offset-2' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700'}`}>Tất cả trạng thái</button>
                                          {(Object.entries(statusConfig) as [NoteStatus, typeof statusConfig[NoteStatus]][]).map(([status, config]) => {
                                             const isActive = selectedStatuses.length === 1 && selectedStatuses[0] === status;
                                             return (
-                                                <button key={status} onClick={() => setSelectedStatuses([status])} className={`snap-start shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border flex items-center gap-1.5 ${isActive ? 'shadow-sm ring-1 ring-offset-1 scale-100' : 'bg-white hover:bg-slate-50 border-transparent text-slate-500'}`} style={{ backgroundColor: isActive ? config.color : 'white', borderColor: isActive ? config.color : 'transparent', color: isActive ? 'white' : config.color, '--tw-ring-color': config.color } as React.CSSProperties}><span className={isActive ? '' : 'opacity-100'}>{config.icon}</span>{config.label}</button>
+                                                <button key={status} onClick={() => setSelectedStatuses([status])} className={`snap-start shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border flex items-center gap-1.5 ${isActive ? 'shadow-sm ring-2 ring-offset-2 scale-100' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-800'}`} style={{ backgroundColor: isActive ? config.color : 'white', borderColor: isActive ? config.color : 'inherit', color: isActive ? 'white' : config.color, '--tw-ring-color': config.color } as React.CSSProperties}><span className={isActive ? '' : 'opacity-100'}>{config.icon}</span>{config.label}</button>
                                             )
                                         })}
+                                        <div className="w-2 shrink-0 sm:hidden"></div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Advanced Filters Dropdown/Panel */}
-                            {(showAdvancedFilters && isSearchExpanded) && (
-                                <div className="bg-white border-b border-slate-100 shadow-inner px-4 py-3 text-sm animate-fade-in flex flex-col gap-3">
+                                    {/* Advanced Filters Dropdown/Panel */}
+                                    {showAdvancedFilters && (
+                                        <div className="bg-white border-t border-slate-50 px-4 py-3 text-sm animate-fade-in flex flex-col gap-3">
                                     <div className="flex flex-col gap-1.5">
                                         <span className="font-bold text-slate-700 text-xs uppercase tracking-wide">Trạng thái</span>
                                         <div className="flex flex-wrap gap-2">
@@ -1103,6 +1108,8 @@ export const NotesManager: React.FC = () => {
                                     )}
                                 </div>
                             )}
+                        </div>
+                    )}
 
                             {/* Notes List */}
                             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/30 pb-20">
