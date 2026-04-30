@@ -20,10 +20,10 @@ export default defineConfig(({ mode }) => {
             maximumFileSizeToCacheInBytes: 50 * 1024 * 1024 // 50MB
           },
           manifest: {
-            name: 'Gia Hân Converter',
-            short_name: 'Gia Hân',
+            name: "Gia Hân's workspace",
+            short_name: "Gia Hân's workspace",
             description: 'Ứng dụng Gia Hân Converter',
-            theme_color: '#ffffff',
+            theme_color: '#FFE4E1',
             background_color: '#ffffff',
             display: 'standalone',
             start_url: '/',

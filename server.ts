@@ -284,7 +284,7 @@ app.post('/api/statistics-history/revenues', async (req, res) => {
   }
 });
 
-app.get('/api/updater-versions', async (req, res) => {
+app.get('/api/app-releases', async (req, res) => {
   try {
     if (!process.env.MONGODB_URI) {
       return res.json([]);

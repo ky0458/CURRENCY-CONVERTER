@@ -25,6 +25,7 @@ import { CopyButton } from './components/CopyButton';
 import { useAuth, AuthProvider } from './contexts/AuthContext';
 import { translateJobTitle } from './services/geminiService';
 import { Analytics } from '@vercel/analytics/react';
+import { usePWAInstall } from './hooks/usePWAInstall';
 
 const ToastNotification = () => {
     const { notification, closeNotification } = useAuth();
@@ -108,8 +109,9 @@ const AppContent: React.FC = () => {
     cnyRate, setCnyRate, useCustomCnyRate, setUseCustomCnyRate
   } = useCurrencyConverter();
 
-  const { records, addRecord, updateRecord, deleteRecord, deleteRecords } = useRevenueTracker();
+  const { records, addRecord, updateRecord: updateRec, deleteRecord: delRec, deleteRecords: delRecs } = useRevenueTracker();
   const { showNotification } = useAuth();
+  const { isInstallable, triggerInstall } = usePWAInstall();
   
   const [activeDropdown, setActiveDropdown] = useState<'FROM' | 'TO' | null>(null);
   const [theme, setTheme] = useState<ThemeColor>('blue');
@@ -560,6 +562,24 @@ const AppContent: React.FC = () => {
 
       {/* GLOBAL FIXED CONTROLS */}
       <div className="absolute top-3 right-3 sm:top-5 sm:right-6 z-[100] flex items-center gap-3 animate-fade-in-up">
+        {/* Install PWA Button */}
+        {isInstallable && (
+            <button
+                onClick={triggerInstall}
+                className={`
+                    flex items-center gap-2 px-3 h-10 rounded-full backdrop-blur-md transition-all duration-300 font-bold text-sm shadow-md hover:shadow-xl hover:-translate-y-0.5 border
+                    ${hasBackground 
+                        ? 'bg-primary-500/80 hover:bg-primary-500 text-white border-white/20' 
+                        : 'bg-primary-500 text-white hover:bg-primary-600 border-transparent'}
+                `}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                <span className="hidden sm:inline">Cài đặt</span>
+            </button>
+        )}
+
         {/* Notifications */}
         <UpdateNotifications hasBackground={hasBackground} />
 

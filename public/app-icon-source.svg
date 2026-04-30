@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Minimalist workspace icon with light pink and white -->
+  <!-- Background -->
+  <rect width="512" height="512" fill="#FFE4E1" rx="112" ry="112" />
+  <!-- Laptop base -->
+  <rect x="116" y="276" width="280" height="150" rx="16" ry="16" fill="#FFFFFF" />
+  <!-- Laptop screen inner -->
+  <rect x="136" y="296" width="240" height="110" rx="8" ry="8" fill="#FFC0CB" />
+  <!-- Keyboard area -->
+  <path d="M 86 440 L 426 440 C 436 440 440 450 436 456 L 416 466 C 406 470 396 470 380 470 L 132 470 C 116 470 106 470 96 466 L 76 456 C 72 450 76 440 86 440 Z" fill="#FFFFFF" />
+  <!-- Trackpad -->
+  <rect x="226" y="445" width="60" height="15" rx="4" ry="4" fill="#FFC0CB" />
+  <!-- Coffee cup / Pen holder placeholder -->
+  <rect x="360" y="230" width="40" height="50" rx="4" ry="4" fill="#FFFFFF" />
+  <rect x="366" y="210" width="8" height="30" rx="4" ry="4" fill="#FFB6C1" />
+  <!-- Simple plant -->
+  <circle cx="120" cy="240" r="30" fill="#FFFFFF" />
+  <circle cx="140" cy="220" r="25" fill="#FFFFFF" />
+</svg>

@@ -93,8 +93,7 @@ export const UpdateNotifications: React.FC<UpdateNotificationsProps> = ({ hasBac
         const fetchUpdates = async () => {
             try {
                 // Fetch from MongoDB Atlas via the backend API
-                const port = window.location.port ? `:${window.location.port}` : '';
-                const apiUrl = `${window.location.protocol}//${window.location.hostname}${port}/api/updater-versions`;
+                const apiUrl = '/api/app-releases';
                 
                 const response = await fetch(apiUrl);
                 let fetchedUpdates: UpdateVersionData[] = [];
