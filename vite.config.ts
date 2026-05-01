@@ -14,39 +14,67 @@ export default defineConfig(({ mode }) => {
       plugins: [
         react(),
         VitePWA({
-          registerType: 'autoUpdate',
-          includeAssets: ['app-icon-192.png', 'app-icon-512.png'],
+          registerType: 'prompt',
+          injectRegister: 'auto',
+          includeAssets: ['app-icon-192.png', 'app-icon-512.png', 'app-icon.svg'],
           workbox: {
-            maximumFileSizeToCacheInBytes: 50 * 1024 * 1024, // 50MB
-            navigateFallbackDenylist: [/^\/api/]
+            maximumFileSizeToCacheInBytes: 50 * 1024 * 1024,
+            navigateFallbackDenylist: [/^\/api/],
+            globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+            cleanupOutdatedCaches: true,
+            runtimeCaching: [
+              {
+                urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+                handler: 'CacheFirst',
+                options: {
+                  cacheName: 'google-fonts-cache',
+                  expiration: {
+                    maxEntries: 10,
+                    maxAgeSeconds: 60 * 60 * 24 * 365,
+                  },
+                  cacheableResponse: {
+                    statuses: [0, 200],
+                  },
+                },
+              },
+            ],
           },
           manifest: {
-            name: "Gia Hân's workspace",
-            short_name: "Gia Hân's workspace",
-            description: 'Ứng dụng Gia Hân Converter',
-            theme_color: '#FFE4E1',
+            name: "Gia Hân's Workspace",
+            short_name: "Gia Hân",
+            description: 'Công cụ quy đổi tiền tệ và quản lý công việc của Gia Hân',
+            theme_color: '#3B82F6',
             background_color: '#ffffff',
             display: 'standalone',
+            orientation: 'portrait',
             start_url: '/',
-            id: '/',
+            scope: '/',
+            id: '/?source=pwa',
             icons: [
               {
-                src: '/app-icon-192.png',
+                src: 'app-icon-192.png',
                 sizes: '192x192',
                 type: 'image/png',
                 purpose: 'any'
               },
               {
-                src: '/app-icon-512.png',
+                src: 'app-icon-512.png',
                 sizes: '512x512',
                 type: 'image/png',
                 purpose: 'any'
               },
               {
-                src: '/app-icon-512.png',
-                sizes: 'any',
+                src: 'app-icon-512.png',
+                sizes: '512x512',
                 type: 'image/png',
-                purpose: 'any maskable'
+                purpose: 'maskable'
+              }
+            ],
+            screenshots: [
+              {
+                src: 'app-icon-512.png',
+                sizes: '512x512',
+                type: 'image/png'
               }
             ]
           }
