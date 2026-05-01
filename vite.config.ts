@@ -69,22 +69,6 @@ export default defineConfig(({ mode }) => {
                 type: 'image/png',
                 purpose: 'maskable'
               }
-            ],
-            screenshots: [
-              {
-                src: '/app-icon-512.png',
-                sizes: '512x512',
-                type: 'image/png',
-                form_factor: 'wide',
-                label: 'Workspace Desktop View'
-              },
-              {
-                src: '/app-icon-512.png',
-                sizes: '512x512',
-                type: 'image/png',
-                form_factor: 'narrow',
-                label: 'Workspace Mobile View'
-              }
             ]
           }
         })
