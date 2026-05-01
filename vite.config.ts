@@ -17,7 +17,8 @@ export default defineConfig(({ mode }) => {
           registerType: 'autoUpdate',
           includeAssets: ['app-icon-192.png', 'app-icon-512.png'],
           workbox: {
-            maximumFileSizeToCacheInBytes: 50 * 1024 * 1024 // 50MB
+            maximumFileSizeToCacheInBytes: 50 * 1024 * 1024, // 50MB
+            navigateFallbackDenylist: [/^\/api/]
           },
           manifest: {
             name: "Gia Hân's workspace",

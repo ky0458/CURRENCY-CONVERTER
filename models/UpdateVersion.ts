@@ -18,4 +18,4 @@ const UpdateVersionSchema = new mongoose.Schema({
   timestamps: true 
 });
 
-export const UpdateVersion = mongoose.models.UpdateVersion || mongoose.model('UpdateVersion', UpdateVersionSchema);
+export const UpdateVersion = mongoose.models.UpdateVersion || mongoose.model<any>('UpdateVersion', UpdateVersionSchema);

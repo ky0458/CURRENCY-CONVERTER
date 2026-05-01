@@ -8,4 +8,4 @@ const AppConfigSchema = new mongoose.Schema({
   timestamps: true 
 });
 
-export const AppConfig = mongoose.models.AppConfig || mongoose.model('AppConfig', AppConfigSchema);
+export const AppConfig = mongoose.models.AppConfig || mongoose.model<any>('AppConfig', AppConfigSchema);

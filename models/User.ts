@@ -12,4 +12,4 @@ const userSchema = new mongoose.Schema({
 });
 
 // Use existing model or create a new one
-export const User = mongoose.models.User || mongoose.model('User', userSchema);
+export const User = mongoose.models.User || mongoose.model<any>('User', userSchema);

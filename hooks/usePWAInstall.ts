@@ -12,20 +12,12 @@ export const usePWAInstall = () => {
       return;
     }
 
-    // Always show install button on mobile/tablet to provide manual instructions if native prompt is missing
-    const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (isMobileOrTablet) {
-        setIsInstallable(true);
-    }
-
-    // Also check if they are not in an iframe
-    if (window === window.parent && !isMobileOrTablet) {
-      // In a normal window on desktop, we still might want to show it if browser supports beforeinstallprompt
-    }
-
     const handleBeforeInstallPrompt = (e: Event) => {
+      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
+      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
+      // Update UI notify the user they can install the PWA
       setIsInstallable(true);
     };
 
@@ -38,11 +30,17 @@ export const usePWAInstall = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
+    // Provide manual install UI ONLY on iOS since iOS doesn't support beforeinstallprompt
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1 && !(window as any).MSStream);
+    if (isIOS && !isInstalled) {
+      setIsInstallable(true);
+    }
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, []);
+  }, [isInstalled]);
 
   const triggerInstall = async () => {
     if (deferredPrompt) {
@@ -64,7 +62,7 @@ export const usePWAInstall = () => {
       if (isIOS) {
           alert('Để cài đặt ứng dụng: Nhấn vào biểu tượng Chia sẻ (Share) ở trình duyệt Safari và chọn "Thêm vào MH chính" (Add to Home Screen).');
       } else {
-          alert('Không thể hiển thị lời nhắc tự động (có thể do bạn đã từng cài đặt và gỡ ứng dụng, hoặc trình duyệt chặn).\n\nVui lòng cài đặt thủ công:\nNhấn vào Menu trình duyệt (ba chấm / tùy chọn) -> Chọn "Thêm vào màn hình chính" (Add to Home screen) hoặc "Cài đặt ứng dụng".\n\n*Nếu bạn không thấy tùy chọn này, hãy thử xóa dữ liệu duyệt web cho trang web này và tải lại.');
+          alert('Trình duyệt của bạn đang tạm thời không cho phép cài đặt lại tự động (có thể do bạn đã từng cài đặt và gỡ ứng dụng gần đây). \n\nĐể cài đặt lại, hãy nhấn vào Menu trình duyệt (dấu 3 chấm góc phải) -> Chọn "Cài đặt ứng dụng" hoặc "Thêm vào màn hình chính".');
       }
     }
   };

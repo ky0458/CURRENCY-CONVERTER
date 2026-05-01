@@ -3,8 +3,8 @@ import React from 'react';
 import { ThemeColor, ButtonStyle } from '../types';
 
 interface TabSelectorProps {
-  activeTab: 'convert' | 'calculate' | 'document';
-  onTabChange: (tab: 'convert' | 'calculate' | 'document') => void;
+  activeTab: 'cv' | 'calculate' | 'convert';
+  onTabChange: (tab: 'cv' | 'calculate' | 'convert') => void;
   theme: ThemeColor;
   buttonStyle?: ButtonStyle;
 }
@@ -13,9 +13,9 @@ export const TabSelector: React.FC<TabSelectorProps> = ({ activeTab, onTabChange
   // Calculate position based on grid column index (0, 1, 2)
   const getTransform = () => {
     switch (activeTab) {
-      case 'convert': return 'translateX(0%)';
+      case 'cv': return 'translateX(0%)';
       case 'calculate': return 'translateX(100%)';
-      case 'document': return 'translateX(200%)';
+      case 'convert': return 'translateX(200%)';
       default: return 'translateX(0%)';
     }
   };
@@ -79,12 +79,12 @@ export const TabSelector: React.FC<TabSelectorProps> = ({ activeTab, onTabChange
 
         {/* Buttons */}
         <button
-          onClick={() => onTabChange('convert')}
+          onClick={() => onTabChange('cv')}
           className={`relative z-10 h-full flex items-center justify-center text-[10px] sm:text-xs md:text-sm font-bold rounded-lg transition-colors duration-200 ${
-              activeTab === 'convert' ? activeTabClassConfig.textClass : 'text-slate-500 hover:text-slate-800'
+              activeTab === 'cv' ? activeTabClassConfig.textClass : 'text-slate-500 hover:text-slate-800'
           }`}
         >
-          Quy đổi
+          CV
         </button>
         <button
           onClick={() => onTabChange('calculate')}
@@ -95,14 +95,15 @@ export const TabSelector: React.FC<TabSelectorProps> = ({ activeTab, onTabChange
           Phí & Doanh thu
         </button>
         <button
-          onClick={() => onTabChange('document')}
+          onClick={() => onTabChange('convert')}
           className={`relative z-10 h-full flex items-center justify-center text-[10px] sm:text-xs md:text-sm font-bold rounded-lg transition-colors duration-200 ${
-              activeTab === 'document' ? activeTabClassConfig.textClass : 'text-slate-500 hover:text-slate-800'
+              activeTab === 'convert' ? activeTabClassConfig.textClass : 'text-slate-500 hover:text-slate-800'
           }`}
         >
-          Tài liệu
+          Quy đổi
         </button>
       </div>
     </div>
   );
 };
+

@@ -22,6 +22,25 @@ interface UpdateNotificationsProps {
 
 const FALLBACK_UPDATES: UpdateVersionData[] = [
     {
+        id: 'v109',
+        versionNumber: 'v1.0.9',
+        updateName: 'Tối ưu TakeNote & Tính năng Đọc CV',
+        dateStr: '01/05/2026 - 04:00',
+        timestamp: new Date('2026-05-01T04:00:00').getTime(),
+        features: [
+            {
+                color: 'emerald',
+                title: 'Tính năng Đọc & Phân tích CV nâng cao',
+                description: 'Hỗ trợ tải lên và phân tích cùng lúc tới 5 CV. Tính năng tự động so sánh hàng loạt và đưa ra đánh giá, xếp hạng ứng viên chi tiết dựa trên Job Description (JD).',
+            },
+            {
+                color: 'indigo',
+                title: 'Tối ưu TakeNote',
+                description: 'Cải tiến hiệu suất và trải nghiệm của tính năng TakeNote, giúp ghi chú mượt mà và trực quan hơn.',
+            }
+        ]
+    },
+    {
         id: 'v108',
         versionNumber: 'v1.0.8',
         updateName: 'Cải tiến Profile & Thông báo',
@@ -99,9 +118,14 @@ export const UpdateNotifications: React.FC<UpdateNotificationsProps> = ({ hasBac
                 let fetchedUpdates: UpdateVersionData[] = [];
                 
                 if (response.ok) {
-                    const data = await response.json();
-                    if (Array.isArray(data) && data.length > 0) {
-                        fetchedUpdates = data;
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        const data = await response.json();
+                        if (Array.isArray(data) && data.length > 0) {
+                            fetchedUpdates = data;
+                        }
+                    } else {
+                        console.warn('API returned non-JSON response');
                     }
                 }
                 

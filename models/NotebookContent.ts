@@ -8,4 +8,4 @@ const notebookContentSchema = new mongoose.Schema({
     timestamps: true
 });
 
-export const NotebookContent = mongoose.models.NotebookContent || mongoose.model('NotebookContent', notebookContentSchema, 'notebook_contents');
+export const NotebookContent = mongoose.models.NotebookContent || mongoose.model<any>('NotebookContent', notebookContentSchema, 'notebook_contents');

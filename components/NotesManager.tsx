@@ -298,7 +298,7 @@ export const NotesManager: React.FC = () => {
   const confirmTagDeletion = () => {
       if (tagToDelete) {
           deleteTag(tagToDelete);
-          if (activeTab === tagToDelete) setActiveTab('all');
+          setSelectedTags(prev => prev.filter(t => t !== tagToDelete));
           setTagToDelete(null);
           if (editingTagId === tagToDelete) cancelEditTag();
       }
@@ -309,7 +309,7 @@ export const NotesManager: React.FC = () => {
       if (ids.length > 0) {
           deleteTags(ids);
           // If current active tab is among deleted, reset to all
-          if (ids.includes(activeTab)) setActiveTab('all');
+          setSelectedTags(prev => prev.filter(t => !ids.includes(t)));
           // If editing tag is among deleted, cancel edit
           if (editingTagId && ids.includes(editingTagId)) cancelEditTag();
           
@@ -788,7 +788,7 @@ export const NotesManager: React.FC = () => {
                                             className="w-full text-sm px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-white transition-all text-slate-800" 
                                             value={newTagName} 
                                             onChange={(e) => setNewTagName(e.target.value)} 
-                                            type="text" inputMode="text" role="presentation" autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="none" name="search_tag_q" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
+                                            inputMode="text" role="presentation" autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="none" name="search_tag_q" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
                                             placeholder="Nhập tên thẻ..." 
                                         />
                                     </div>

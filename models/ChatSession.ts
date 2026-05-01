@@ -21,4 +21,4 @@ const chatSessionSchema = new mongoose.Schema({
     timestamps: true
 });
 
-export const ChatSession = mongoose.models.ChatSession || mongoose.model('ChatSession', chatSessionSchema, 'ai_chat_history');
+export const ChatSession = mongoose.models.ChatSession || mongoose.model<any>('ChatSession', chatSessionSchema, 'ai_chat_history');

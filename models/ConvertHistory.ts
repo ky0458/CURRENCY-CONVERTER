@@ -7,4 +7,4 @@ const convertHistorySchema = new mongoose.Schema({
     timestamps: true
 });
 
-export const ConvertHistory = mongoose.models.ConvertHistory || mongoose.model('ConvertHistory', convertHistorySchema, 'convert_history');
+export const ConvertHistory = mongoose.models.ConvertHistory || mongoose.model<any>('ConvertHistory', convertHistorySchema, 'convert_history');

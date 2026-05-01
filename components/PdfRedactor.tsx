@@ -42,7 +42,7 @@ const PdfBlock = React.memo(({
     onDeleteBlock?: (id: string) => void;
 }) => {
     const [action, setAction] = useState<ActionType>(initialAction);
-    const timerRef = useRef<NodeJS.Timeout>();
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
     const isLongPressActive = useRef(false);
 
     const handleToggle = useCallback((e: React.MouseEvent) => {
@@ -463,13 +463,13 @@ export const PdfRedactor: React.FC = () => {
                     setOcrProgress(`Đang quét ảnh trang ${i}/${pdf.numPages}...`);
                     try {
                         const Tesseract = await import('tesseract.js');
-                        const { data } = await Tesseract.recognize(canvas, 'vie+eng', {
+                        const { data } = (await Tesseract.recognize(canvas, 'vie+eng', {
                             logger: m => {
                                 if (m.status === 'recognizing text') {
                                     setOcrProgress(`Đang quét ảnh trang ${i}/${pdf.numPages} (${Math.round(m.progress * 100)}%)`);
                                 }
                             }
-                        });
+                        })) as any;
 
                         if (data && data.words) {
                             data.words.forEach((word: any, wIndex: number) => {

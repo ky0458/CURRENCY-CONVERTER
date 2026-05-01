@@ -7,4 +7,4 @@ const statisticsHistorySchema = new mongoose.Schema({
     timestamps: true
 });
 
-export const StatisticsHistory = mongoose.models.StatisticsHistory || mongoose.model('StatisticsHistory', statisticsHistorySchema, 'statistics_history');
+export const StatisticsHistory = mongoose.models.StatisticsHistory || mongoose.model<any>('StatisticsHistory', statisticsHistorySchema, 'statistics_history');

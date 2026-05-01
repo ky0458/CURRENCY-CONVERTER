@@ -114,7 +114,7 @@ const AppContent: React.FC = () => {
   const { isInstallable, isInstalled, triggerInstall } = usePWAInstall();
   
   const [activeDropdown, setActiveDropdown] = useState<'FROM' | 'TO' | null>(null);
-  const [theme, setTheme] = useState<ThemeColor>('blue');
+  const [theme, setTheme] = useState<ThemeColor>('rose');
   const [appStyles, setAppStyles] = useState<AppStyles>({
     header: 'panda',
     button: 'panda',
@@ -124,9 +124,7 @@ const AppContent: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [isClosingHistory, setIsClosingHistory] = useState(false);
   
-  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-
-  const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'document'>('convert');
+  const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'cv'>('cv');
   const [salaryAmount, setSalaryAmount] = useState<string>('');
   const [calcType, setCalcType] = useState<'probation' | 'official'>('official');
   
@@ -216,7 +214,6 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('app_theme');
-    const savedBg = localStorage.getItem('app_bg');
     const savedStyle = localStorage.getItem('app_styles');
     
     if (savedStyle) {
@@ -227,15 +224,12 @@ const AppContent: React.FC = () => {
         }
     }
     
-    if (savedBg) {
-        setBackgroundImage(savedBg);
-    }
-
     if (savedTheme) {
       setTheme(savedTheme);
       applyTheme(savedTheme);
     } else {
-      applyTheme('blue');
+      applyTheme('rose');
+      setTheme('rose');
     }
   }, []);
 
@@ -249,40 +243,6 @@ const AppContent: React.FC = () => {
       const newStyles = { ...appStyles, ...updates };
       setAppStyles(newStyles);
       localStorage.setItem('app_styles', JSON.stringify(newStyles));
-  };
-
-  const handleBackgroundUpload = async (file: File) => {
-      if (!file) return;
-
-      try {
-          const base64String = await compressImage(file);
-          
-          setBackgroundImage(base64String);
-          
-          try {
-              localStorage.setItem('app_bg', base64String);
-          } catch (e) {
-              console.error("LocalStorage quota exceeded", e);
-              alert("Ảnh nền quá lớn để lưu tự động. Ảnh sẽ chỉ hiển thị trong phiên làm việc hiện tại.");
-          }
-          
-          try {
-              const dominantColor = await extractDominantColor(base64String);
-              setTheme(dominantColor);
-              localStorage.setItem('app_theme', dominantColor);
-              applyTheme(dominantColor);
-          } catch (e) {
-              console.error("Could not extract color", e);
-          }
-      } catch (error) {
-          console.error("Error processing background image", error);
-          alert("Có lỗi xảy ra khi xử lý ảnh.");
-      }
-  };
-
-  const handleRemoveBackground = () => {
-    setBackgroundImage(null);
-    localStorage.removeItem('app_bg');
   };
 
   useEffect(() => {
@@ -477,8 +437,7 @@ const AppContent: React.FC = () => {
   const renderHistoryButton = (
     <button 
         onClick={() => setShowHistory(true)}
-        className={`flex items-center gap-1.5 text-xs font-bold hover:text-primary-700 px-2 py-1 rounded-md transition-all 
-        ${backgroundImage ? 'text-primary-600 bg-white/90' : 'text-primary-600 bg-primary-50 hover:bg-primary-100'}`}
+        className={`flex items-center gap-1.5 text-xs font-bold hover:text-primary-700 px-2 py-1 rounded-md transition-all text-primary-600 bg-primary-50 hover:bg-primary-100`}
     >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -518,19 +477,15 @@ const AppContent: React.FC = () => {
   }, [activeTab, result, amount, fromCurrency, toCurrency]);
 
   const vietNamFlagUrl = "https://flagcdn.com/w80/vn.png";
-  const hasBackground = !!backgroundImage;
   const isCnyInvolved = fromCurrency.code === 'CNY' || toCurrency.code === 'CNY';
+  const hasBackground = false;
+  const backgroundImage = null as string | null;
 
   return (
     <div 
         className={`min-h-screen font-sans text-slate-800 selection:bg-primary-200 flex flex-col relative transition-all duration-500`}
         style={{
-            backgroundColor: backgroundImage ? 'transparent' : '#f1f5f9',
-            backgroundImage: backgroundImage ? `url(${backgroundImage})` : 'none',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundAttachment: 'fixed',
-            backgroundRepeat: 'no-repeat'
+            backgroundColor: '#FFF5F8'
         }}
     >
       <ToastNotification />
@@ -569,12 +524,8 @@ const AppContent: React.FC = () => {
                 className={`
                     flex items-center gap-2 px-3 h-10 rounded-full backdrop-blur-md transition-all duration-300 font-bold text-sm shadow-md border
                     ${isInstalled
-                        ? `bg-emerald-500 text-white border-transparent cursor-default ${hasBackground ? 'border-white/20' : ''}`
-                        : `hover:shadow-xl hover:-translate-y-0.5 cursor-pointer ${
-                            hasBackground 
-                                ? 'bg-primary-500/80 hover:bg-primary-500 text-white border-white/20' 
-                                : 'bg-primary-500 text-white hover:bg-primary-600 border-transparent'
-                          }`
+                        ? `bg-emerald-500 text-white border-transparent cursor-default`
+                        : `hover:shadow-xl hover:-translate-y-0.5 cursor-pointer bg-primary-500 text-white hover:bg-primary-600 border-transparent`
                     }
                 `}
                 title={isInstalled ? "Ứng dụng đã được cài đặt" : "Cài đặt ứng dụng"}
@@ -593,17 +544,14 @@ const AppContent: React.FC = () => {
         )}
 
         {/* Notifications */}
-        <UpdateNotifications hasBackground={hasBackground} />
+        <UpdateNotifications hasBackground={false} />
 
         {/* CNY Rate Configuration Button (Absolute Position) */}
         <div className="relative" ref={rateConfigRef}>
             <button
                 onClick={() => setShowRateConfig(!showRateConfig)}
                 className={`
-                    w-10 h-10 rounded-full backdrop-blur-md transition-all duration-300 flex items-center justify-center group border font-bold text-sm
-                    ${hasBackground 
-                        ? 'bg-white/20 hover:bg-white/30 text-white shadow-lg shadow-black/5 border-white/20' 
-                        : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-primary-600 shadow-md hover:shadow-xl hover:-translate-y-0.5 border-transparent'}
+                    w-10 h-10 rounded-full backdrop-blur-md transition-all duration-300 flex items-center justify-center group border font-bold text-sm bg-white text-slate-600 hover:bg-slate-50 hover:text-primary-600 shadow-md hover:shadow-xl hover:-translate-y-0.5 border-transparent
                 `}
             >
                 ¥
@@ -693,9 +641,6 @@ const AppContent: React.FC = () => {
         <ThemeSelector 
             currentTheme={theme} 
             onThemeChange={handleThemeChange} 
-            onBackgroundUpload={handleBackgroundUpload}
-            onRemoveBackground={handleRemoveBackground}
-            currentBackground={backgroundImage}
             appStyles={appStyles}
             onStyleChange={handleStyleChange}
         />
@@ -741,13 +686,13 @@ const AppContent: React.FC = () => {
                     />
                 </div>
 
-                {activeTab === 'document' && (
+                {activeTab === 'cv' && (
                     <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
                         <DocumentSection />
                     </div>
                 )}
                 
-                {activeTab !== 'document' && (
+                {activeTab !== 'cv' && (
                     <>
                         {activeTab === 'convert' && (
                             <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>

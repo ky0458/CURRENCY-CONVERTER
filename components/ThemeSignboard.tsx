@@ -250,7 +250,7 @@ export const ThemeSignboard: React.FC<ThemeSignboardProps> = ({ style }) => {
           <div className="absolute bottom-2 left-3 w-1.5 h-1.5 rounded-full bg-black/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] z-20"></div>
           <div className="absolute bottom-2 right-3 w-1.5 h-1.5 rounded-full bg-black/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.4)] z-20"></div>
           
-          <h1 className={`relative z-30 ${text} mb-1.5 tracking-tight whitespace-nowrap text-[15px] sm:text-lg md:text-xl font-black uppercase ${!['penguin', 'space', 'clouds', 'panda'].includes(style) ? '[text-shadow:0_1px_1px_rgba(255,255,255,0.6)]' : ''}`}>Máy Đổi Tiền Của Gia Hân</h1>
+          <h1 className={`relative z-30 ${text} mb-1.5 tracking-tight whitespace-nowrap text-[15px] sm:text-lg md:text-xl font-black uppercase ${!['penguin', 'space', 'clouds', 'panda'].includes(style) ? '[text-shadow:0_1px_1px_rgba(255,255,255,0.6)]' : ''}`}>WELCOME TO GIA HÂN'S WORKSPACE</h1>
           
           <div className={`inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold ${text} opacity-95 relative z-30 max-w-full bg-white/20 px-3 py-1 rounded-full border ${border.replace('border-', 'border-').replace(/-\d00$/, '-400/30')} shadow-sm`}>
              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#4ade80]"></span>
