@@ -631,6 +631,93 @@ export const PdfRedactor: React.FC = () => {
         }
     };
 
+    const processImageFile = async (file: File) => {
+        try {
+            setIsProcessing(true);
+            setPages([]);
+            setDocxBlob(null);
+            blockActionsRef.current = {};
+
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            await new Promise<void>((resolve, reject) => {
+                img.onload = () => resolve();
+                img.onerror = reject;
+            });
+
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(img, 0, 0);
+            }
+
+            const blocks: TextBlock[] = [];
+            setOcrProgress('Đang quét thông tin từ ảnh...');
+            
+            try {
+                const Tesseract = await import('tesseract.js');
+                const { data } = (await Tesseract.recognize(canvas, 'vie+eng', {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            setOcrProgress(`Đang quét ảnh (${Math.round(m.progress * 100)}%)`);
+                        }
+                    }
+                })) as any;
+
+                if (data && data.words) {
+                    data.words.forEach((word: any, wIndex: number) => {
+                        const str = word.text;
+                        if (!str || str.trim() === '') return;
+                        
+                        // Mock viewport conversion for images (1:1)
+                        const xPct = (word.bbox.x0 / canvas.width) * 100;
+                        const yPct = (word.bbox.y0 / canvas.height) * 100;
+                        const widthPct = ((word.bbox.x1 - word.bbox.x0) / canvas.width) * 100;
+                        const heightPct = ((word.bbox.y1 - word.bbox.y0) / canvas.height) * 100;
+
+                        const blockId = `p1_ocr_${wIndex}`;
+                        if (isSensitiveData(str)) {
+                            blockActionsRef.current[blockId] = 'redact';
+                        }
+
+                        blocks.push({
+                            id: blockId,
+                            text: str,
+                            xPct, yPct, widthPct, heightPct,
+                            rawX: word.bbox.x0,
+                            rawY: word.bbox.y0,
+                            rawW: word.bbox.x1 - word.bbox.x0,
+                            rawH: word.bbox.y1 - word.bbox.y0
+                        });
+                    });
+                }
+            } catch (e) {
+                console.error("OCR Error on image:", e);
+            }
+
+            setOcrProgress('');
+            setPages([{
+                pageIndex: 1,
+                canvasUrl: canvas.toDataURL('image/jpeg', 0.95),
+                width: canvas.width,
+                height: canvas.height,
+                blocks: blocks,
+                viewport: {
+                    convertToPdfPoint: (x: number, y: number) => [x, y], // mock for images
+                    convertToViewportPoint: (x: number, y: number) => [x, y]
+                }
+            }]);
+            URL.revokeObjectURL(img.src);
+        } catch (error) {
+            console.error("Error processing image:", error);
+            alert("Có lỗi khi xử lý ảnh.");
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -640,6 +727,11 @@ export const PdfRedactor: React.FC = () => {
         setPages([]);
         setDocxBlob(null);
         blockActionsRef.current = {};
+
+        if (file.type.startsWith('image/')) {
+            await processImageFile(file);
+            return;
+        }
 
         if (file.name.toLowerCase().endsWith('.docx')) {
             try {
@@ -847,7 +939,7 @@ export const PdfRedactor: React.FC = () => {
                             <input 
                                 type="file" 
                                 onChange={handleFileUpload} 
-                                accept=".pdf,.docx" 
+                                accept=".pdf,.docx,image/*" 
                                 className="hidden" 
                             />
                         </label>
@@ -998,7 +1090,7 @@ export const PdfRedactor: React.FC = () => {
                         </svg>
                     </div>
                     <h3 className="text-lg font-bold text-slate-700 mb-1">Bắt đầu che CV</h3>
-                    <p className="text-slate-500 text-sm max-w-sm">Tải lên một file PDF hoặc Word (.docx) để bắt đầu. Hệ thống sẽ tự động nhận diện thông tin nhạy cảm.</p>
+                    <p className="text-slate-500 text-sm max-w-sm">Tải lên file PDF, Word (.docx) hoặc hình ảnh (JPG, PNG) để bắt đầu. Hệ thống sẽ tự động nhận diện thông tin nhạy cảm.</p>
                 </div>
             )}
         </div>

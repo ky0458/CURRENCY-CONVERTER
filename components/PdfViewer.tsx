@@ -15,11 +15,18 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ file }) => {
   const [width, setWidth] = useState<number>(800);
 
   useEffect(() => {
-    // Responsive width based on container
     const handleResize = () => {
       const parentWidth = window.innerWidth;
-      // Subtract modal paddings and margins
-      setWidth(Math.min(parentWidth - 64, 1000));
+      if (parentWidth <= 640) {
+        // Mobile: use almost full width
+        setWidth(parentWidth - 16);
+      } else if (parentWidth <= 1024) {
+        // Tablet: leave some margins
+        setWidth(parentWidth - 48);
+      } else {
+        // Desktop: capped width
+        setWidth(Math.min(parentWidth - 100, 1000));
+      }
     };
     handleResize();
     window.addEventListener('resize', handleResize);

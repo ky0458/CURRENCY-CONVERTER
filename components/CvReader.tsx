@@ -343,15 +343,14 @@ export const CvReader: React.FC = () => {
 
             {previewFile && createPortal(
                 <div 
-                    className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/50 backdrop-blur-[2px] p-2 sm:p-4 md:p-8 transition-all duration-300"
+                    className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-0 sm:p-4 md:p-8 transition-all duration-300"
                     onClick={closePreview}
                 >
                     <div 
-                        className="bg-white rounded-2xl sm:rounded-[2rem] shadow-2xl w-full max-w-5xl flex flex-col animate-spring-up overflow-hidden"
-                        style={{ height: 'calc(100vh - 2rem)', maxHeight: '900px' }}
+                        className="bg-white shadow-2xl w-full h-full sm:h-[90vh] sm:max-h-[900px] sm:max-w-5xl sm:rounded-[2rem] flex flex-col animate-spring-up overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-100 bg-slate-50">
+                        <div className="flex items-center justify-between p-3 sm:p-5 border-b border-slate-100 bg-slate-50/50 backdrop-blur-md">
                             <h3 className="font-bold text-slate-800 flex items-center gap-2 truncate pr-4 text-sm sm:text-base">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-indigo-600 shrink-0">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3 12h9m-9-3h9m-9-3h9m-9-3h9" />
