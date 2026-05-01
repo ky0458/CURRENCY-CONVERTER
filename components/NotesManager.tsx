@@ -774,7 +774,7 @@ export const NotesManager: React.FC = () => {
                 <div className="flex-1 overflow-hidden flex flex-col min-h-0 relative" ref={scrollContainerRef}>
                     {/* View: Add Tag */}
                     {viewMode === 'add-tag' && (
-                        <div className={`p-5 flex flex-col gap-6 overflow-y-auto custom-scrollbar ${isSubViewClosing ? 'animate-fade-out-down' : 'animate-fade-in-up'}`}>
+                        <div className={`p-5 flex flex-col gap-6 overflow-y-auto hide-scrollbar ${isSubViewClosing ? 'animate-fade-out-down' : 'animate-fade-in-up'}`}>
                             <div className="max-w-3xl mx-auto w-full">
                                 <h4 className="text-sm font-extrabold text-slate-800 uppercase tracking-wide mb-4">
                                     {editingTagId ? 'Cập nhật thẻ' : 'Tạo thẻ mới'}
@@ -902,7 +902,7 @@ export const NotesManager: React.FC = () => {
                     )}
 
                     {viewMode === 'add-note' && (
-                        <div className={`p-5 flex flex-col gap-5 flex-1 h-full overflow-y-auto custom-scrollbar ${isSubViewClosing ? 'animate-fade-out-down' : 'animate-fade-in-up'}`}>
+                        <div className={`p-5 flex flex-col gap-5 flex-1 h-full overflow-y-auto hide-scrollbar ${isSubViewClosing ? 'animate-fade-out-down' : 'animate-fade-in-up'}`}>
                            <div className="max-w-3xl mx-auto w-full h-full flex flex-col">
                                 <div className="flex-1 flex flex-col gap-2 min-h-[200px]">
                                     <label className="block text-xs font-bold text-slate-500 uppercase">Nội dung ghi chú</label>
@@ -922,7 +922,7 @@ export const NotesManager: React.FC = () => {
                                     </button>
                                     {isTagDropdownOpen && (
                                         <div className="absolute bottom-full left-0 w-full mb-2 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-20 animate-fade-in-up">
-                                            <div className="max-h-40 overflow-y-auto custom-scrollbar p-1">
+                                            <div className="max-h-40 overflow-y-auto hide-scrollbar p-1">
                                                 <button onClick={() => { setSelectedTagForNewNote(''); setIsTagDropdownOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-lg font-medium">Mặc định (Không thẻ)</button>
                                                 {tags.map(tag => (
                                                     <button key={tag.id} onClick={() => { setSelectedTagForNewNote(tag.id); setIsTagDropdownOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 rounded-lg transition-colors">
@@ -1112,7 +1112,7 @@ export const NotesManager: React.FC = () => {
                     )}
 
                             {/* Notes List */}
-                            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/30 pb-20">
+                            <div className="flex-1 overflow-y-auto p-4 hide-scrollbar bg-slate-50/30 pb-20">
                                 {isLoading || isFiltering ? (
                                     <LoadingSpinner />
                                 ) : filteredNotes.length === 0 ? (
@@ -1212,7 +1212,7 @@ export const NotesManager: React.FC = () => {
                                                             className="fixed inset-0 z-10" 
                                                             onClick={() => setIsItemsPerPageOpen(false)}
                                                         />
-                                                        <div className="absolute bottom-full mb-1 left-0 w-24 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-y-auto max-h-48 custom-scrollbar animate-fade-in-up origin-bottom-left">
+                                                        <div className="absolute bottom-full mb-1 left-0 w-24 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-y-auto max-h-48 hide-scrollbar animate-fade-in-up origin-bottom-left">
                                                             {Array.from({length: 10}, (_, i) => (i + 1) * 10).map(val => (
                                                                 <button
                                                                     key={val}

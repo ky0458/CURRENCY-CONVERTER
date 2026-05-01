@@ -835,7 +835,7 @@ const AppContent: React.FC = () => {
                                 onAmountChange={handleAmountChange}
                                 onCurrencyChange={handleFromChange}
                                 inputPlacement="left"
-                                autoFocus={true}
+                                autoFocus={window.innerWidth >= 1024}
                                 isActive={activeDropdown === 'FROM'}
                                 onToggleDropdown={() => setActiveDropdown(activeDropdown === 'FROM' ? null : 'FROM')}
                                 onCloseDropdown={() => setActiveDropdown(null)}
@@ -857,7 +857,7 @@ const AppContent: React.FC = () => {
                                     onAmountChange={handleAmountChange}
                                     onCurrencyChange={handleFromChange}
                                     inputPlacement="left"
-                                    autoFocus={true}
+                                    autoFocus={window.innerWidth >= 1024}
                                     isActive={activeDropdown === 'FROM'}
                                     onToggleDropdown={() => setActiveDropdown(activeDropdown === 'FROM' ? null : 'FROM')}
                                     onCloseDropdown={() => setActiveDropdown(null)}
