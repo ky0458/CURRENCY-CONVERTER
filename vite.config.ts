@@ -14,8 +14,8 @@ export default defineConfig(({ mode }) => {
       plugins: [
         react(),
         VitePWA({
-          registerType: 'prompt',
-          injectRegister: 'auto',
+          registerType: 'autoUpdate',
+          injectRegister: false, // Using manual registration in index.tsx
           includeAssets: ['app-icon-192.png', 'app-icon-512.png', 'app-icon.svg'],
           workbox: {
             maximumFileSizeToCacheInBytes: 50 * 1024 * 1024,
@@ -49,22 +49,22 @@ export default defineConfig(({ mode }) => {
             orientation: 'portrait',
             start_url: '/',
             scope: '/',
-            id: '/?source=pwa',
+            id: '/',
             icons: [
               {
-                src: 'app-icon-192.png',
+                src: '/app-icon-192.png',
                 sizes: '192x192',
                 type: 'image/png',
                 purpose: 'any'
               },
               {
-                src: 'app-icon-512.png',
+                src: '/app-icon-512.png',
                 sizes: '512x512',
                 type: 'image/png',
                 purpose: 'any'
               },
               {
-                src: 'app-icon-512.png',
+                src: '/app-icon-512.png',
                 sizes: '512x512',
                 type: 'image/png',
                 purpose: 'maskable'
@@ -72,9 +72,18 @@ export default defineConfig(({ mode }) => {
             ],
             screenshots: [
               {
-                src: 'app-icon-512.png',
+                src: '/app-icon-512.png',
                 sizes: '512x512',
-                type: 'image/png'
+                type: 'image/png',
+                form_factor: 'wide',
+                label: 'Workspace Desktop View'
+              },
+              {
+                src: '/app-icon-512.png',
+                sizes: '512x512',
+                type: 'image/png',
+                form_factor: 'narrow',
+                label: 'Workspace Mobile View'
               }
             ]
           }

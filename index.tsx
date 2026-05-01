@@ -7,10 +7,8 @@ import { registerSW } from 'virtual:pwa-register';
 
 const updateSW = registerSW({
   onNeedRefresh() {
-    // Show a prompt to update
-    if (confirm('Ứng dụng có phiên bản mới. Làm mới ngay?')) {
-      updateSW(true);
-    }
+    // For autoUpdate mode, it will handle it, but we can also manually trigger if needed
+    updateSW(true);
   },
   onOfflineReady() {
     console.log('Ứng dụng đã sẵn sàng hoạt động ngoại tuyến');
