@@ -240,7 +240,7 @@ export const UpdateNotifications: React.FC<UpdateNotificationsProps> = ({ hasBac
                             <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{updates.length}</span>
                         </div>
                         
-                        <div className="overflow-y-auto p-1 py-2 flex flex-col gap-1 [scrollbar-width:thin]">
+                        <div className="overflow-y-auto p-1 py-2 flex flex-col gap-1 hide-scrollbar">
                             {updates.length === 0 ? (
                                 <div className="p-4 text-center text-sm text-slate-500 italic">
                                     Chưa có bản cập nhật nào.
@@ -302,7 +302,7 @@ export const UpdateNotifications: React.FC<UpdateNotificationsProps> = ({ hasBac
                             <p className="text-indigo-100 font-medium text-sm sm:text-base">Bản cập nhật ngày {selectedUpdate.dateStr}</p>
                         </div>
 
-                        <div className="p-4 sm:p-6 overflow-y-auto [scrollbar-width:thin]">
+                        <div className="p-4 sm:p-6 overflow-y-auto hide-scrollbar">
                             <ul className="space-y-4">
                                 {selectedUpdate.features && selectedUpdate.features.map((feature, idx) => (
                                     <li key={idx} className="flex gap-4">

@@ -7,7 +7,17 @@ import { AppStyles } from '../types';
 import { THEME_COLORS } from '../constants';
 
 // Initialize Gemini API
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+const getAI = () => {
+  if (!aiInstance) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      throw new Error('Please configure GEMINI_API_KEY to use AI features.');
+    }
+    aiInstance = new GoogleGenAI({ apiKey: key });
+  }
+  return aiInstance;
+};
 
 const FALLBACK_MODELS = [
   "gemini-2.5-flash",
@@ -361,51 +371,56 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
 
   // Sync messages state when current session changes
   useEffect(() => {
-    if (currentSessionId) {
-      const session = sessions.find(s => s.id === currentSessionId);
-      if (session) {
-        setMessages(session.messages || []);
-        // Re-initialize AI chat with history
-        const rawHistory = (session.messages || []).map(msg => ({
-          role: msg.sender === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.text }]
-        }));
-        
-        let validHistory: any[] = [];
-        let expectedRole = 'model';
-        for (let i = rawHistory.length - 1; i >= 0; i--) {
-          if (rawHistory[i].role === expectedRole) {
-            validHistory.unshift(rawHistory[i]);
-            expectedRole = expectedRole === 'model' ? 'user' : 'model';
+    try {
+      if (currentSessionId) {
+        const session = sessions.find(s => s.id === currentSessionId);
+        if (session) {
+          setMessages(session.messages || []);
+          // Re-initialize AI chat with history
+          const rawHistory = (session.messages || []).map(msg => ({
+            role: msg.sender === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.text }]
+          }));
+          
+          let validHistory: any[] = [];
+          let expectedRole = 'model';
+          for (let i = rawHistory.length - 1; i >= 0; i--) {
+            if (rawHistory[i].role === expectedRole) {
+              validHistory.unshift(rawHistory[i]);
+              expectedRole = expectedRole === 'model' ? 'user' : 'model';
+            }
           }
+          if (validHistory.length > 0 && validHistory[0].role === 'model') {
+            validHistory.shift();
+          }
+          
+          chatSessionRef.current = getAI().chats.create({
+            model: FALLBACK_MODELS[currentModelIndexRef.current],
+            config: {
+              systemInstruction: SYSTEM_INSTRUCTION,
+            },
+            history: validHistory.length > 0 ? validHistory : undefined
+          });
+          activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
         }
-        if (validHistory.length > 0 && validHistory[0].role === 'model') {
-          validHistory.shift();
-        }
-        
-        chatSessionRef.current = ai.chats.create({
+      } else {
+        setMessages([{
+          id: Date.now().toString(),
+          text: "Xin chào! Em là trợ lý AI của Gia Hân. Em có thể giúp gì cho chị hôm nay?",
+          sender: 'ai',
+          timestamp: Date.now()
+        }]);
+        chatSessionRef.current = getAI().chats.create({
           model: FALLBACK_MODELS[currentModelIndexRef.current],
           config: {
             systemInstruction: SYSTEM_INSTRUCTION,
           },
-          history: validHistory.length > 0 ? validHistory : undefined
         });
         activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
       }
-    } else {
-      setMessages([{
-        id: Date.now().toString(),
-        text: "Xin chào! Em là trợ lý AI của Gia Hân. Em có thể giúp gì cho chị hôm nay?",
-        sender: 'ai',
-        timestamp: Date.now()
-      }]);
-      chatSessionRef.current = ai.chats.create({
-        model: FALLBACK_MODELS[currentModelIndexRef.current],
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-        },
-      });
-      activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
+    } catch (err: any) {
+      console.warn("AI Init failed:", err);
+      // Don't crash the widget
     }
   }, [currentSessionId, sessions.length === 0]);
 
@@ -625,7 +640,7 @@ ${text}`;
             validHistory.shift();
           }
           
-          chatSessionRef.current = ai.chats.create({
+          chatSessionRef.current = getAI().chats.create({
             model: modelToUse,
             config: {
               systemInstruction: SYSTEM_INSTRUCTION,
@@ -744,13 +759,17 @@ ${text}`;
       sender: 'ai',
       timestamp: Date.now()
     }]);
-    chatSessionRef.current = ai.chats.create({
-      model: FALLBACK_MODELS[currentModelIndexRef.current],
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-      },
-    });
-    activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
+    try {
+      chatSessionRef.current = getAI().chats.create({
+        model: FALLBACK_MODELS[currentModelIndexRef.current],
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+        },
+      });
+      activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
+    } catch (err: any) {
+      console.warn("AI Init failed in createNewChat:", err);
+    }
     if (window.innerWidth < 640) setShowSidebar(false);
   };
 

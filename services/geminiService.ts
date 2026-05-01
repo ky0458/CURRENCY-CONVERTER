@@ -3,7 +3,17 @@ import { ConversionResult } from '../types';
 import { getReadFunction } from '../utils/currencyTextFormatter';
 import { GoogleGenAI } from '@google/genai';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+const getAI = () => {
+  if (!aiInstance) {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) {
+      throw new Error('Please configure GEMINI_API_KEY to use AI features.');
+    }
+    aiInstance = new GoogleGenAI({ apiKey: key });
+  }
+  return aiInstance;
+};
 
 const getDecimals = (currencyCode: string): number => {
   if (['VND', 'JPY', 'KRW', 'TWD', 'HUF'].includes(currencyCode)) {
@@ -72,7 +82,7 @@ export const translateJobTitle = async (text: string): Promise<string> => {
   while (attempts < FALLBACK_MODELS.length) {
     const modelToUse = FALLBACK_MODELS[(currentModelIndex + attempts) % FALLBACK_MODELS.length];
     try {
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: modelToUse,
         contents: {
           parts: [{
@@ -236,7 +246,7 @@ Hãy trình bày báo cáo đánh giá theo format từng tầng thông tin rõ 
           }
       }
 
-      const response = await ai.models.generateContent({
+      const response = await getAI().models.generateContent({
         model: modelToUse,
         contents: parts
       });
