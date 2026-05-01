@@ -11,12 +11,12 @@ export const DocumentSection: React.FC = () => {
     
     return (
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-xl border border-white/50 animate-fade-in relative">
-            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-5">
+            <div className="flex flex-col gap-4 mb-6">
                 <div>
                     <h2 className="text-xl font-bold text-slate-800">Che CV - Phân tích CV & So sánh độ phù hợp với JD</h2>
                 </div>
                 
-                <div className="grid grid-cols-2 sm:flex sm:flex-row flex-wrap w-full xl:w-auto bg-slate-100/80 p-1.5 rounded-2xl gap-1">
+                <div className="grid grid-cols-2 sm:flex sm:flex-row flex-wrap w-full sm:w-fit bg-slate-100/80 p-1.5 rounded-2xl gap-1">
                     <button
                         onClick={() => setMode('redact_cv')}
                         className={`px-2 py-2 sm:px-4 sm:py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all duration-200 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${mode === 'redact_cv' ? 'bg-white text-purple-600 shadow-sm ring-1 ring-slate-200/50 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
