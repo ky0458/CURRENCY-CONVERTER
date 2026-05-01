@@ -58,11 +58,18 @@ export const useNotes = () => {
                 localStorage.setItem('app_note_tags', JSON.stringify(finalTags));
 
                 // Sync the merged result back to DB
-                await fetch('/api/notes', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ uid: user.uid, notes: finalNotes, tags: finalTags })
-                });
+                await Promise.all([
+                   fetch('/api/notes', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ uid: user.uid, notes: finalNotes })
+                   }),
+                   fetch('/api/note-tags', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ uid: user.uid, tags: finalTags })
+                   })
+                ]);
                 
                 setIsLoading(false);
                 return;
@@ -92,11 +99,18 @@ export const useNotes = () => {
     
     if (user && user.uid) {
       try {
-        await fetch('/api/notes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: user.uid, notes: newNotes, tags: newTags })
-        });
+        await Promise.all([
+           fetch('/api/notes', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ uid: user.uid, notes: newNotes })
+           }),
+           fetch('/api/note-tags', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ uid: user.uid, tags: newTags })
+           })
+        ]);
       } catch (err) {
         console.error('Error syncing notes to DB', err);
       }

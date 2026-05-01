@@ -40,11 +40,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // --- OPTIMIZED PRESENCE SYSTEM ---
+  const userRef = React.useRef(user);
+  
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   useEffect(() => {
     let interval: any;
 
     const updatePresence = async () => {
-      if (user) {
+      const currentUser = userRef.current;
+      if (currentUser) {
         try {
           const response = await fetch('/api/users/presence', {
             method: 'POST',
@@ -52,10 +59,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              uid: user.uid,
-              displayName: user.displayName || 'Người dùng',
-              photoURL: user.photoURL || '',
-              email: user.email,
+              uid: currentUser.uid,
+              displayName: currentUser.displayName || 'Người dùng',
+              photoURL: currentUser.photoURL || '',
+              email: currentUser.email,
               lastSeen: Date.now(),
               status: document.visibilityState === 'visible' ? 'online' : 'away'
             })
@@ -65,8 +72,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error("Failed to update presence in backend", await response.text());
           }
         } catch (error: any) {
-          // Suppress permission errors to avoid console noise if Firestore rules are strict
-          // Also suppress 'Failed to fetch' which often occurs on tab close/visibility change
           if (error.code !== 'permission-denied' && error.message !== 'Failed to fetch') {
              console.error("Presence update error:", error);
           }
@@ -74,12 +79,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    if (user) {
+    if (user?.uid) {
       // 1. Initial update on mount
       updatePresence();
 
-      // 2. Heartbeat every 45 seconds
-      interval = setInterval(updatePresence, 45000);
+      // 2. Heartbeat every 5 minutes (reduced frequency to avoid spam)
+      interval = setInterval(updatePresence, 300000);
 
       // 3. Update immediately when tab becomes visible
       const handleVisibilityChange = () => {
@@ -95,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         document.removeEventListener("visibilitychange", handleVisibilityChange);
       };
     }
-  }, [user]);
+  }, [user?.uid]);
   // -----------------------------------
 
   const showNotification = (message: string, type: 'success' | 'error' | 'info') => {

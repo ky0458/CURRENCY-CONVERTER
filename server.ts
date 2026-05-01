@@ -7,6 +7,7 @@ import { User } from './models/User.js';
 import { ChatSession } from './models/ChatSession.js';
 
 import { NotebookContent } from './models/NotebookContent.js';
+import { NoteTag } from './models/NoteTag.js';
 
 import { ConvertHistory } from './models/ConvertHistory.js';
 import { StatisticsHistory } from './models/StatisticsHistory.js';
@@ -189,11 +190,16 @@ app.get('/api/notes', async (req, res) => {
   try {
     const { uid } = req.query;
     if (!uid) return res.status(400).json({ error: 'Missing uid' });
-    if (!process.env.MONGODB_URI) return res.json(null);
+    if (!process.env.MONGODB_URI) return res.json({ notes: [], tags: [] });
     
     // Using lean() for better performance
     const content = await NotebookContent.findOne({ userId: uid as string }).lean();
-    res.json(content || { notes: [], tags: [] });
+    const tagContent = await NoteTag.findOne({ userId: uid as string }).lean();
+    
+    res.json({
+        notes: content?.notes || [],
+        tags: tagContent?.tags || []
+    });
   } catch (err) {
     console.error('Error fetching notes:', err);
     res.status(500).json({ error: 'Internal server error' });
@@ -202,19 +208,38 @@ app.get('/api/notes', async (req, res) => {
 
 app.post('/api/notes', async (req, res) => {
   try {
-    const { uid, notes, tags } = req.body;
+    const { uid, notes } = req.body;
     if (!uid) return res.status(400).json({ error: 'Missing uid' });
     if (!process.env.MONGODB_URI) return res.json({ success: true });
     
     const content = await NotebookContent.findOneAndUpdate(
       { userId: uid as string },
-      { $set: { notes: notes || [], tags: tags || [] } },
+      { $set: { notes: notes || [] } },
       { returnDocument: 'after', upsert: true }
     ).lean();
     
     res.json(content);
   } catch (err) {
     console.error('Error saving notes:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/note-tags', async (req, res) => {
+  try {
+    const { uid, tags } = req.body;
+    if (!uid) return res.status(400).json({ error: 'Missing uid' });
+    if (!process.env.MONGODB_URI) return res.json({ success: true });
+    
+    const content = await NoteTag.findOneAndUpdate(
+      { userId: uid as string },
+      { $set: { tags: tags || [] } },
+      { returnDocument: 'after', upsert: true }
+    ).lean();
+    
+    res.json(content);
+  } catch (err) {
+    console.error('Error saving note tags:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
