@@ -517,6 +517,32 @@ const AppContent: React.FC = () => {
 
       {/* GLOBAL FIXED CONTROLS */}
       <div className="absolute top-3 right-3 sm:top-5 sm:right-6 z-[100] flex items-center gap-3 animate-fade-in-up">
+        {/* Install PWA Button */}
+        {(isInstallable || isInstalled) && (
+            <button
+                onClick={isInstalled ? undefined : triggerInstall}
+                className={`
+                    flex items-center gap-2 px-3 h-10 rounded-full backdrop-blur-md transition-all duration-300 font-bold text-sm shadow-md border
+                    ${isInstalled
+                        ? `bg-emerald-500 text-white border-transparent cursor-default`
+                        : `hover:shadow-xl hover:-translate-y-0.5 cursor-pointer bg-primary-500 text-white hover:bg-primary-600 border-transparent`
+                    }
+                `}
+                title={isInstalled ? "Ứng dụng đã được cài đặt" : "Cài đặt ứng dụng"}
+            >
+                {isInstalled ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.125 2.25h-4.5c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125v-9M10.125 2.25h.375a9 9 0 0 1 9 9v.375M10.125 2.25A3.375 3.375 0 0 1 13.5 5.625v1.875a3.375 3.375 0 0 0 3.375 3.375h1.875M9 15l2.25 2.25L15 12" />
+                    </svg>
+                ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                )}
+                <span className="hidden sm:inline">{isInstalled ? "Đã cài đặt" : "Cài đặt"}</span>
+            </button>
+        )}
+
         {/* Notifications */}
         <UpdateNotifications hasBackground={false} />
 

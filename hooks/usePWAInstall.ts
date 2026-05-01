@@ -13,9 +13,11 @@ export const usePWAInstall = () => {
     }
 
     const handleBeforeInstallPrompt = (e: Event) => {
-      // Do NOT prevent default to allow browser's default prompt
-      // Stash the event just in case, but we won't show custom UI
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
+      // Update UI notify the user they can install the PWA
       setIsInstallable(true);
     };
 
