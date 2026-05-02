@@ -14,18 +14,33 @@ export const useNotes = () => {
   const [tags, setTags] = useState<NoteTag[]>(DEFAULT_TAGS);
   const [isLoading, setIsLoading] = useState(true);
   
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   // Load Data
   useEffect(() => {
+    if (loading) return;
+
     const loadData = async () => {
       setIsLoading(true);
       try {
         const savedNotesStr = localStorage.getItem('app_notes');
+        const savedNotesOwner = localStorage.getItem('app_notes_owner');
         const savedTagsStr = localStorage.getItem('app_note_tags');
+        const savedTagsOwner = localStorage.getItem('app_note_tags_owner');
+        const currentOwner = user?.uid || 'guest';
         
-        let localNotes = savedNotesStr ? JSON.parse(savedNotesStr) : [];
-        let localTags = savedTagsStr ? JSON.parse(savedTagsStr) : DEFAULT_TAGS;
+        let localNotes = [];
+        let localTags = DEFAULT_TAGS;
+
+        const shouldLoadLocalNotes = !savedNotesOwner || savedNotesOwner === currentOwner || savedNotesOwner === 'guest';
+        const shouldLoadLocalTags = !savedTagsOwner || savedTagsOwner === currentOwner || savedTagsOwner === 'guest';
+
+        if (shouldLoadLocalNotes) {
+            localNotes = savedNotesStr ? JSON.parse(savedNotesStr) : [];
+        }
+        if (shouldLoadLocalTags) {
+            localTags = savedTagsStr ? JSON.parse(savedTagsStr) : DEFAULT_TAGS;
+        }
 
         if (user && user.uid) {
           try {
@@ -56,6 +71,8 @@ export const useNotes = () => {
                 // Persist the merged data to storage
                 localStorage.setItem('app_notes', JSON.stringify(finalNotes));
                 localStorage.setItem('app_note_tags', JSON.stringify(finalTags));
+                localStorage.setItem('app_notes_owner', user.uid);
+                localStorage.setItem('app_note_tags_owner', user.uid);
 
                 // Sync the merged result back to DB
                 await Promise.all([
@@ -90,12 +107,14 @@ export const useNotes = () => {
       }
     };
     loadData();
-  }, [user]);
+  }, [user, loading]);
 
   // Helper to save everything to LocalStorage & DB
   const persistData = async (newNotes: Note[], newTags: NoteTag[]) => {
     localStorage.setItem('app_notes', JSON.stringify(newNotes));
     localStorage.setItem('app_note_tags', JSON.stringify(newTags));
+    localStorage.setItem('app_notes_owner', user?.uid || 'guest');
+    localStorage.setItem('app_note_tags_owner', user?.uid || 'guest');
     
     if (user && user.uid) {
       try {

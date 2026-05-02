@@ -100,6 +100,7 @@ export const NotesManager: React.FC = () => {
   // Create/Edit Tag State
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState('#3b82f6');
+  const [tagInputError, setTagInputError] = useState('');
   const tagInputRef = useRef<HTMLInputElement>(null); // Ref for tag input to auto-focus
 
   // --- DRAGGABLE BUTTON STATE ---
@@ -238,6 +239,7 @@ export const NotesManager: React.FC = () => {
         setViewMode('list'); 
         setEditingTagId(null);
         setNewTagName('');
+        setTagInputError('');
     }, 300);
   };
 
@@ -248,6 +250,7 @@ export const NotesManager: React.FC = () => {
         setIsSubViewClosing(false);
         setEditingTagId(null);
         setNewTagName('');
+        setTagInputError('');
         setIsTagSelectionMode(false);
         setSelectedTagIds(new Set());
     }, 300);
@@ -262,7 +265,10 @@ export const NotesManager: React.FC = () => {
   };
 
   const handleSaveTag = () => {
-    if (!newTagName.trim()) return;
+    if (!newTagName.trim()) {
+        setTagInputError('Vui lòng nhập tên thẻ');
+        return;
+    }
     
     if (editingTagId) {
         updateTag(editingTagId, newTagName, newTagColor);
@@ -273,6 +279,7 @@ export const NotesManager: React.FC = () => {
         showNotification("Đã tạo thẻ mới", "success");
     }
     
+    setTagInputError('');
     setNewTagName('');
     setNewTagColor('#3b82f6');
   };
@@ -281,6 +288,7 @@ export const NotesManager: React.FC = () => {
       setEditingTagId(tag.id);
       setNewTagName(tag.name);
       setNewTagColor(tag.color);
+      setTagInputError('');
       // Auto scroll to top to show edit form
       scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -288,6 +296,7 @@ export const NotesManager: React.FC = () => {
   const cancelEditTag = () => {
       setEditingTagId(null);
       setNewTagName('');
+      setTagInputError('');
       setNewTagColor('#3b82f6');
   };
 
@@ -780,17 +789,21 @@ export const NotesManager: React.FC = () => {
                                     {editingTagId ? 'Cập nhật thẻ' : 'Tạo thẻ mới'}
                                 </h4>
                                 <div className={`bg-slate-50 p-4 rounded-2xl border ${editingTagId ? 'border-indigo-200 ring-2 ring-indigo-50' : 'border-slate-100'} ${isTagSelectionMode ? 'opacity-50 pointer-events-none' : ''}`}>
-                                    <div className="mb-4">
+                                    <div className="mb-4 relative">
                                         <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tên thẻ</label>
                                         <input 
                                             ref={tagInputRef}
                                             type="text" 
                                             className="w-full text-sm px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-white transition-all text-slate-800" 
                                             value={newTagName} 
-                                            onChange={(e) => setNewTagName(e.target.value)} 
+                                            onChange={(e) => {
+                                                setNewTagName(e.target.value);
+                                                if (e.target.value.trim()) setTagInputError('');
+                                            }} 
                                             inputMode="text" role="presentation" autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="none" name="search_tag_q" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
                                             placeholder="Nhập tên thẻ..." 
                                         />
+                                        {tagInputError && <p className="text-red-500 text-xs mt-1 absolute">{tagInputError}</p>}
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase mb-3">Màu nhận diện</label>

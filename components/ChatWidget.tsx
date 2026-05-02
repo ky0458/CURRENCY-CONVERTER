@@ -383,7 +383,15 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
   useEffect(() => {
     const loadSessions = async () => {
       const localSessionsStr = localStorage.getItem('app_chat_sessions');
-      const parsedLocal = localSessionsStr ? JSON.parse(localSessionsStr) : [];
+      const savedOwner = localStorage.getItem('app_chat_sessions_owner');
+      const currentOwner = user?.uid || 'guest';
+      
+      let parsedLocal = [];
+      const shouldLoadLocal = !savedOwner || savedOwner === currentOwner || savedOwner === 'guest';
+      
+      if (shouldLoadLocal) {
+          parsedLocal = localSessionsStr ? JSON.parse(localSessionsStr) : [];
+      }
       
       if (user && user.uid) {
         try {
@@ -398,6 +406,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
             if (Array.isArray(data) && data.length > 0) {
               setSessions(data);
               localStorage.setItem('app_chat_sessions', JSON.stringify(data));
+              localStorage.setItem('app_chat_sessions_owner', user.uid);
               return;
             }
           }
@@ -407,6 +416,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
       }
       
       setSessions(parsedLocal);
+      localStorage.setItem('app_chat_sessions_owner', currentOwner);
     };
     loadSessions();
   }, [user]);
@@ -539,6 +549,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
     
     setSessions(trimmedSessions);
     localStorage.setItem('app_chat_sessions', JSON.stringify(trimmedSessions));
+    localStorage.setItem('app_chat_sessions_owner', user?.uid || 'guest');
 
     // Save to DB if user is logged in
     if (!isLocal) {
@@ -853,6 +864,7 @@ ${text}`;
   const persistSessions = (updatedSessions: ChatSession[]) => {
     setSessions(updatedSessions);
     localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+    localStorage.setItem('app_chat_sessions_owner', user?.uid || 'guest');
   };
 
   const togglePin = async (session: ChatSession, e: React.MouseEvent) => {
@@ -865,6 +877,7 @@ ${text}`;
       // Update local storage via persistSessions
       setSessions(updatedSessions);
       localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+      localStorage.setItem('app_chat_sessions_owner', user?.uid || 'guest');
       
       // Update DB if authenticated
       if (user && user.uid && updatedSessions[index].userId !== 'local') {
@@ -931,6 +944,7 @@ ${text}`;
     
     setSessions(updatedSessions);
     localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+    localStorage.setItem('app_chat_sessions_owner', user?.uid || 'guest');
     
     if (updatedSessionToSave && user && user.uid && (updatedSessionToSave as ChatSession).userId !== 'local') {
         try {
@@ -965,6 +979,7 @@ ${text}`;
         const updatedSessions = sessions.filter(s => !selectedSessions.has(s.id));
         setSessions(updatedSessions);
         localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+        localStorage.setItem('app_chat_sessions_owner', user?.uid || 'guest');
         if (currentSessionId && selectedSessions.has(currentSessionId)) {
             createNewChat();
         }
@@ -981,6 +996,7 @@ ${text}`;
         const updatedSessions = sessions.filter(s => s.id !== sessionToDelete);
         setSessions(updatedSessions);
         localStorage.setItem('app_chat_sessions', JSON.stringify(updatedSessions));
+        localStorage.setItem('app_chat_sessions_owner', user?.uid || 'guest');
         if (currentSessionId === sessionToDelete) {
           createNewChat();
         }
