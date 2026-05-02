@@ -110,7 +110,7 @@ export const useCurrencyConverter = () => {
       converted: number, 
       type: 'convert' | 'calculate' | 'revenue', 
       originalSalary?: number,
-      revenueDetails?: { shareType: 'all' | 'cv' | 'job', stageRevenue: number, totalRevenue: number, isSalesExecutive?: boolean, salesExecutiveType?: 'with_language' | 'without_language' }
+      revenueDetails?: { shareType: 'all' | 'cv' | 'job', stageRevenue: number, totalRevenue: number, isSalesExecutive?: boolean, specialCase?: 'none' | 'sales' | 'senior', salesExecutiveType?: 'with_language' | 'without_language' }
   ) => {
     const newItem: ConversionHistoryItem = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -166,7 +166,7 @@ export const useCurrencyConverter = () => {
     setLoadingState(LoadingState.IDLE);
   }, []);
 
-  const executeConversion = async (currentAmount: number, source: Currency, target: Currency, type: 'convert' | 'calculate' | 'revenue', originalSalary?: number, revenueDetails?: { shareType: 'all' | 'cv' | 'job', stageRevenue: number, totalRevenue: number, isSalesExecutive?: boolean, salesExecutiveType?: 'with_language' | 'without_language' }) => {
+  const executeConversion = async (currentAmount: number, source: Currency, target: Currency, type: 'convert' | 'calculate' | 'revenue', originalSalary?: number, revenueDetails?: { shareType: 'all' | 'cv' | 'job', stageRevenue: number, totalRevenue: number, isSalesExecutive?: boolean, specialCase?: 'none' | 'sales' | 'senior', salesExecutiveType?: 'with_language' | 'without_language' }) => {
     setLoadingState(LoadingState.LOADING);
     setErrorMsg('');
     
@@ -183,7 +183,7 @@ export const useCurrencyConverter = () => {
     }
   };
 
-  const handleConvert = useCallback((amountOverride?: string, type: 'convert' | 'calculate' | 'revenue' = 'convert', originalSalary?: number, revenueDetails?: { shareType: 'all' | 'cv' | 'job', stageRevenue: number, totalRevenue: number, isSalesExecutive?: boolean, salesExecutiveType?: 'with_language' | 'without_language' }) => {
+  const handleConvert = useCallback((amountOverride?: string, type: 'convert' | 'calculate' | 'revenue' = 'convert', originalSalary?: number, revenueDetails?: { shareType: 'all' | 'cv' | 'job', stageRevenue: number, totalRevenue: number, isSalesExecutive?: boolean, specialCase?: 'none' | 'sales' | 'senior', salesExecutiveType?: 'with_language' | 'without_language' }) => {
     const valueToCheck = amountOverride !== undefined ? amountOverride : amount;
     const numAmount = parseFloat(valueToCheck);
 

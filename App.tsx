@@ -128,7 +128,8 @@ const AppContent: React.FC = () => {
   const [salaryAmount, setSalaryAmount] = useState<string>('');
   const [calcType, setCalcType] = useState<'probation' | 'official'>('official');
   
-  const [isSalesExecutive, setIsSalesExecutive] = useState(false);
+  const [specialCase, setSpecialCase] = useState<'none' | 'sales' | 'senior'>('none');
+  const [isSpecialCaseDropdownOpen, setIsSpecialCaseDropdownOpen] = useState(false);
   const [salesExecutiveType, setSalesExecutiveType] = useState<'with_language' | 'without_language'>('with_language');
   
   const [revenueShare, setRevenueShare] = useState<'all' | 'cv' | 'job'>('all');
@@ -330,17 +331,22 @@ const AppContent: React.FC = () => {
                 netIncome: item.type === 'revenue' ? item.convertedAmount : Math.floor(item.revenueDetails.totalRevenue * 0.49)
             });
             
-            if (item.revenueDetails.isSalesExecutive) {
-                setIsSalesExecutive(true);
-                if (item.revenueDetails.salesExecutiveType) {
+            if (item.revenueDetails.specialCase) {
+                setSpecialCase(item.revenueDetails.specialCase);
+                if (item.revenueDetails.salesExecutiveType && item.revenueDetails.specialCase === 'sales') {
+                    setSalesExecutiveType(item.revenueDetails.salesExecutiveType);
+                }
+            } else if (item.revenueDetails.isSalesExecutive !== undefined) {
+                setSpecialCase(item.revenueDetails.isSalesExecutive ? 'sales' : 'none');
+                if (item.revenueDetails.salesExecutiveType && item.revenueDetails.isSalesExecutive) {
                     setSalesExecutiveType(item.revenueDetails.salesExecutiveType);
                 }
             } else {
-                setIsSalesExecutive(false);
+                setSpecialCase('none');
             }
         } else {
             setRevenueResult(null);
-            setIsSalesExecutive(false);
+            setSpecialCase('none');
         }
         
         if (item.type === 'calculate') {
@@ -366,7 +372,7 @@ const AppContent: React.FC = () => {
         let fee = 0;
         let salary = 0;
 
-        if (isSalesExecutive) {
+        if (specialCase === 'sales') {
             fee = salesExecutiveType === 'with_language' ? 10000000 : 6000000;
             salary = fee; // Use fee as salary for history to avoid NaN
         } else {
@@ -378,8 +384,12 @@ const AppContent: React.FC = () => {
             }
             
             // Calculate Fee
-            const multiplier = calcType === 'probation' ? 0.75 : 0.60;
-            fee = Math.floor(salary * multiplier);
+            if (specialCase === 'senior') {
+                fee = salary;
+            } else {
+                const multiplier = calcType === 'probation' ? 0.75 : 0.60;
+                fee = Math.floor(salary * multiplier);
+            }
         }
 
         setAmount(fee.toString()); 
@@ -405,7 +415,7 @@ const AppContent: React.FC = () => {
             shareType: revenueShare,
             stageRevenue: stageRevenue,
             totalRevenue: totalRevenue,
-            isSalesExecutive: isSalesExecutive,
+            specialCase: specialCase,
             salesExecutiveType: salesExecutiveType
         }); 
     } else if (activeTab === 'convert') {
@@ -680,7 +690,7 @@ const AppContent: React.FC = () => {
                 <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
                     <TabSelector 
                         activeTab={activeTab} 
-                        onTabChange={(tab) => { setActiveTab(tab); resetResult(); setAmount(''); setSalaryAmount(''); setRevenueResult(null); setJobTitle(''); setTranslatedJobTitle(''); setIsSalesExecutive(false); }} 
+                        onTabChange={(tab) => { setActiveTab(tab); resetResult(); setAmount(''); setSalaryAmount(''); setRevenueResult(null); setJobTitle(''); setTranslatedJobTitle(''); setSpecialCase('none'); }} 
                         theme={theme} 
                         buttonStyle={appStyles.button}
                     />
@@ -808,19 +818,67 @@ const AppContent: React.FC = () => {
                 )}
 
                 {activeTab === 'calculate' && (
-                    <div className="mb-3 flex items-center justify-between animate-fade-in-up">
-                        <label className="flex items-center gap-2 cursor-pointer w-fit">
-                            <input 
-                                type="checkbox" 
-                                checked={isSalesExecutive}
-                                onChange={(e) => setIsSalesExecutive(e.target.checked)}
-                                className="w-4 h-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500"
-                            />
-                            <span className={`text-sm font-bold ${hasBackground ? 'text-white drop-shadow-sm' : 'text-slate-700'}`}>
-                                Trường hợp đặc biệt: Nhân viên kinh doanh
-                            </span>
-                        </label>
-                        {isSalesExecutive && renderHistoryButton}
+                    <div className={`mb-3 flex items-center justify-between animate-fade-in-up min-h-[34px] relative ${isSpecialCaseDropdownOpen ? 'z-[60]' : 'z-20'}`}>
+                        <div className="flex-1 md:flex-none md:w-[calc(50%-0.5rem)] relative pr-2 md:pr-0">
+                            <div className="relative group">
+                                <button
+                                    onClick={() => setIsSpecialCaseDropdownOpen(!isSpecialCaseDropdownOpen)}
+                                    className={`w-full text-left pl-3 pr-8 py-1.5 rounded-lg border text-[13px] sm:text-sm font-bold outline-none transition-all cursor-pointer shadow-sm hover:shadow flex items-center justify-between ${hasBackground ? 'bg-white/95 border-white text-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'} ${isSpecialCaseDropdownOpen ? 'border-primary-500 ring-2 ring-primary-100 z-50 bg-white' : ''}`}
+                                >
+                                    <span className="truncate">
+                                        {specialCase === 'none' ? 'Đặc biệt: Không' : specialCase === 'sales' ? 'Đặc biệt: Nhân viên KD' : 'Đặc biệt: Vị trí cấp cao'}
+                                    </span>
+                                    <div className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 transition-transform duration-200 ${isSpecialCaseDropdownOpen ? 'rotate-180 text-primary-500' : ''}`}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                                           <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                        </svg>
+                                    </div>
+                                </button>
+
+                                {isSpecialCaseDropdownOpen && (
+                                    <>
+                                        <div 
+                                            className="fixed inset-0 z-40"
+                                            onClick={() => setIsSpecialCaseDropdownOpen(false)}
+                                        />
+                                        <div className="absolute z-[70] w-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden transform origin-top transition-all animate-fade-in-up">
+                                            <div className="py-1">
+                                                <button
+                                                    onClick={() => { setSpecialCase('none'); setIsSpecialCaseDropdownOpen(false); }}
+                                                    className={`w-full flex items-center gap-2 px-3 py-2.5 text-[13px] sm:text-sm font-medium transition-colors hover:bg-slate-50 ${specialCase === 'none' ? 'text-primary-600 bg-primary-50/50' : 'text-slate-700'}`}
+                                                >
+                                                    <div className={`w-3 h-3 rounded-full border flex items-center justify-center shrink-0 ${specialCase === 'none' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                                        {specialCase === 'none' && <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
+                                                    </div>
+                                                    Đặc biệt: Không
+                                                </button>
+                                                <button
+                                                    onClick={() => { setSpecialCase('sales'); setIsSpecialCaseDropdownOpen(false); }}
+                                                    className={`w-full flex items-center gap-2 px-3 py-2.5 text-[13px] sm:text-sm font-medium transition-colors hover:bg-slate-50 ${specialCase === 'sales' ? 'text-primary-600 bg-primary-50/50' : 'text-slate-700'}`}
+                                                >
+                                                    <div className={`w-3 h-3 rounded-full border flex items-center justify-center shrink-0 ${specialCase === 'sales' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                                        {specialCase === 'sales' && <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
+                                                    </div>
+                                                    Đặc biệt: Nhân viên KD
+                                                </button>
+                                                <button
+                                                    onClick={() => { setSpecialCase('senior'); setIsSpecialCaseDropdownOpen(false); }}
+                                                    className={`w-full flex items-center gap-2 px-3 py-2.5 text-[13px] sm:text-sm font-medium transition-colors hover:bg-slate-50 ${specialCase === 'senior' ? 'text-primary-600 bg-primary-50/50' : 'text-slate-700'}`}
+                                                >
+                                                    <div className={`w-3 h-3 rounded-full border flex items-center justify-center shrink-0 ${specialCase === 'senior' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                                        {specialCase === 'senior' && <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
+                                                    </div>
+                                                    Đặc biệt: Vị trí cấp cao
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                        <div className="shrink-0 flex items-center">
+                            {renderHistoryButton}
+                        </div>
                     </div>
                 )}
 
@@ -847,7 +905,7 @@ const AppContent: React.FC = () => {
                             />
                         )}
 
-                        {activeTab === 'calculate' && !isSalesExecutive && (
+                        {activeTab === 'calculate' && specialCase !== 'sales' && (
                             <>
                                 <CurrencyRow
                                     key={activeTab}
@@ -862,11 +920,11 @@ const AppContent: React.FC = () => {
                                     onToggleDropdown={() => setActiveDropdown(activeDropdown === 'FROM' ? null : 'FROM')}
                                     onCloseDropdown={() => setActiveDropdown(null)}
                                     theme={theme}
-                                    headerAction={renderHistoryButton}
                                     error={errorMsg}
                                     onEnter={onCalculateAndConvert}
                                     hasBackgroundImage={hasBackground}
                                 />
+                                {specialCase === 'none' && (
                                 <div className="flex flex-col gap-0 w-full animate-fade-in-up">
                                     <div className="flex items-center justify-between ml-1 h-8">
                                         <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
@@ -903,10 +961,26 @@ const AppContent: React.FC = () => {
                                         </label>
                                     </div>
                                 </div>
+                                )}
+                                {specialCase === 'senior' && (
+                                <div className="flex flex-col gap-0 w-full animate-fade-in-up">
+                                    <div className="flex items-center justify-between ml-1 h-8">
+                                        <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                            Tỷ lệ tính phí
+                                        </label>
+                                    </div>
+                                    <div className={`flex items-center justify-center gap-2 px-3 rounded-2xl border transition-all h-[60px] sm:h-[66px] bg-primary-50 border-primary-500 text-primary-700 font-bold shadow-inner`}>
+                                        <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 leading-tight">
+                                            <span className="text-sm">Vị trí cấp cao</span>
+                                            <span className="text-[10px] sm:text-xs opacity-70 font-normal">(100% mức lương)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                )}
                             </>
                         )}
 
-                        {activeTab === 'calculate' && isSalesExecutive && (
+                        {activeTab === 'calculate' && specialCase === 'sales' && (
                             <>
                                 <div className="flex flex-col gap-0 w-full animate-fade-in-up">
                                     <div className="flex items-center justify-between ml-1 h-8">
@@ -1160,14 +1234,14 @@ const AppContent: React.FC = () => {
                             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-[90%] h-0.5 bg-sky-700/30 rounded-full"></div>
                         </>
                     )}
-                    <span className="flex items-center justify-center gap-2 relative z-10">
+                    <span className={`flex items-center justify-center gap-2 relative z-10 transition-all font-bold ${['cat', 'bee', 'frog'].includes(appStyles.button) ? 'drop-shadow-[0_1px_2px_rgba(255,255,255,0.8)]' : 'drop-shadow-[0_2px_3px_rgba(0,0,0,0.6)]'}`}>
                         {loadingState === LoadingState.LOADING ? (
                         <>
-                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin h-5 w-5 opacity-80" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            Đang xử lý...
+                            <span>Đang xử lý...</span>
                         </>
                         ) : (
                             <span>

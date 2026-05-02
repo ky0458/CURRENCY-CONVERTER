@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
+import remarkBreaks from 'remark-breaks';
+import remarkGfm from 'remark-gfm';
+import TurndownService from 'turndown';
 import { useAuth } from '../contexts/AuthContext';
 import { AppStyles } from '../types';
 import { THEME_COLORS } from '../constants';
@@ -58,6 +61,45 @@ interface ChatWidgetProps {
   appStyles: AppStyles;
   theme: string;
 }
+
+const TypewriterMarkdown = ({ text, timestamp }: { text: string, timestamp: number }) => {
+    // If the message is older than 5 seconds when mounted, show it immediately without animation
+    const isNew = Date.now() - timestamp < 5000;
+    const [displayedText, setDisplayedText] = useState(isNew ? '' : text);
+    const typingIndex = useRef(isNew ? 0 : text.length);
+    const requestRef = useRef<number>();
+    
+    useEffect(() => {
+        if (text.length > displayedText.length) {
+            let lastUpdate = performance.now();
+            const TYPING_SPEED = 20; // ms per char
+            
+            const typeText = (time: number) => {
+                if (time - lastUpdate > TYPING_SPEED) {
+                     const charsToAdd = Math.ceil((time - lastUpdate) / TYPING_SPEED);
+                     typingIndex.current = Math.min(text.length, typingIndex.current + charsToAdd);
+                     
+                     setDisplayedText(text.slice(0, typingIndex.current));
+                     lastUpdate = time;
+                }
+                
+                if (typingIndex.current < text.length) {
+                    requestRef.current = requestAnimationFrame(typeText);
+                }
+            };
+            
+            requestRef.current = requestAnimationFrame(typeText);
+            
+            return () => {
+                if (requestRef.current) cancelAnimationFrame(requestRef.current);
+            };
+        } else if (!isNew && displayedText.length === 0 && text.length > 0) {
+            setDisplayedText(text);
+        }
+    }, [text, isNew]);
+
+    return <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{displayedText}</ReactMarkdown>;
+};
 
 export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
   const { user } = useAuth();
@@ -582,21 +624,22 @@ Input cần dịch:
 ${text}`;
     } else if (chatMode === 'writing') {
         promptText = `[TẠO BÀI VIẾT TUYỂN DỤNG]
-Bạn là một headhunter hoặc chuyên gia tuyển dụng chuyên nghiệp và luôn xưng 'em', gọi người dùng là 'chị'. Hãy viết một bài đăng tuyển dụng để đăng Facebook hoặc Threads hoặc content ngắn, hấp dẫn, thu hút ứng viên dựa trên thông tin sau.
-Bài viết TUYỆT ĐỐI TUÂN THỦ cấu trúc sau (nếu thông tin được cung cấp không có thì có thể bỏ qua phần đó):
-1. Tiêu đề hấp dẫn (bao gồm tên vị trí hoặc mức lương tùy theo độ nổi bật).
-2. Tên công ty (nếu có).
-3. Mô tả công việc ngắn gọn, súc tích.
-4. Yêu cầu công việc.
-5. Quyền lợi ứng viên.
-6. Thời gian và địa điểm làm việc.
-7. Thông tin liên hệ ứng tuyển rõ ràng.
+Bạn là một headhunter hoặc chuyên gia tuyển dụng chuyên nghiệp. Hãy viết một bài đăng tuyển dụng NGẮN GỌN, SÚC TÍCH, VĂN PHONG CHUYÊN NGHIỆP để đăng Facebook hoặc Threads, thu hút ứng viên dựa trên thông tin được cung cấp.
 
-Lưu ý quan trọng: 
-- Viết nội dung làm sao để tránh vi phạm các điều khoản nền tảng, tránh các từ khóa nhạy cảm làm bài viết không được duyệt.
-- Hạn chế lạm dụng quá nhiều biểu tượng cảm xúc (emoji), chỉ dùng vừa phải để làm điểm nhấn.
-- Trình bày rõ ràng, chuyên nghiệp, tạo cảm giác đáng tin cậy. Chú ý phân bổ xuống dòng, dấu cách và thụt dòng phù hợp để phân tầng nội dung cho dễ quan sát và đọc hiểu.
-- Không giải thích thêm, chỉ trả về nội dung bài viết.
+Bài viết BẮT BUỘC TUÂN THỦ các quy tắc sau:
+1. KHÔNG xưng hô (như em-chị, tôi-bạn) hay đóng vai trợ lý AI. KHÔNG có phần mở bài hay kết luận thừa thãi.
+2. CHỈ TRẢ VỀ DUY NHẤT nội dung của bài viết tuyển dụng để người dùng có thể copy và sử dụng ngay.
+3. FORMAT TIÊU ĐỀ CHÍNH: Bắt buộc phải có định dạng "[Địa điểm] + Tiêu đề về job thu hút ứng viên".
+4. BẢO VỆ TÀI KHOẢN (FACEBOOK SAFE): Tiêu đề và nội dung phải lách hoặc tránh tuyệt đối các từ ngữ nhạy cảm, vi phạm nguyên tắc cộng đồng của Facebook, làm bài không được duyệt.
+5. TRÌNH BÀY: Rất ngắn gọn, súc tích, giữ nguyên đủ ý. Sử dụng gạch đầu dòng (-) rõ ràng.
+6. HẠN CHẾ ICON: Hạn chế tối đa sử dụng icon (biểu tượng cảm xúc), phong cách chuyên nghiệp.
+7. NỘI DUNG (nếu thông tin được cung cấp không có thì bỏ qua phần đó):
+   - Tên công ty (nếu có).
+   - Mô tả công việc ngắn gọn.
+   - Yêu cầu công việc.
+   - Quyền lợi ứng viên.
+   - Thời gian và địa điểm làm việc.
+   - Thông tin liên hệ ứng tuyển rõ ràng.
 
 Thông tin công việc:
 ${text}`;
@@ -720,8 +763,42 @@ ${text}`;
     setIsLoading(false);
   };
 
-  const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = async (text: string, id: string) => {
+    // Clean markdown before copying for plain text fallback
+    const cleanText = text
+        .replace(/\*\*(.*?)\*\*/gs, '$1') // remove bold
+        .replace(/\*(.*?)\*/gs, '$1')     // remove italic/bold
+        .replace(/__(.*?)__/gs, '$1')     // remove underline/italic
+        .replace(/^#+\s/gm, '')           // remove headings
+        .replace(/\[(.*?)\]\(.*?\)/gs, '$1') // remove links
+        .replace(/`(.*?)`/gs, '$1');      // remove inline code
+
+    try {
+      const messageElement = document.getElementById(`msg-content-${id}`);
+      if (messageElement && window.ClipboardItem) {
+          const htmlContent = messageElement.innerHTML;
+          // Create blobs
+          const textBlob = new Blob([cleanText], { type: 'text/plain' });
+          const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+          
+          await navigator.clipboard.write([
+              new ClipboardItem({
+                  'text/plain': textBlob,
+                  'text/html': htmlBlob
+              })
+          ]);
+      } else {
+          await navigator.clipboard.writeText(cleanText);
+      }
+    } catch (err) {
+      console.warn('Clipboard write failed, using fallback:', err);
+      try {
+        await navigator.clipboard.writeText(cleanText);
+      } catch (e) {
+        console.error('Fallback clipboard failed:', e);
+      }
+    }
+
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
@@ -1370,14 +1447,17 @@ ${text}`;
                     </div>
 
                     {/* Content: Chat Tab */}
-                    <div className={`flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] space-y-6 transition-colors duration-300 ${chatMode === 'deep_translate' ? 'bg-gradient-to-b from-indigo-50/30 to-purple-50/30' : chatMode === 'writing' ? 'bg-gradient-to-b from-amber-50/30 to-orange-50/30' : 'bg-transparent'}`} ref={scrollRef}>
+                    <div 
+                        className={`flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] space-y-6 transition-colors duration-300 ${chatMode === 'deep_translate' ? 'bg-gradient-to-b from-indigo-50/30 to-purple-50/30' : chatMode === 'writing' ? 'bg-gradient-to-b from-amber-50/30 to-orange-50/30' : 'bg-transparent'}`} 
+                        ref={scrollRef}
+                    >
                         {messages.map((msg) => {
                             const isMe = msg.sender === 'user';
                             
                             return (
                                 <div key={msg.id} className={`flex gap-3 sm:gap-4 ${isMe ? 'justify-end' : 'justify-start w-full'}`}>
                                     <div className={`flex flex-col min-w-0 ${isMe ? 'items-end max-w-[85%] sm:max-w-[75%]' : 'items-start w-full max-w-[100%] sm:max-w-[95%]'}`}>
-                                        <div className={`group relative min-w-0 ${isMe ? 'w-auto' : 'w-full'}`}>
+                                        <div className={`group relative min-w-0 ${isMe ? 'w-auto' : 'w-fit max-w-full pt-1 pb-4'}`}>
                                                                                         {(() => {
                                                 const style = isMe ? appStyles.userBubble : appStyles.aiBubble;
                                                 const hasImage = msg.attachmentMimeType?.startsWith('image/');
@@ -1427,8 +1507,8 @@ ${text}`;
                                                         style === 'whale' ? 'prose-pre:bg-sky-950 prose-pre:text-sky-200 prose-headings:text-sky-100 prose-a:text-sky-300' :
                                                         style === 'octopus' ? 'prose-pre:bg-purple-950 prose-pre:text-purple-200 prose-headings:text-purple-100 prose-a:text-purple-300' :
                                                         'prose-pre:bg-slate-50 prose-pre:text-slate-800 prose-headings:text-slate-800 prose-a:text-indigo-600'
-                                                    }`}>
-                                                        <ReactMarkdown>{msg.text}</ReactMarkdown>
+                                                    }`} id={`msg-content-${msg.id}`}>
+                                                        <TypewriterMarkdown text={msg.text} timestamp={msg.timestamp} />
                                                     </div>
                                                 );
 
@@ -1657,7 +1737,7 @@ ${text}`;
                                             {!isMe && msg.text && (
                                                 <button
                                                     onClick={() => handleCopy(msg.text, msg.id)}
-                                                    className="absolute -right-12 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all shadow-sm border border-transparent hover:border-indigo-100"
+                                                    className="absolute -bottom-1 right-1 p-1.5 bg-white/70 backdrop-blur-sm text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-sm border border-slate-200/50 hover:border-slate-300 z-20"
                                                     title="Sao chép"
                                                 >
                                                     {copiedId === msg.id ? (
@@ -1911,6 +1991,16 @@ ${text}`;
                                 ) : (
                                     <input 
                                         type="text" 
+                                        inputMode="text" 
+                                        role="presentation" 
+                                        autoComplete="off" 
+                                        spellCheck="false" 
+                                        autoCorrect="off" 
+                                        autoCapitalize="sentences" 
+                                        name="chat_message_input_random" 
+                                        data-1p-ignore="true" 
+                                        data-lpignore="true" 
+                                        data-form-type="other"
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         onFocus={() => { if (window.innerWidth < 640) setShowMobileActions(false) }}

@@ -230,14 +230,20 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
                     let typeLabel = "Chuyển đổi";
                     let typeColor = "bg-blue-100 text-blue-600";
 
+                    // Determine special case for calculations
+                    let specialCase = 'none';
+                    if (isCalculate || isRevenue) {
+                        specialCase = item.revenueDetails?.specialCase || (item.revenueDetails?.isSalesExecutive ? 'sales' : 'none');
+                    }
+                    
                     if (isCalculate) {
-                        displayLabel = item.revenueDetails?.isSalesExecutive ? "Phí dịch vụ" : "Mức lương";
+                        displayLabel = specialCase === 'sales' ? "Phí dịch vụ" : "Mức lương";
                         displayAmount = item.originalSalary || item.inputAmount;
-                        typeLabel = item.revenueDetails?.isSalesExecutive ? "NVKD" : "Tính phí";
-                        typeColor = item.revenueDetails?.isSalesExecutive ? "bg-orange-100 text-orange-600" : "bg-purple-100 text-purple-600";
+                        typeLabel = specialCase === 'sales' ? "NVKD" : specialCase === 'senior' ? "Cấp cao" : "Tính phí";
+                        typeColor = specialCase === 'sales' ? "bg-orange-100 text-orange-600" : specialCase === 'senior' ? "bg-rose-100 text-rose-600" : "bg-purple-100 text-purple-600";
                     } else if (isRevenue) {
                         displayLabel = "Mức lương";
-                        displayAmount = item.inputAmount; // stored as salary for revenue
+                        displayAmount = item.originalSalary || item.inputAmount; // stored as salary for revenue
                         typeLabel = "Doanh thu";
                         typeColor = "bg-emerald-100 text-emerald-600";
                     }
@@ -292,7 +298,7 @@ export const HistorySection: React.FC<HistorySectionProps> = ({ history, onSelec
                                     </div>
                                     
                                     {/* Sub details based on type */}
-                                    {isCalculate && !item.revenueDetails?.isSalesExecutive && (
+                                    {isCalculate && specialCase !== 'sales' && (
                                         <div className="flex items-center gap-1 mt-1 text-slate-500">
                                             <span className="text-[10px] uppercase font-bold bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">Phí dịch vụ</span>
                                             <span className="text-xs font-bold">{formatCurrency(item.inputAmount, item.fromCurrency.locale, item.fromCurrency.code)}</span>
