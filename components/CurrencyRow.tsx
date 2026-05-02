@@ -157,12 +157,11 @@ export const CurrencyRow: React.FC<CurrencyRowProps> = ({
 
   return (
     <div className="flex flex-col gap-0 w-full" ref={containerRef}>
-      {/* Fixed height (h-8 = 32px) ensures alignment regardless of button presence */}
-      <div className="flex items-center justify-between ml-1 h-8">
-        <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${error ? 'text-red-500' : 'text-slate-500'}`}>
+      <div className="flex items-center justify-between h-8">
+        <label className={`ml-1 text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${error ? 'text-red-500' : 'text-slate-500'}`}>
             {label}
         </label>
-        {headerAction && <div>{headerAction}</div>}
+        {headerAction && <div className="shrink-0">{headerAction}</div>}
       </div>
       
       <div onClick={() => !readOnly && !isActive && amountInputRef.current?.focus()}

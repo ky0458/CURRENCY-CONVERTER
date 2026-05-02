@@ -824,8 +824,8 @@ const AppContent: React.FC = () => {
 
                 {activeTab === 'calculate' && (
                     <div className={`mb-3 flex flex-col gap-0 w-full animate-fade-in-up relative ${isSpecialCaseDropdownOpen ? 'z-[60]' : 'z-20'}`}>
-                        <div className="flex items-center justify-between ml-1 h-8">
-                            <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                        <div className="flex items-center justify-between h-8">
+                            <label className={`ml-1 text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
                                 Trường hợp đặc biệt
                             </label>
                             <div className="shrink-0 flex items-center">
@@ -909,7 +909,6 @@ const AppContent: React.FC = () => {
                                 onToggleDropdown={() => setActiveDropdown(activeDropdown === 'FROM' ? null : 'FROM')}
                                 onCloseDropdown={() => setActiveDropdown(null)}
                                 theme={theme}
-                                headerAction={renderHistoryButton}
                                 error={errorMsg}
                                 onEnter={onCalculateAndConvert}
                                 hasBackgroundImage={hasBackground}
@@ -937,8 +936,8 @@ const AppContent: React.FC = () => {
                                 />
                                 {specialCase === 'none' && (
                                 <div className="flex flex-col gap-0 w-full animate-fade-in-up">
-                                    <div className="flex items-center justify-between ml-1 h-8">
-                                        <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                    <div className="flex items-center justify-between h-8">
+                                        <label className={`ml-1 text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
                                             Loại hợp đồng
                                         </label>
                                     </div>
@@ -975,8 +974,8 @@ const AppContent: React.FC = () => {
                                 )}
                                 {specialCase === 'senior' && (
                                 <div className="flex flex-col gap-0 w-full animate-fade-in-up">
-                                    <div className="flex items-center justify-between ml-1 h-8">
-                                        <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                    <div className="flex items-center justify-between h-8">
+                                        <label className={`ml-1 text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
                                             Tỷ lệ tính phí
                                         </label>
                                     </div>
@@ -994,8 +993,8 @@ const AppContent: React.FC = () => {
                         {activeTab === 'calculate' && specialCase === 'sales' && (
                             <>
                                 <div className="flex flex-col gap-0 w-full animate-fade-in-up">
-                                    <div className="flex items-center justify-between ml-1 h-8">
-                                        <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                    <div className="flex items-center justify-between h-8">
+                                        <label className={`ml-1 text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
                                             Yêu cầu ngoại ngữ
                                         </label>
                                     </div>
@@ -1029,8 +1028,8 @@ const AppContent: React.FC = () => {
                                 </div>
                                 
                                 <div className="flex flex-col gap-0 w-full animate-fade-in-up">
-                                    <div className="flex items-center justify-between ml-1 h-8">
-                                        <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                    <div className="flex items-center justify-between h-8">
+                                        <label className={`ml-1 text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
                                             Phí dịch vụ mặc định
                                         </label>
                                     </div>
@@ -1062,12 +1061,13 @@ const AppContent: React.FC = () => {
                             onCloseDropdown={() => setActiveDropdown(null)}
                             theme={theme}
                             hasBackgroundImage={hasBackground}
+                            headerAction={activeTab === 'convert' ? renderHistoryButton : undefined}
                         />
 
                         {activeTab === 'calculate' && (
                             <div className="flex flex-col gap-0 w-full animate-fade-in-up" ref={revenueDropdownRef}>
-                                <div className="flex items-center justify-between ml-1 h-8">
-                                    <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                <div className="flex items-center justify-between h-8">
+                                    <label className={`ml-1 text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
                                         Tùy chọn tỷ lệ
                                     </label>
                                 </div>

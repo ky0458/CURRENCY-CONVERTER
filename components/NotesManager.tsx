@@ -1143,7 +1143,7 @@ export const NotesManager: React.FC = () => {
                                         <p className="text-xs text-slate-400 mt-2 text-center px-4">Giữ lì vào ghi chú để chọn nhiều</p>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col gap-3 min-h-[300px] sm:min-h-[500px]">
                                         {paginatedNotes.map((note, index) => {
                                             const tag = getTag(note.tagId);
                                             const status = statusConfig[note.status];
