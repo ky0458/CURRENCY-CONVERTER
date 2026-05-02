@@ -138,9 +138,9 @@ export const CurrencyRow: React.FC<CurrencyRowProps> = ({
             }
         }}
         readOnly={readOnly}
-        className={`w-full h-full px-2 bg-transparent border-none outline-none text-xl sm:text-2xl font-bold placeholder-slate-300 transition-colors 
-            ${error ? 'text-red-600 placeholder-red-300' : 'text-slate-800'}`}
-        placeholder="0"
+        className={`w-full h-full px-2 bg-transparent border-none outline-none transition-colors truncate
+            ${error ? 'text-xs sm:text-sm pr-10 text-red-500 font-normal placeholder-red-400' : 'text-xl sm:text-2xl font-bold text-slate-800 placeholder-slate-300'}`}
+        placeholder={error || "0"}
         autoComplete="off"
       />
       
@@ -195,15 +195,6 @@ export const CurrencyRow: React.FC<CurrencyRowProps> = ({
         </div>
       </div>
 
-      {/* Error Message Below Input */}
-      {error && (
-        <div className="flex items-center gap-1.5 mt-1.5 ml-1 animate-fade-in-up">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5 text-red-500">
-                <path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
-            </svg>
-            <span className="text-[11px] sm:text-xs font-semibold text-red-500">{error}</span>
-        </div>
-      )}
     </div>
   );
 };

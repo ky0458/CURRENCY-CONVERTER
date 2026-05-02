@@ -10,9 +10,13 @@ export const useRevenueTracker = () => {
   useEffect(() => {
     const loadData = async () => {
       let localRecords: RevenueRecord[] = [];
+      const savedRecordsOwner = localStorage.getItem('app_revenue_records_owner');
+      const currentOwner = user?.uid || 'guest';
+      const shouldLoadLocalRecords = !savedRecordsOwner || savedRecordsOwner === currentOwner || savedRecordsOwner === 'guest';
+
       try {
         const savedRecords = localStorage.getItem('app_revenue_records');
-        if (savedRecords) {
+        if (shouldLoadLocalRecords && savedRecords) {
           localRecords = JSON.parse(savedRecords);
         }
       } catch (e) {
@@ -35,6 +39,7 @@ export const useRevenueTracker = () => {
               
               setRecords(finalRecords);
               localStorage.setItem('app_revenue_records', JSON.stringify(finalRecords));
+              localStorage.setItem('app_revenue_records_owner', user.uid);
               
               fetch('/api/statistics-history/revenues', {
                 method: 'POST',
@@ -60,6 +65,11 @@ export const useRevenueTracker = () => {
 
     // 2. Always save to LocalStorage (as cache/backup)
     localStorage.setItem('app_revenue_records', JSON.stringify(newRecords));
+    if (user && user.uid) {
+      localStorage.setItem('app_revenue_records_owner', user.uid);
+    } else {
+      localStorage.setItem('app_revenue_records_owner', 'guest');
+    }
     
     // 3. Save to DB
     if (user && user.uid) {

@@ -378,6 +378,7 @@ const AppContent: React.FC = () => {
         } else {
             salary = parseFloat(salaryAmount.replace(/,/g, ''));
             if (isNaN(salary) || salary <= 0) {
+                setSalaryAmount('');
                 handleConvert('0', activeTab); 
                 setRevenueResult(null);
                 return;
@@ -419,6 +420,10 @@ const AppContent: React.FC = () => {
             salesExecutiveType: salesExecutiveType
         }); 
     } else if (activeTab === 'convert') {
+        const numAmount = parseFloat(amount.replace(/,/g, ''));
+        if (isNaN(numAmount) || numAmount <= 0) {
+            setAmount('');
+        }
         handleConvert(amount, activeTab); 
     }
   };
@@ -818,66 +823,72 @@ const AppContent: React.FC = () => {
                 )}
 
                 {activeTab === 'calculate' && (
-                    <div className={`mb-3 flex items-center justify-between animate-fade-in-up min-h-[34px] relative ${isSpecialCaseDropdownOpen ? 'z-[60]' : 'z-20'}`}>
-                        <div className="flex-1 md:flex-none md:w-[calc(50%-0.5rem)] relative pr-2 md:pr-0">
-                            <div className="relative group">
-                                <button
-                                    onClick={() => setIsSpecialCaseDropdownOpen(!isSpecialCaseDropdownOpen)}
-                                    className={`w-full text-left pl-3 pr-8 py-1.5 rounded-lg border text-[13px] sm:text-sm font-bold outline-none transition-all cursor-pointer shadow-sm hover:shadow flex items-center justify-between ${hasBackground ? 'bg-white/95 border-white text-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'} ${isSpecialCaseDropdownOpen ? 'border-primary-500 ring-2 ring-primary-100 z-50 bg-white' : ''}`}
-                                >
-                                    <span className="truncate">
-                                        {specialCase === 'none' ? 'Đặc biệt: Không' : specialCase === 'sales' ? 'Đặc biệt: Nhân viên KD' : 'Đặc biệt: Vị trí cấp cao'}
-                                    </span>
-                                    <div className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 transition-transform duration-200 ${isSpecialCaseDropdownOpen ? 'rotate-180 text-primary-500' : ''}`}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
-                                           <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                        </svg>
-                                    </div>
-                                </button>
-
-                                {isSpecialCaseDropdownOpen && (
-                                    <>
-                                        <div 
-                                            className="fixed inset-0 z-40"
-                                            onClick={() => setIsSpecialCaseDropdownOpen(false)}
-                                        />
-                                        <div className="absolute z-[70] w-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden transform origin-top transition-all animate-fade-in-up">
-                                            <div className="py-1">
-                                                <button
-                                                    onClick={() => { setSpecialCase('none'); setIsSpecialCaseDropdownOpen(false); }}
-                                                    className={`w-full flex items-center gap-2 px-3 py-2.5 text-[13px] sm:text-sm font-medium transition-colors hover:bg-slate-50 ${specialCase === 'none' ? 'text-primary-600 bg-primary-50/50' : 'text-slate-700'}`}
-                                                >
-                                                    <div className={`w-3 h-3 rounded-full border flex items-center justify-center shrink-0 ${specialCase === 'none' ? 'border-primary-500' : 'border-slate-300'}`}>
-                                                        {specialCase === 'none' && <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
-                                                    </div>
-                                                    Đặc biệt: Không
-                                                </button>
-                                                <button
-                                                    onClick={() => { setSpecialCase('sales'); setIsSpecialCaseDropdownOpen(false); }}
-                                                    className={`w-full flex items-center gap-2 px-3 py-2.5 text-[13px] sm:text-sm font-medium transition-colors hover:bg-slate-50 ${specialCase === 'sales' ? 'text-primary-600 bg-primary-50/50' : 'text-slate-700'}`}
-                                                >
-                                                    <div className={`w-3 h-3 rounded-full border flex items-center justify-center shrink-0 ${specialCase === 'sales' ? 'border-primary-500' : 'border-slate-300'}`}>
-                                                        {specialCase === 'sales' && <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
-                                                    </div>
-                                                    Đặc biệt: Nhân viên KD
-                                                </button>
-                                                <button
-                                                    onClick={() => { setSpecialCase('senior'); setIsSpecialCaseDropdownOpen(false); }}
-                                                    className={`w-full flex items-center gap-2 px-3 py-2.5 text-[13px] sm:text-sm font-medium transition-colors hover:bg-slate-50 ${specialCase === 'senior' ? 'text-primary-600 bg-primary-50/50' : 'text-slate-700'}`}
-                                                >
-                                                    <div className={`w-3 h-3 rounded-full border flex items-center justify-center shrink-0 ${specialCase === 'senior' ? 'border-primary-500' : 'border-slate-300'}`}>
-                                                        {specialCase === 'senior' && <div className="w-1.5 h-1.5 rounded-full bg-primary-500" />}
-                                                    </div>
-                                                    Đặc biệt: Vị trí cấp cao
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
+                    <div className={`mb-3 flex flex-col gap-0 w-full animate-fade-in-up relative ${isSpecialCaseDropdownOpen ? 'z-[60]' : 'z-20'}`}>
+                        <div className="flex items-center justify-between ml-1 h-8">
+                            <label className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide transition-colors ${hasBackground ? 'text-white/90 drop-shadow-sm' : 'text-slate-500'}`}>
+                                Trường hợp đặc biệt
+                            </label>
+                            <div className="shrink-0 flex items-center">
+                                {renderHistoryButton}
                             </div>
                         </div>
-                        <div className="shrink-0 flex items-center">
-                            {renderHistoryButton}
+                        <div className="relative group">
+                            <button
+                                onClick={() => setIsSpecialCaseDropdownOpen(!isSpecialCaseDropdownOpen)}
+                                className={`relative w-full border text-slate-800 text-left text-sm sm:text-base font-bold py-4 px-4 pr-12 rounded-2xl transition-all h-[60px] sm:h-[66px] flex items-center backdrop-blur-md
+                                ${isSpecialCaseDropdownOpen 
+                                    ? 'border-primary-500 ring-2 ring-primary-100 z-50 bg-white' 
+                                    : hasBackground 
+                                        ? 'bg-white/80 border-white/40 hover:bg-white' 
+                                        : 'bg-white/90 border-slate-200 hover:border-primary-300 hover:bg-white'}`}
+                            >
+                                {specialCase === 'none' ? 'Không' : specialCase === 'sales' ? 'Nhân viên kinh doanh' : 'Vị trí cấp cao'}
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className={`w-4 h-4 transition-transform ${isSpecialCaseDropdownOpen ? 'rotate-180 text-primary-500' : ''}`}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                    </svg>
+                                </div>
+                            </button>
+
+                            {isSpecialCaseDropdownOpen && (
+                                <>
+                                    <div 
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setIsSpecialCaseDropdownOpen(false)}
+                                    />
+                                    <div className="absolute top-[calc(100%+8px)] w-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden transform origin-top transition-all z-[70] animate-fade-in-up">
+                                        <div className="p-1">
+                                            <button
+                                                onClick={() => { setSpecialCase('none'); setIsSpecialCaseDropdownOpen(false); }}
+                                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm sm:text-base hover:bg-slate-50 ${specialCase === 'none' ? 'text-primary-700 bg-primary-50' : 'text-slate-700'}`}
+                                            >
+                                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${specialCase === 'none' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                                    {specialCase === 'none' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
+                                                </div>
+                                                <span className="font-bold">Không</span>
+                                            </button>
+                                            <button
+                                                onClick={() => { setSpecialCase('sales'); setIsSpecialCaseDropdownOpen(false); }}
+                                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm sm:text-base hover:bg-slate-50 ${specialCase === 'sales' ? 'text-primary-700 bg-primary-50' : 'text-slate-700'}`}
+                                            >
+                                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${specialCase === 'sales' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                                    {specialCase === 'sales' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
+                                                </div>
+                                                <span className="font-bold">Nhân viên kinh doanh</span>
+                                            </button>
+                                            <button
+                                                onClick={() => { setSpecialCase('senior'); setIsSpecialCaseDropdownOpen(false); }}
+                                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm sm:text-base hover:bg-slate-50 ${specialCase === 'senior' ? 'text-primary-700 bg-primary-50' : 'text-slate-700'}`}
+                                            >
+                                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${specialCase === 'senior' ? 'border-primary-500' : 'border-slate-300'}`}>
+                                                    {specialCase === 'senior' && <div className="w-2 h-2 rounded-full bg-primary-500" />}
+                                                </div>
+                                                <span className="font-bold">Vị trí cấp cao</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 )}

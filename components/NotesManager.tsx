@@ -789,21 +789,29 @@ export const NotesManager: React.FC = () => {
                                     {editingTagId ? 'Cập nhật thẻ' : 'Tạo thẻ mới'}
                                 </h4>
                                 <div className={`bg-slate-50 p-4 rounded-2xl border ${editingTagId ? 'border-indigo-200 ring-2 ring-indigo-50' : 'border-slate-100'} ${isTagSelectionMode ? 'opacity-50 pointer-events-none' : ''}`}>
-                                    <div className="mb-4 relative">
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tên thẻ</label>
-                                        <input 
-                                            ref={tagInputRef}
-                                            type="text" 
-                                            className="w-full text-sm px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-white transition-all text-slate-800" 
-                                            value={newTagName} 
-                                            onChange={(e) => {
-                                                setNewTagName(e.target.value);
-                                                if (e.target.value.trim()) setTagInputError('');
-                                            }} 
-                                            inputMode="text" role="presentation" autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="none" name="search_tag_q" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
-                                            placeholder="Nhập tên thẻ..." 
-                                        />
-                                        {tagInputError && <p className="text-red-500 text-xs mt-1 absolute">{tagInputError}</p>}
+                                    <div className="mb-4">
+                                        <label className={`block text-xs font-bold uppercase mb-2 transition-colors ${tagInputError ? 'text-red-500' : 'text-slate-500'}`}>Tên thẻ</label>
+                                        <div className="relative">
+                                            <input 
+                                                ref={tagInputRef}
+                                                type="text" 
+                                                className={`w-full text-sm px-4 py-3 rounded-xl border focus:outline-none transition-all ${tagInputError ? 'border-red-400 ring-4 ring-red-50 text-red-500 placeholder-red-400 bg-red-50/10' : 'border-slate-200 focus:border-indigo-500 text-slate-800 bg-white'}`} 
+                                                value={newTagName} 
+                                                onChange={(e) => {
+                                                    setNewTagName(e.target.value);
+                                                    if (e.target.value.trim()) setTagInputError('');
+                                                }} 
+                                                inputMode="text" role="presentation" autoComplete="off" spellCheck="false" autoCorrect="off" autoCapitalize="none" name="search_tag_q" data-1p-ignore="true" data-lpignore="true" data-form-type="other"
+                                                placeholder={tagInputError || "Nhập tên thẻ..."} 
+                                            />
+                                            {tagInputError && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-red-400">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                                                        <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clipRule="evenodd" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase mb-3">Màu nhận diện</label>

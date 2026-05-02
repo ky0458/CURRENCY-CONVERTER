@@ -33,8 +33,13 @@ export const useCurrencyConverter = () => {
 
     const loadHistory = async () => {
       const savedHistory = localStorage.getItem('conversion_history');
+      const savedHistoryOwner = localStorage.getItem('conversion_history_owner');
+      const currentOwner = user?.uid || 'guest';
+      
+      const shouldLoadLocalHistory = !savedHistoryOwner || savedHistoryOwner === currentOwner || savedHistoryOwner === 'guest';
+      
       let localHistory: ConversionHistoryItem[] = [];
-      if (savedHistory) {
+      if (shouldLoadLocalHistory && savedHistory) {
         const parsed = JSON.parse(savedHistory);
         localHistory = parsed.map((item: any) => ({
             ...item,
@@ -58,6 +63,7 @@ export const useCurrencyConverter = () => {
               
               setHistory(finalHistory);
               localStorage.setItem('conversion_history', JSON.stringify(finalHistory));
+              localStorage.setItem('conversion_history_owner', user.uid);
               
               fetch('/api/convert-history/conversions', {
                 method: 'POST',
@@ -89,6 +95,11 @@ export const useCurrencyConverter = () => {
   const saveHistory = async (newHistory: ConversionHistoryItem[]) => {
     setHistory(newHistory);
     localStorage.setItem('conversion_history', JSON.stringify(newHistory));
+    if (user && user.uid) {
+        localStorage.setItem('conversion_history_owner', user.uid);
+    } else {
+        localStorage.setItem('conversion_history_owner', 'guest');
+    }
     
     if (user && user.uid) {
       try {
