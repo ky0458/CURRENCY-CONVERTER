@@ -86,7 +86,7 @@ const PdfBlock = React.memo(({
     return (
         <div
             data-action={action}
-            className={`absolute cursor-pointer border rounded-sm touch-manipulation pdf-block ${actionClasses}`}
+            className={`absolute cursor-pointer border rounded-[2px] touch-manipulation pdf-block ${actionClasses}`}
             style={{
                 left: `${block.xPct}%`,
                 top: `${block.yPct}%`,
@@ -869,7 +869,13 @@ export const PdfRedactor: React.FC = () => {
                         const w = (block.widthPct / 100) * canvas.width;
                         const h = (block.heightPct / 100) * canvas.height;
                         
-                        ctx.fillRect(x, y, w, h);
+                        if ((ctx as any).roundRect) {
+                            ctx.beginPath();
+                            (ctx as any).roundRect(x, y, w, h, 2);
+                            ctx.fill();
+                        } else {
+                            ctx.fillRect(x, y, w, h);
+                        }
                     }
                 });
 
@@ -1033,7 +1039,7 @@ export const PdfRedactor: React.FC = () => {
                     <div className="flex flex-col items-center mx-auto w-full max-w-4xl relative">
                         <div 
                             ref={docxContainerRef}
-                            className="bg-white shadow-md rounded-sm w-full min-h-[A4] text-black outline-none"
+                            className="bg-white shadow-md rounded-[2px] w-full min-h-[A4] text-black outline-none"
                             style={{ padding: '0 2rem' }}
                         ></div>
                     </div>
@@ -1046,7 +1052,7 @@ export const PdfRedactor: React.FC = () => {
                         {pages.map((page, idx) => (
                             <div 
                                 key={idx} 
-                                className="relative bg-white shadow-md rounded-sm overflow-hidden w-full transition-all hover:shadow-lg ring-1 ring-slate-900/5 select-none" 
+                                className="relative bg-white shadow-md rounded-[2px] overflow-hidden w-full transition-all hover:shadow-lg ring-1 ring-slate-900/5 select-none" 
                                 style={{ aspectRatio: `${page.width} / ${page.height}`, touchAction: isManualMode ? 'none' : 'auto' }}
                                 onPointerDown={(e) => handlePdfMouseDown(e, idx)}
                                 onPointerMove={(e) => handlePdfMouseMove(e, idx)}
@@ -1057,7 +1063,7 @@ export const PdfRedactor: React.FC = () => {
                                 
                                 {drawingState.isDrawing && drawingState.pageIndex === idx && (
                                     <div 
-                                        className="absolute border-2 border-black bg-black/40 z-50 pointer-events-none"
+                                        className="absolute border-2 border-black bg-black/40 z-50 pointer-events-none rounded-[2px]"
                                         style={{
                                             left: `${Math.min(drawingState.startX, drawingState.currentX)}px`,
                                             top: `${Math.min(drawingState.startY, drawingState.currentY)}px`,

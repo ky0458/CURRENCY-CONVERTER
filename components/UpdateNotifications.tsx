@@ -22,6 +22,35 @@ interface UpdateNotificationsProps {
 
 const FALLBACK_UPDATES: UpdateVersionData[] = [
     {
+        id: 'v110',
+        versionNumber: 'v1.1.0',
+        updateName: 'Đồng bộ Database & Tối ưu UI',
+        dateStr: '02/05/2026 - 11:08',
+        timestamp: new Date('2026-05-02T11:08:00').getTime(),
+        features: [
+            {
+                color: 'emerald',
+                title: 'Sửa lỗi đồng bộ Database',
+                description: 'Khắc phục triệt để lỗi đồng bộ dữ liệu lịch sử trong tab Phí & Doanh thu và Quy đổi khi đăng xuất hoặc chuyển đổi tài khoản.',
+            },
+            {
+                color: 'blue',
+                title: 'Cải tiến Tab Quy đổi',
+                description: 'Điều chỉnh vị trí nút Lịch sử sang phía bên phải phía trên phần quy đổi, giúp thao tác thuận tiện hơn.',
+            },
+            {
+                color: 'indigo',
+                title: 'Nâng cấp Giao diện TakeNote',
+                description: 'Cải thiện layout TakeNote với chiều dài tối thiểu cố định ngay cả khi không có ghi chú, đảm bảo tính nhất quán của giao diện.',
+            },
+            {
+                color: 'pink',
+                title: 'Tinh chỉnh Che CV (Redaction)',
+                description: 'Điều chỉnh border-radius cho các ô quét nhận diện và lớp phủ che CV về mức 2px, mang lại vẻ ngoài tinh tế và chuyên nghiệp.',
+            }
+        ]
+    },
+    {
         id: 'v109',
         versionNumber: 'v1.0.9',
         updateName: 'Tối ưu TakeNote & Tính năng Đọc CV',
