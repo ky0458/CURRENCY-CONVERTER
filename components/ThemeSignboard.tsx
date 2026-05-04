@@ -254,7 +254,7 @@ export const ThemeSignboard: React.FC<ThemeSignboardProps> = ({ style }) => {
           
           <div className={`inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold ${text} opacity-95 relative z-30 max-w-full bg-white/20 px-3 py-1 rounded-full border ${border.replace('border-', 'border-').replace(/-\d00$/, '-400/30')} shadow-sm`}>
              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#4ade80]"></span>
-             <span className="truncate">Tỷ giá cập nhật liên tục</span>
+             <span className="truncate">往事不回头，未来不将就</span>
           </div>
       </div>
       
