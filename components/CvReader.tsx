@@ -97,6 +97,12 @@ export const CvReader: React.FC = () => {
             }
 
             const summary = await readCvContent(cvDataArray, jdData);
+            if (summary.trim() === "ERROR_INVALID_CONTENT_ALL") {
+                setError('Nội dung tải lên không phải là CV hoặc JD hợp lệ để phân tích.');
+                setResult('');
+                setIsProcessing(false);
+                return;
+            }
             setResult(summary);
         } catch (err) {
             console.error(err);

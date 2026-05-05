@@ -112,12 +112,25 @@ export const readCvContent = async (
   let attempts = 0;
   
   while (attempts < FALLBACK_MODELS.length) {
-    const modelToUse = FALLBACK_MODELS[(currentModelIndex + attempts) % FALLBACK_MODELS.length];
+    const modelToUse = "gemini-2.5-flash-lite";
     try {
       const parts: any[] = [];
+      const validationInstruction = `QUAN TRỌNG VỀ NHẬN DIỆN NỘI DUNG MỞ ĐẦU:
+Trước khi phân tích, bạn BẮT BUỘC rà soát nội dung của các file tải lên:
+1. Nếu TRONG TẤT CẢ các file tải lên (cả phần CV và phần JD) ĐỀU HOÀN TOÀN KHÔNG PHẢI là Sơ yếu lý lịch (CV/Resume) và cũng KHÔNG PHẢI là Mô tả công việc (JD) (Ví dụ: là phong cảnh, hợp đồng, biên lai, tài liệu khác...), BẮT BUỘC CHỈ trả về đúng chuỗi ký tự duy nhất: "ERROR_INVALID_CONTENT_ALL" và không kèm theo giải thích nào.
+2. Nếu người dùng chỉ tải lên phần CV (không có JD) mà tất cả CV đều không phải là Sơ yếu lý lịch, BẮT BUỘC CHỈ trả về đúng chuỗi ký tự: "ERROR_INVALID_CONTENT_ALL"
+3. Nếu phần JD được cung cấp nhưng nội dung không phải là Mô tả công việc, BẮT ĐẦU phần báo cáo của bạn bằng dòng (in đậm): "**⚠️ Cảnh báo: Nội dung file tải lên trong phần JD không phải là Mô tả công việc (JD) hợp lệ. Kết quả bên dưới được phân tích mà không có JD.**", sau đó đánh giá CV như bình thường (bỏ qua JD).
+4. Tương tự, đối với phần CV, nếu có CV nào không hợp lệ (nhưng có CV hoặc JD khác hợp lệ để phân tích tiếp), hãy bắt đầu bằng: "**⚠️ Cảnh báo: Tệp tin (chỉ rõ tên) tải lên trong phần CV không chứa nội dung CV hợp lệ. Bỏ qua tệp tin này.**", sau đó tiếp tục đánh giá những nội dung hợp lệ còn lại.
+
+Nội dung phân tích thực sự sẽ bắt đầu sau phần cảnh báo (nếu có).
+
+=== HẾT PHẦN HƯỚNG DẪN KIỂM TRA MỞ ĐẦU ===
+
+`;
+      parts.push({ text: validationInstruction });
       
       cvDataArray.forEach((cv, index) => {
-          const cleanCvBase64 = cv.base64.includes('base64,') ? cv.base64.split('base64,')[1] : cv.base64;
+           const cleanCvBase64 = cv.base64.includes('base64,') ? cv.base64.split('base64,')[1] : cv.base64;
           parts.push({
               text: `CV thứ ${index + 1} (Tên file: ${cv.filename}):`
           });

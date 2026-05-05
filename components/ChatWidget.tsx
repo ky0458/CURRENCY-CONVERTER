@@ -23,6 +23,7 @@ const getAI = () => {
 };
 
 const FALLBACK_MODELS = [
+  "gemini-2.5-flash-lite",
   "gemini-2.5-flash",
   "gemini-3-flash-preview",
   "gemini-3.1-flash-lite-preview",
@@ -112,6 +113,8 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState<'normal' | 'deep_translate' | 'writing'>('normal');
   const [showModeGuide, setShowModeGuide] = useState(false);
@@ -144,6 +147,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const currentModelIndexRef = useRef(0);
+  const [currentModelIndex, setCurrentModelIndex] = useState(0);
   const activeModelRef = useRef(FALLBACK_MODELS[0]);
 
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -425,35 +429,41 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
   useEffect(() => {
     try {
       if (currentSessionId) {
+        setIsHistoryLoading(true);
         const session = sessions.find(s => s.id === currentSessionId);
         if (session) {
-          setMessages(session.messages || []);
-          // Re-initialize AI chat with history
-          const rawHistory = (session.messages || []).map(msg => ({
-            role: msg.sender === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.text }]
-          }));
-          
-          let validHistory: any[] = [];
-          let expectedRole = 'model';
-          for (let i = rawHistory.length - 1; i >= 0; i--) {
-            if (rawHistory[i].role === expectedRole) {
-              validHistory.unshift(rawHistory[i]);
-              expectedRole = expectedRole === 'model' ? 'user' : 'model';
+          setTimeout(() => {
+            setMessages(session.messages || []);
+            // Re-initialize AI chat with history
+            const rawHistory = (session.messages || []).map(msg => ({
+              role: msg.sender === 'user' ? 'user' : 'model',
+              parts: [{ text: msg.text }]
+            }));
+            
+            let validHistory: any[] = [];
+            let expectedRole = 'model';
+            for (let i = rawHistory.length - 1; i >= 0; i--) {
+              if (rawHistory[i].role === expectedRole) {
+                validHistory.unshift(rawHistory[i]);
+                expectedRole = expectedRole === 'model' ? 'user' : 'model';
+              }
             }
-          }
-          if (validHistory.length > 0 && validHistory[0].role === 'model') {
-            validHistory.shift();
-          }
-          
-          chatSessionRef.current = getAI().chats.create({
-            model: FALLBACK_MODELS[currentModelIndexRef.current],
-            config: {
-              systemInstruction: SYSTEM_INSTRUCTION,
-            },
-            history: validHistory.length > 0 ? validHistory : undefined
-          });
-          activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
+            if (validHistory.length > 0 && validHistory[0].role === 'model') {
+              validHistory.shift();
+            }
+            
+            chatSessionRef.current = getAI().chats.create({
+              model: FALLBACK_MODELS[currentModelIndexRef.current],
+              config: {
+                systemInstruction: SYSTEM_INSTRUCTION,
+              },
+              history: validHistory.length > 0 ? validHistory : undefined
+            });
+            activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
+            setIsHistoryLoading(false);
+          }, 300);
+        } else {
+            setIsHistoryLoading(false);
         }
       } else {
         setMessages([{
@@ -472,6 +482,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
       }
     } catch (err: any) {
       console.warn("AI Init failed:", err);
+      setIsHistoryLoading(false);
       // Don't crash the widget
     }
   }, [currentSessionId, sessions.length === 0]);
@@ -742,6 +753,7 @@ ${text}`;
 
         success = true;
         currentModelIndexRef.current = (currentModelIndexRef.current + attempts) % FALLBACK_MODELS.length;
+        setCurrentModelIndex(currentModelIndexRef.current);
 
         // Save final AI message
         const finalMessages = currentMessages.map(msg => 
@@ -1439,10 +1451,40 @@ ${text}`;
                                             </button>
                                         </div>
                                     )}
-                                    <p className="text-[10px] sm:text-xs text-emerald-600 font-semibold flex items-center gap-1.5">
-                                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
-                                        Đang hoạt động
-                                    </p>
+                                    <div className="relative mt-0.5" tabIndex={0} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsModelSelectorOpen(false); }}>
+                                        <button 
+                                            onClick={() => setIsModelSelectorOpen(!isModelSelectorOpen)}
+                                            className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 transition-colors border border-indigo-100/50 rounded-md px-2 py-0.5"
+                                        >
+                                            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)] mr-0.5"></span>
+                                            <span className="max-w-[120px] sm:max-w-[160px] truncate leading-none pt-0.5">{FALLBACK_MODELS[currentModelIndex]}</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-3 h-3 transition-transform ${isModelSelectorOpen ? 'rotate-180' : ''}`}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                            </svg>
+                                        </button>
+                                        {isModelSelectorOpen && (
+                                            <div className="absolute top-full left-0 mt-1 w-[200px] bg-white border border-slate-200 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] rounded-xl overflow-hidden z-50 animate-fade-in-up" style={{ animationDuration: '0.2s' }}>
+                                                {FALLBACK_MODELS.map((model, idx) => (
+                                                    <button
+                                                        key={model}
+                                                        onClick={() => {
+                                                            setCurrentModelIndex(idx);
+                                                            currentModelIndexRef.current = idx;
+                                                            setIsModelSelectorOpen(false);
+                                                        }}
+                                                        className={`w-full text-left px-3 py-2.5 text-xs transition-colors flex items-center justify-between ${idx === currentModelIndex ? 'bg-indigo-50/80 text-indigo-700 font-bold' : 'text-slate-600 hover:bg-slate-50 font-medium'}`}
+                                                    >
+                                                        <span className="truncate">{model}</span>
+                                                        {idx === currentModelIndex && (
+                                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-indigo-600 shrink-0">
+                                                                <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 0 1 1.04-.208Z" clipRule="evenodd" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1467,6 +1509,13 @@ ${text}`;
                         className={`flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] space-y-6 transition-colors duration-300 ${chatMode === 'deep_translate' ? 'bg-gradient-to-b from-indigo-50/30 to-purple-50/30' : chatMode === 'writing' ? 'bg-gradient-to-b from-amber-50/30 to-orange-50/30' : 'bg-transparent'}`} 
                         ref={scrollRef}
                     >
+                        {isHistoryLoading ? (
+                            <div className="flex flex-col items-center justify-center h-full min-h-[200px]">
+                                <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin shadow-md mb-3"></div>
+                                <p className="text-sm text-slate-500 font-medium animate-pulse">Đang tải lịch sử...</p>
+                            </div>
+                        ) : (
+                        <>
                         {messages.map((msg) => {
                             const isMe = msg.sender === 'user';
                             
@@ -1783,6 +1832,8 @@ ${text}`;
                                     </div>
                                 </div>
                             </div>
+                        )}
+                        </>
                         )}
                     </div>
 
