@@ -13,6 +13,7 @@ import { ChatWidget } from './components/ChatWidget'; // Import ChatWidget
 import { UserMenu } from './components/UserMenu';
 import { DocumentSection } from './components/DocumentSection';
 import { UpdateNotifications } from './components/UpdateNotifications';
+import { AdminDashboard } from './components/AdminDashboard';
 import { useCurrencyConverter } from './hooks/useCurrencyConverter';
 import { useRevenueTracker } from './hooks/useRevenueTracker';
 import { RevenueStatsSection } from './components/RevenueStatsSection';
@@ -124,7 +125,7 @@ const AppContent: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [isClosingHistory, setIsClosingHistory] = useState(false);
   
-  const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'cv'>('cv');
+  const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'cv' | 'admin'>('cv');
   const [salaryAmount, setSalaryAmount] = useState<string>('');
   const [calcType, setCalcType] = useState<'probation' | 'official'>('official');
   
@@ -496,6 +497,15 @@ const AppContent: React.FC = () => {
   const hasBackground = false;
   const backgroundImage = null as string | null;
 
+  if (activeTab === 'admin') {
+      return (
+          <>
+              <AdminDashboard onExit={() => setActiveTab('cv')} />
+              <ToastNotification />
+          </>
+      );
+  }
+
   return (
     <div 
         className={`min-h-screen font-sans text-slate-800 selection:bg-primary-200 flex flex-col relative transition-all duration-500`}
@@ -505,6 +515,27 @@ const AppContent: React.FC = () => {
     >
       <ToastNotification />
 
+      {/* Admin Button */}
+      {useAuth().isAdmin && (
+          <div className="absolute top-3 left-3 sm:top-5 sm:left-6 z-[100] flex items-center animate-fade-in-up">
+              <button
+                  onClick={() => setActiveTab('admin')}
+                  className={`
+                      flex items-center gap-2 px-3 h-10 rounded-full backdrop-blur-md transition-all duration-300 font-bold text-sm shadow-md border border-transparent
+                      ${activeTab === 'admin' 
+                          ? 'bg-primary-600 text-white cursor-default'
+                          : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-primary-600 hover:shadow-xl hover:-translate-y-0.5'
+                      }
+                  `}
+                  title="Trang quản lý Admin"
+              >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+                  </svg>
+                  <span className="hidden sm:inline">Admin</span>
+              </button>
+          </div>
+      )}
 
       {/* History Modal */}
       {showHistory && createPortal(
@@ -692,22 +723,22 @@ const AppContent: React.FC = () => {
 
             <div className="p-4 sm:p-8 space-y-6 relative flex-1">
                 
-                <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-                    <TabSelector 
-                        activeTab={activeTab} 
-                        onTabChange={(tab) => { setActiveTab(tab); resetResult(); setAmount(''); setSalaryAmount(''); setRevenueResult(null); setJobTitle(''); setTranslatedJobTitle(''); setSpecialCase('none'); }} 
-                        theme={theme} 
-                        buttonStyle={appStyles.button}
-                    />
-                </div>
+                        <div className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+                            <TabSelector 
+                                activeTab={activeTab as any} 
+                                onTabChange={(tab) => { setActiveTab(tab); resetResult(); setAmount(''); setSalaryAmount(''); setRevenueResult(null); setJobTitle(''); setTranslatedJobTitle(''); setSpecialCase('none'); }} 
+                                theme={theme} 
+                                buttonStyle={appStyles.button}
+                            />
+                        </div>
 
-                {activeTab === 'cv' && (
-                    <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
-                        <DocumentSection />
-                    </div>
-                )}
-                
-                {activeTab !== 'cv' && (
+                        {activeTab === 'cv' && (
+                            <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+                                <DocumentSection />
+                            </div>
+                        )}
+                        
+                        {activeTab !== 'cv' && (
                     <>
                         {activeTab === 'convert' && (
                             <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
@@ -1336,8 +1367,8 @@ const AppContent: React.FC = () => {
                         </div>
                      </>
                 )}
-                </>
-                )}
+                        </>
+                    )}
 
             </div>
             

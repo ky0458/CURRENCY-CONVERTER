@@ -88,15 +88,38 @@ app.post('/api/users/presence', async (req, res) => {
        return res.status(503).json({ error: 'Database not configured' });
     }
 
+    const userExists = await User.findOne({ uid });
+    
+    if (userExists && userExists.isLocked) {
+        return res.status(403).json({ error: 'LOCKED' });
+    }
+
+    let increment = 0;
+    
+    if (userExists) {
+        // Calculate the time difference in seconds
+        const timeDiff = (Date.now() - (userExists.lastSeen || Date.now())) / 1000;
+        
+        // If the previous status was online and time difference is reasonable (e.g., up to 10 minutes to account for interval + lag)
+        if (userExists.status === 'online' && timeDiff > 0 && timeDiff < 600) {
+           increment = timeDiff;
+        }
+    }
+
     const user = await User.findOneAndUpdate(
       { uid },
       { 
-        uid, 
-        displayName, 
-        photoURL, 
-        email, 
-        lastSeen, 
-        status 
+        $set: {
+          uid, 
+          displayName, 
+          photoURL, 
+          email, 
+          lastSeen, 
+          status 
+        },
+        $inc: {
+          appUsageTime: increment
+        }
       },
       { returnDocument: 'after', upsert: true }
     );
@@ -319,6 +342,318 @@ app.get('/api/app-releases', async (req, res) => {
     res.json(versions);
   } catch (err) {
     console.error('Error fetching updater versions:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin Middleware
+const checkAdmin = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const adminUid = (req.query?.adminUid as string) || (req.body?.adminUid as string) || (req.headers['x-admin-uid'] as string);
+  if (!adminUid) {
+    return res.status(401).json({ error: 'Unauthorized: missing adminUid' });
+  }
+  try {
+    const adminUser = await User.findOne({ uid: adminUid }).lean();
+    if (!adminUser || !adminUser.isAdmin) {
+      return res.status(403).json({ error: 'Forbidden: not admin' });
+    }
+    next();
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error during auth check' });
+  }
+};
+
+app.use('/api/admin', checkAdmin);
+
+// Admin APIs
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    if (!process.env.MONGODB_URI) return res.json([]);
+    const users = await User.find().sort({ lastSeen: -1 }).lean();
+    res.json(users);
+  } catch (err) {
+    console.error('Error fetching admin users:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.patch('/api/admin/users/:uid/role', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { isAdmin } = req.body;
+    await User.findOneAndUpdate({ uid }, { isAdmin });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/admin/users/:uid/lock', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { isLocked } = req.body;
+    await User.findOneAndUpdate({ uid }, { $set: { isLocked } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/admin/users/:uid', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    await Promise.all([
+      User.findOneAndDelete({ uid }),
+      NotebookContent.findOneAndDelete({ userId: uid }),
+      NoteTag.findOneAndDelete({ userId: uid }),
+      ConvertHistory.findOneAndDelete({ userId: uid }),
+      StatisticsHistory.findOneAndDelete({ userId: uid }),
+      ChatSession.deleteMany({ userId: uid }),
+    ]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/admin/user-details/:uid', async (req, res) => {
+  try {
+    const { uid } = req.params;
+    if (!process.env.MONGODB_URI) return res.json(null);
+    
+    const [notes, tags, convertHistory, statsHistory, chatSessions] = await Promise.all([
+      NotebookContent.findOne({ userId: uid }).lean(),
+      NoteTag.findOne({ userId: uid }).lean(),
+      ConvertHistory.findOne({ userId: uid }).lean(),
+      StatisticsHistory.findOne({ userId: uid }).lean(),
+      ChatSession.find({ userId: uid }).sort({ updatedAt: -1 }).lean()
+    ]);
+    
+    res.json({
+      notes: notes?.notes || [],
+      tags: tags?.tags || [],
+      convertHistory: convertHistory?.conversions || [],
+      statsHistory: statsHistory?.revenues || [],
+      chatSessions: chatSessions || []
+    });
+  } catch (err) {
+    console.error('Error fetching admin user details:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/admin/all-tags', async (req, res) => {
+  try {
+    const [docs, users] = await Promise.all([ NoteTag.find().lean(), User.find().lean() ]);
+    const userMap = new Map(users.map((u: any) => [u.uid, u]));
+    let flat: any[] = [];
+    docs.forEach((doc: any) => {
+        const u = userMap.get(doc.userId);
+        (doc.tags || []).forEach((item: any) => {
+            flat.push({ ...item, userId: doc.userId, userName: u?.displayName || 'Unknown', userEmail: u?.email || '' });
+        });
+    });
+    res.json(flat);
+  } catch (err) { res.status(500).json({ error: 'Internal error' }); }
+});
+
+app.get('/api/admin/all-notes', async (req, res) => {
+  try {
+    const [docs, users] = await Promise.all([ NotebookContent.find().lean(), User.find().lean() ]);
+    const userMap = new Map(users.map((u: any) => [u.uid, u]));
+    let flat: any[] = [];
+    docs.forEach((doc: any) => {
+        const u = userMap.get(doc.userId);
+        (doc.notes || []).forEach((item: any) => {
+            flat.push({ ...item, userId: doc.userId, userName: u?.displayName || 'Unknown', userEmail: u?.email || '' });
+        });
+    });
+    flat.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+    res.json(flat);
+  } catch (err) { res.status(500).json({ error: 'Internal error' }); }
+});
+
+app.get('/api/admin/all-stats', async (req, res) => {
+  try {
+    const [docs, users] = await Promise.all([ StatisticsHistory.find().lean(), User.find().lean() ]);
+    const userMap = new Map(users.map((u: any) => [u.uid, u]));
+    let flat: any[] = [];
+    docs.forEach((doc: any) => {
+        const u = userMap.get(doc.userId);
+        (doc.revenues || []).forEach((item: any) => {
+            flat.push({ ...item, userId: doc.userId, userName: u?.displayName || 'Unknown', userEmail: u?.email || '' });
+        });
+    });
+    flat.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+    res.json(flat);
+  } catch (err) { res.status(500).json({ error: 'Internal error' }); }
+});
+
+app.get('/api/admin/all-chats', async (req, res) => {
+  try {
+    const [docs, users] = await Promise.all([ ChatSession.find().lean(), User.find().lean() ]);
+    const userMap = new Map(users.map((u: any) => [u.uid, u]));
+    const list = docs.map((doc: any) => {
+      const u = userMap.get(doc.userId);
+      return {
+        ...doc,
+        userName: u?.displayName || 'Unknown',
+        userEmail: u?.email || ''
+      };
+    });
+    list.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+    res.json(list);
+  } catch (err) { res.status(500).json({ error: 'Internal error' }); }
+});
+
+app.get('/api/admin/models', async (req, res) => {
+  try {
+    const config = await AppConfig.findOne({ key: 'ai_models' });
+    res.json(config ? config.value : []);
+  } catch (err) { res.status(500).json({ error: 'Internal error' }); }
+});
+
+app.get('/api/models', async (req, res) => {
+  try {
+    const config = await AppConfig.findOne({ key: 'ai_models' });
+    res.json(config ? config.value : []);
+  } catch (err) { res.status(500).json({ error: 'Internal error' }); }
+});
+
+app.post('/api/admin/models', async (req, res) => {
+  try {
+    const { name, modelKey } = req.body;
+    let config = await AppConfig.findOne({ key: 'ai_models' });
+    if (!config) {
+      config = new AppConfig({ key: 'ai_models', value: [] });
+    }
+    const newModel = { id: Math.random().toString(36).substring(7), name, modelKey };
+    config.value.push(newModel);
+    await config.save();
+    res.json(config.value);
+  } catch(err) {
+    res.status(500).json({ error: 'System error' });
+  }
+});
+
+app.delete('/api/admin/models/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    let config = await AppConfig.findOne({ key: 'ai_models' });
+    if (config) {
+      config.value = config.value.filter((m: any) => m.id !== id);
+      await config.save();
+    }
+    res.json({ success: true });
+  } catch(err) {
+    res.status(500).json({ error: 'System error' });
+  }
+});
+
+app.put('/api/admin/models/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, modelKey } = req.body;
+    let config = await AppConfig.findOne({ key: 'ai_models' });
+    if (config) {
+      const idx = config.value.findIndex((m: any) => m.id === id);
+      if (idx !== -1) {
+        config.value[idx].name = name;
+        config.value[idx].modelKey = modelKey;
+      }
+      config.markModified('value');
+      await config.save();
+    }
+    res.json({ success: true });
+  } catch(err) {
+    res.status(500).json({ error: 'System error' });
+  }
+});
+
+app.delete('/api/admin/user-details/:uid/chats/:sessionId', async (req, res) => {
+  try {
+    const { uid, sessionId } = req.params;
+    await ChatSession.findOneAndDelete({ id: sessionId, userId: uid });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/admin/user-details/:uid/notes/:noteId', async (req, res) => {
+  try {
+    const { uid, noteId } = req.params;
+    await NotebookContent.findOneAndUpdate(
+      { userId: uid },
+      { $pull: { notes: { id: noteId } } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/admin/user-details/:uid/tags/:tagId', async (req, res) => {
+  try {
+    const { uid, tagId } = req.params;
+    await NoteTag.findOneAndUpdate(
+      { userId: uid },
+      { $pull: { tags: { id: tagId } } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/admin/user-details/:uid/conversions/:conversionId', async (req, res) => {
+  try {
+    const { uid, conversionId } = req.params;
+    await ConvertHistory.findOneAndUpdate(
+      { userId: uid },
+      { $pull: { conversions: { id: conversionId } } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/admin/user-details/:uid/stats/:statId', async (req, res) => {
+  try {
+    const { uid, statId } = req.params;
+    await StatisticsHistory.findOneAndUpdate(
+      { userId: uid },
+      { $pull: { revenues: { id: statId } } }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/admin/releases', async (req, res) => {
+  try {
+    const { version, title } = req.body;
+    const newRelease = new UpdateVersion({
+      version,
+      title,
+      timestamp: Date.now(),
+      viewedBy: []
+    });
+    await newRelease.save();
+    res.json(newRelease);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/admin/releases/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await UpdateVersion.findByIdAndDelete(id);
+    res.json({ success: true });
+  } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });

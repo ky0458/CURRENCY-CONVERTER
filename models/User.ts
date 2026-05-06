@@ -6,7 +6,11 @@ const userSchema = new mongoose.Schema({
   photoURL: { type: String, default: '' },
   email: { type: String },
   lastSeen: { type: Number },
-  status: { type: String, enum: ['online', 'away', 'offline'], default: 'offline' }
+  status: { type: String, enum: ['online', 'away', 'offline', 'locked'], default: 'offline' },
+  isLocked: { type: Boolean, default: false },
+  isAdmin: { type: Boolean, default: false },
+  appUsageTime: { type: Number, default: 0 },
+  currentSessionStart: { type: Number, default: 0 }
 }, {
   timestamps: true // Automatically adds createdAt and updatedAt
 });

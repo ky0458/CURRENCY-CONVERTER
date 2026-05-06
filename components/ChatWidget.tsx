@@ -149,6 +149,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
   const currentModelIndexRef = useRef(0);
   const [currentModelIndex, setCurrentModelIndex] = useState(0);
   const activeModelRef = useRef(FALLBACK_MODELS[0]);
+  const availableModelsRef = useRef<string[]>(FALLBACK_MODELS);
+  const [modelOptions, setModelOptions] = useState<{key:string, name:string}[]>(
+    FALLBACK_MODELS.map(m => ({key: m, name: m}))
+  );
 
   const [isFullScreen, setIsFullScreen] = useState(false);
   const isCancelingRef = useRef(false);
@@ -156,6 +160,22 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
   const [recordingOffset, setRecordingOffset] = useState(0);
 
   useEffect(() => {
+    fetch('/api/models')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          const fetchedModels = data.map((m: any) => ({ key: m.modelKey, name: m.name }));
+          setModelOptions(fetchedModels);
+          availableModelsRef.current = fetchedModels.map((m: any) => m.key);
+          if (currentModelIndexRef.current >= fetchedModels.length) {
+            currentModelIndexRef.current = 0;
+            setCurrentModelIndex(0);
+          }
+          activeModelRef.current = fetchedModels[currentModelIndexRef.current].key;
+        }
+      })
+      .catch(console.error);
+
     const savedAvatar = localStorage.getItem('ai_avatar');
     if (savedAvatar) {
       setAvatarUrl(savedAvatar);
@@ -453,13 +473,13 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
             }
             
             chatSessionRef.current = getAI().chats.create({
-              model: FALLBACK_MODELS[currentModelIndexRef.current],
+              model: availableModelsRef.current[currentModelIndexRef.current],
               config: {
                 systemInstruction: SYSTEM_INSTRUCTION,
               },
               history: validHistory.length > 0 ? validHistory : undefined
             });
-            activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
+            activeModelRef.current = availableModelsRef.current[currentModelIndexRef.current];
             setIsHistoryLoading(false);
           }, 300);
         } else {
@@ -473,12 +493,12 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
           timestamp: Date.now()
         }]);
         chatSessionRef.current = getAI().chats.create({
-          model: FALLBACK_MODELS[currentModelIndexRef.current],
+          model: availableModelsRef.current[currentModelIndexRef.current],
           config: {
             systemInstruction: SYSTEM_INSTRUCTION,
           },
         });
-        activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
+        activeModelRef.current = availableModelsRef.current[currentModelIndexRef.current];
       }
     } catch (err: any) {
       console.warn("AI Init failed:", err);
@@ -683,9 +703,9 @@ ${text}`;
         ];
     }
 
-    while (!success && attempts < FALLBACK_MODELS.length) {
+    while (!success && attempts < availableModelsRef.current.length) {
       try {
-        const modelToUse = FALLBACK_MODELS[(currentModelIndexRef.current + attempts) % FALLBACK_MODELS.length];
+        const modelToUse = availableModelsRef.current[(currentModelIndexRef.current + attempts) % availableModelsRef.current.length];
         
         if (!chatSessionRef.current || activeModelRef.current !== modelToUse) {
           const rawHistory = currentMessages.slice(0, -1).map(msg => ({
@@ -752,7 +772,7 @@ ${text}`;
         }
 
         success = true;
-        currentModelIndexRef.current = (currentModelIndexRef.current + attempts) % FALLBACK_MODELS.length;
+        currentModelIndexRef.current = (currentModelIndexRef.current + attempts) % availableModelsRef.current.length;
         setCurrentModelIndex(currentModelIndexRef.current);
 
         // Save final AI message
@@ -764,7 +784,7 @@ ${text}`;
       } catch (error) {
         console.warn(`AI Chat error with model ${activeModelRef.current}:`, error);
         attempts++;
-        if (attempts >= FALLBACK_MODELS.length) {
+        if (attempts >= availableModelsRef.current.length) {
           setIsLoading(false);
           const errorMsg: ChatMessage = {
             id: (Date.now() + 1).toString(),
@@ -861,12 +881,12 @@ ${text}`;
     }]);
     try {
       chatSessionRef.current = getAI().chats.create({
-        model: FALLBACK_MODELS[currentModelIndexRef.current],
+        model: availableModelsRef.current[currentModelIndexRef.current],
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
         },
       });
-      activeModelRef.current = FALLBACK_MODELS[currentModelIndexRef.current];
+      activeModelRef.current = availableModelsRef.current[currentModelIndexRef.current];
     } catch (err: any) {
       console.warn("AI Init failed in createNewChat:", err);
     }
@@ -1457,24 +1477,25 @@ ${text}`;
                                             className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 transition-colors border border-indigo-100/50 rounded-md px-2 py-0.5"
                                         >
                                             <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)] mr-0.5"></span>
-                                            <span className="max-w-[120px] sm:max-w-[160px] truncate leading-none pt-0.5">{FALLBACK_MODELS[currentModelIndex]}</span>
+                                            <span className="max-w-[120px] sm:max-w-[160px] truncate leading-none pt-0.5" title={modelOptions[currentModelIndex]?.key}>{modelOptions[currentModelIndex]?.name || 'Loading...'}</span>
                                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-3 h-3 transition-transform ${isModelSelectorOpen ? 'rotate-180' : ''}`}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                                             </svg>
                                         </button>
                                         {isModelSelectorOpen && (
                                             <div className="absolute top-full left-0 mt-1 w-[200px] bg-white border border-slate-200 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] rounded-xl overflow-hidden z-50 animate-fade-in-up" style={{ animationDuration: '0.2s' }}>
-                                                {FALLBACK_MODELS.map((model, idx) => (
+                                                {modelOptions.map((model, idx) => (
                                                     <button
-                                                        key={model}
+                                                        key={model.key}
                                                         onClick={() => {
                                                             setCurrentModelIndex(idx);
                                                             currentModelIndexRef.current = idx;
+                                                            activeModelRef.current = model.key;
                                                             setIsModelSelectorOpen(false);
                                                         }}
                                                         className={`w-full text-left px-3 py-2.5 text-xs transition-colors flex items-center justify-between ${idx === currentModelIndex ? 'bg-indigo-50/80 text-indigo-700 font-bold' : 'text-slate-600 hover:bg-slate-50 font-medium'}`}
                                                     >
-                                                        <span className="truncate">{model}</span>
+                                                        <span className="truncate">{model.name}</span>
                                                         {idx === currentModelIndex && (
                                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-indigo-600 shrink-0">
                                                                 <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 0 1 1.04-.208Z" clipRule="evenodd" />

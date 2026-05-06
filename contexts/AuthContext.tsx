@@ -16,6 +16,7 @@ interface NotificationState {
 
 interface AuthContextType {
   user: User | null;
+  isAdmin: boolean;
   loading: boolean;
   loginGoogle: () => Promise<void>;
   logout: () => Promise<void>;
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState<NotificationState | null>(null);
 
@@ -69,7 +71,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           
           if (!response.ok) {
+            if (response.status === 403) {
+              await auth.signOut();
+              alert("Tài khoản của bạn đã bị khóa.");
+              return;
+            }
             console.error("Failed to update presence in backend", await response.text());
+          } else {
+             const data = await response.json();
+             if (data.user && typeof data.user.isAdmin === 'boolean') {
+                 setIsAdmin(data.user.isAdmin);
+             }
           }
         } catch (error: any) {
           if (error.code !== 'permission-denied' && error.message !== 'Failed to fetch') {
@@ -167,7 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginGoogle, logout, notification, closeNotification, showNotification }}>
+    <AuthContext.Provider value={{ user, isAdmin, loading, loginGoogle, logout, notification, closeNotification, showNotification }}>
       {children}
     </AuthContext.Provider>
   );
