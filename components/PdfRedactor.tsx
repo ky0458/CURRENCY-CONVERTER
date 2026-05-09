@@ -826,7 +826,7 @@ export const PdfRedactor: React.FC = () => {
             const url = URL.createObjectURL(docxBlob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `ĐÃ CHE_${fileName}`;
+            link.download = `HỒ SƠ_${fileName}`;
             link.click();
             URL.revokeObjectURL(url);
             return;
@@ -902,7 +902,7 @@ export const PdfRedactor: React.FC = () => {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `ĐÃ CHE_${fileName.replace(/\.[^/.]+$/, "")}.pdf`;
+            link.download = `HỒ SƠ_${fileName.replace(/\.[^/.]+$/, "")}.pdf`;
             link.click();
             URL.revokeObjectURL(url);
             
