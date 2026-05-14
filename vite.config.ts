@@ -15,7 +15,12 @@ export default defineConfig(({ mode }) => {
         react(),
         VitePWA({
           registerType: 'autoUpdate',
-          injectRegister: false, // Using manual registration in index.tsx
+          injectRegister: 'auto',
+          manifestFilename: 'manifest.json',
+          devOptions: {
+            enabled: true,
+            type: 'module',
+          },
           includeAssets: ['app-icon-192.png', 'app-icon-512.png', 'app-icon.svg'],
           workbox: {
             maximumFileSizeToCacheInBytes: 50 * 1024 * 1024,
