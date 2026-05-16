@@ -37,6 +37,27 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 
+const ensureAdmin = async (req: any, res: any, next: any) => {
+  const adminUid = req.headers['x-admin-uid'];
+  if (!adminUid) return res.status(403).json({ error: 'Access denied: Admin UID required' });
+  
+  try {
+    await connectToDatabase();
+    const adminUser = await User.findOne({ uid: adminUid, isAdmin: true });
+    if (!adminUser) return res.status(403).json({ error: 'Access denied: Not an administrator' });
+    next();
+  } catch (e) {
+    res.status(500).json({ error: 'Security check failed' });
+  }
+};
+
+const ensureAuth = (req: any, res: any, next: any) => {
+  const uid = req.headers['x-user-uid'] || req.query?.uid || req.body?.uid;
+  if (!uid) return res.status(401).json({ error: 'Unauthorized: Missing User UID' });
+  req.userUid = uid;
+  next();
+};
+
 // Database connection helper for serverless environment
 async function connectToDatabase() {
   if (mongoose.connection.readyState === 1) {
@@ -76,9 +97,9 @@ app.get('/api/db-status', (req, res) => {
   });
 });
 
-app.post('/api/users/presence', async (req, res) => {
+app.post('/api/users/presence', ensureAuth, async (req, res) => {
   try {
-    const { uid, displayName, photoURL, email, lastSeen, status } = req.body;
+    const { uid, displayName, photoURL, email, lastSeen, status, deviceInfo } = req.body;
     
     if (!uid) {
       return res.status(400).json({ error: 'Missing uid' });
@@ -106,21 +127,29 @@ app.post('/api/users/presence', async (req, res) => {
         }
     }
 
+    const updateFields: any = {
+      uid, 
+      displayName, 
+      photoURL, 
+      email, 
+      lastSeen, 
+      status 
+    };
+
+    const updateQuery: any = {
+      $set: updateFields,
+      $inc: {
+        appUsageTime: increment
+      }
+    };
+
+    if (deviceInfo) {
+      updateQuery.$addToSet = { devices: deviceInfo };
+    }
+
     const user = await User.findOneAndUpdate(
       { uid },
-      { 
-        $set: {
-          uid, 
-          displayName, 
-          photoURL, 
-          email, 
-          lastSeen, 
-          status 
-        },
-        $inc: {
-          appUsageTime: increment
-        }
-      },
+      updateQuery,
       { returnDocument: 'after', upsert: true }
     );
     
@@ -132,7 +161,7 @@ app.post('/api/users/presence', async (req, res) => {
 });
 
 // Chat History API
-app.get('/api/chat/sessions', async (req, res) => {
+app.get('/api/chat/sessions', ensureAuth, async (req, res) => {
   try {
     const { uid } = req.query;
     if (!uid) return res.status(400).json({ error: 'Missing uid' });
@@ -148,7 +177,7 @@ app.get('/api/chat/sessions', async (req, res) => {
   }
 });
 
-app.post('/api/chat/sync', async (req, res) => {
+app.post('/api/chat/sync', ensureAuth, async (req, res) => {
   try {
     const { uid, localSessions } = req.body;
     if (!uid || !localSessions || !Array.isArray(localSessions)) {
@@ -175,7 +204,7 @@ app.post('/api/chat/sync', async (req, res) => {
   }
 });
 
-app.post('/api/chat/sessions', async (req, res) => {
+app.post('/api/chat/sessions', ensureAuth, async (req, res) => {
   try {
     const { uid, session } = req.body;
     if (!uid || !session || !session.id) return res.status(400).json({ error: 'Invalid payload' });
@@ -193,7 +222,7 @@ app.post('/api/chat/sessions', async (req, res) => {
   }
 });
 
-app.delete('/api/chat/sessions/:id', async (req, res) => {
+app.delete('/api/chat/sessions/:id', ensureAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { uid } = req.query;
@@ -209,7 +238,7 @@ app.delete('/api/chat/sessions/:id', async (req, res) => {
 });
 
 // Notes API
-app.get('/api/notes', async (req, res) => {
+app.get('/api/notes', ensureAuth, async (req, res) => {
   try {
     const { uid } = req.query;
     if (!uid) return res.status(400).json({ error: 'Missing uid' });
@@ -229,7 +258,7 @@ app.get('/api/notes', async (req, res) => {
   }
 });
 
-app.post('/api/notes', async (req, res) => {
+app.post('/api/notes', ensureAuth, async (req, res) => {
   try {
     const { uid, notes } = req.body;
     if (!uid) return res.status(400).json({ error: 'Missing uid' });
@@ -248,7 +277,7 @@ app.post('/api/notes', async (req, res) => {
   }
 });
 
-app.post('/api/note-tags', async (req, res) => {
+app.post('/api/note-tags', ensureAuth, async (req, res) => {
   try {
     const { uid, tags } = req.body;
     if (!uid) return res.status(400).json({ error: 'Missing uid' });
@@ -267,7 +296,7 @@ app.post('/api/note-tags', async (req, res) => {
   }
 });
 
-app.get('/api/convert-history', async (req, res) => {
+app.get('/api/convert-history', ensureAuth, async (req, res) => {
   try {
     const { uid } = req.query;
     if (!uid) return res.status(400).json({ error: 'Missing uid' });
@@ -281,7 +310,7 @@ app.get('/api/convert-history', async (req, res) => {
   }
 });
 
-app.post('/api/convert-history/conversions', async (req, res) => {
+app.post('/api/convert-history/conversions', ensureAuth, async (req, res) => {
   try {
     const { uid, conversions } = req.body;
     if (!uid) return res.status(400).json({ error: 'Missing uid' });
@@ -300,7 +329,7 @@ app.post('/api/convert-history/conversions', async (req, res) => {
   }
 });
 
-app.get('/api/statistics-history', async (req, res) => {
+app.get('/api/statistics-history', ensureAuth, async (req, res) => {
   try {
     const { uid } = req.query;
     if (!uid) return res.status(400).json({ error: 'Missing uid' });
@@ -314,7 +343,7 @@ app.get('/api/statistics-history', async (req, res) => {
   }
 });
 
-app.post('/api/statistics-history/revenues', async (req, res) => {
+app.post('/api/statistics-history/revenues', ensureAuth, async (req, res) => {
   try {
     const { uid, revenues } = req.body;
     if (!uid) return res.status(400).json({ error: 'Missing uid' });
@@ -366,7 +395,7 @@ const checkAdmin = async (req: express.Request, res: express.Response, next: exp
 app.use('/api/admin', checkAdmin);
 
 // Admin APIs
-app.get('/api/admin/users', async (req, res) => {
+app.get('/api/admin/users', ensureAdmin, async (req, res) => {
   try {
     if (!process.env.MONGODB_URI) return res.json([]);
     const users = await User.find().sort({ lastSeen: -1 }).lean();
@@ -377,7 +406,7 @@ app.get('/api/admin/users', async (req, res) => {
   }
 });
 
-app.patch('/api/admin/users/:uid/role', async (req, res) => {
+app.patch('/api/admin/users/:uid/role', ensureAdmin, async (req, res) => {
   try {
     const { uid } = req.params;
     const { isAdmin } = req.body;
@@ -388,7 +417,7 @@ app.patch('/api/admin/users/:uid/role', async (req, res) => {
   }
 });
 
-app.put('/api/admin/users/:uid/lock', async (req, res) => {
+app.put('/api/admin/users/:uid/lock', ensureAdmin, async (req, res) => {
   try {
     const { uid } = req.params;
     const { isLocked } = req.body;
@@ -399,7 +428,7 @@ app.put('/api/admin/users/:uid/lock', async (req, res) => {
   }
 });
 
-app.delete('/api/admin/users/:uid', async (req, res) => {
+app.delete('/api/admin/users/:uid', ensureAdmin, async (req, res) => {
   try {
     const { uid } = req.params;
     await Promise.all([
@@ -416,7 +445,7 @@ app.delete('/api/admin/users/:uid', async (req, res) => {
   }
 });
 
-app.get('/api/admin/user-details/:uid', async (req, res) => {
+app.get('/api/admin/user-details/:uid', ensureAdmin, async (req, res) => {
   try {
     const { uid } = req.params;
     if (!process.env.MONGODB_URI) return res.json(null);
@@ -442,7 +471,7 @@ app.get('/api/admin/user-details/:uid', async (req, res) => {
   }
 });
 
-app.get('/api/admin/all-tags', async (req, res) => {
+app.get('/api/admin/all-tags', ensureAdmin, async (req, res) => {
   try {
     const [docs, users] = await Promise.all([ NoteTag.find().lean(), User.find().lean() ]);
     const userMap = new Map(users.map((u: any) => [u.uid, u]));
@@ -457,7 +486,7 @@ app.get('/api/admin/all-tags', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Internal error' }); }
 });
 
-app.get('/api/admin/all-notes', async (req, res) => {
+app.get('/api/admin/all-notes', ensureAdmin, async (req, res) => {
   try {
     const [docs, users] = await Promise.all([ NotebookContent.find().lean(), User.find().lean() ]);
     const userMap = new Map(users.map((u: any) => [u.uid, u]));
@@ -473,7 +502,7 @@ app.get('/api/admin/all-notes', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Internal error' }); }
 });
 
-app.get('/api/admin/all-stats', async (req, res) => {
+app.get('/api/admin/all-stats', ensureAdmin, async (req, res) => {
   try {
     const [docs, users] = await Promise.all([ StatisticsHistory.find().lean(), User.find().lean() ]);
     const userMap = new Map(users.map((u: any) => [u.uid, u]));
@@ -489,7 +518,7 @@ app.get('/api/admin/all-stats', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Internal error' }); }
 });
 
-app.get('/api/admin/all-chats', async (req, res) => {
+app.get('/api/admin/all-chats', ensureAdmin, async (req, res) => {
   try {
     const [docs, users] = await Promise.all([ ChatSession.find().lean(), User.find().lean() ]);
     const userMap = new Map(users.map((u: any) => [u.uid, u]));
@@ -506,21 +535,21 @@ app.get('/api/admin/all-chats', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Internal error' }); }
 });
 
-app.get('/api/admin/models', async (req, res) => {
+app.get('/api/admin/models', ensureAdmin, async (req, res) => {
   try {
     const config = await AppConfig.findOne({ key: 'ai_models' });
     res.json(config ? config.value : []);
   } catch (err) { res.status(500).json({ error: 'Internal error' }); }
 });
 
-app.get('/api/models', async (req, res) => {
+app.get('/api/models', ensureAuth, async (req, res) => {
   try {
     const config = await AppConfig.findOne({ key: 'ai_models' });
     res.json(config ? config.value : []);
   } catch (err) { res.status(500).json({ error: 'Internal error' }); }
 });
 
-app.post('/api/admin/models', async (req, res) => {
+app.post('/api/admin/models', ensureAdmin, async (req, res) => {
   try {
     const { name, modelKey } = req.body;
     let config = await AppConfig.findOne({ key: 'ai_models' });
@@ -536,7 +565,7 @@ app.post('/api/admin/models', async (req, res) => {
   }
 });
 
-app.delete('/api/admin/models/:id', async (req, res) => {
+app.delete('/api/admin/models/:id', ensureAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     let config = await AppConfig.findOne({ key: 'ai_models' });
@@ -550,7 +579,7 @@ app.delete('/api/admin/models/:id', async (req, res) => {
   }
 });
 
-app.put('/api/admin/models/:id', async (req, res) => {
+app.put('/api/admin/models/:id', ensureAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, modelKey } = req.body;
@@ -570,7 +599,7 @@ app.put('/api/admin/models/:id', async (req, res) => {
   }
 });
 
-app.delete('/api/admin/user-details/:uid/chats/:sessionId', async (req, res) => {
+app.delete('/api/admin/user-details/:uid/chats/:sessionId', ensureAdmin, async (req, res) => {
   try {
     const { uid, sessionId } = req.params;
     await ChatSession.findOneAndDelete({ id: sessionId, userId: uid });
@@ -580,7 +609,7 @@ app.delete('/api/admin/user-details/:uid/chats/:sessionId', async (req, res) => 
   }
 });
 
-app.delete('/api/admin/user-details/:uid/notes/:noteId', async (req, res) => {
+app.delete('/api/admin/user-details/:uid/notes/:noteId', ensureAdmin, async (req, res) => {
   try {
     const { uid, noteId } = req.params;
     await NotebookContent.findOneAndUpdate(
@@ -593,7 +622,7 @@ app.delete('/api/admin/user-details/:uid/notes/:noteId', async (req, res) => {
   }
 });
 
-app.delete('/api/admin/user-details/:uid/tags/:tagId', async (req, res) => {
+app.delete('/api/admin/user-details/:uid/tags/:tagId', ensureAdmin, async (req, res) => {
   try {
     const { uid, tagId } = req.params;
     await NoteTag.findOneAndUpdate(
@@ -606,7 +635,7 @@ app.delete('/api/admin/user-details/:uid/tags/:tagId', async (req, res) => {
   }
 });
 
-app.delete('/api/admin/user-details/:uid/conversions/:conversionId', async (req, res) => {
+app.delete('/api/admin/user-details/:uid/conversions/:conversionId', ensureAdmin, async (req, res) => {
   try {
     const { uid, conversionId } = req.params;
     await ConvertHistory.findOneAndUpdate(
@@ -619,7 +648,7 @@ app.delete('/api/admin/user-details/:uid/conversions/:conversionId', async (req,
   }
 });
 
-app.delete('/api/admin/user-details/:uid/stats/:statId', async (req, res) => {
+app.delete('/api/admin/user-details/:uid/stats/:statId', ensureAdmin, async (req, res) => {
   try {
     const { uid, statId } = req.params;
     await StatisticsHistory.findOneAndUpdate(
@@ -632,7 +661,7 @@ app.delete('/api/admin/user-details/:uid/stats/:statId', async (req, res) => {
   }
 });
 
-app.post('/api/admin/releases', async (req, res) => {
+app.post('/api/admin/releases', ensureAdmin, async (req, res) => {
   try {
     const { version, title } = req.body;
     const newRelease = new UpdateVersion({
@@ -648,7 +677,7 @@ app.post('/api/admin/releases', async (req, res) => {
   }
 });
 
-app.delete('/api/admin/releases/:id', async (req, res) => {
+app.delete('/api/admin/releases/:id', ensureAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await UpdateVersion.findByIdAndDelete(id);

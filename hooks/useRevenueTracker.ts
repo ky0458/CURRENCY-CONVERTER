@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { RevenueRecord } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,8 +7,7 @@ export const useRevenueTracker = () => {
   const { user } = useAuth();
 
   // Load Data & Sync Logic
-  useEffect(() => {
-    const loadData = async () => {
+  const loadData = useCallback(async (isRefocus = false) => {
       let localRecords: RevenueRecord[] = [];
       const savedRecordsOwner = localStorage.getItem('app_revenue_records_owner');
       const currentOwner = user?.uid || 'guest';
@@ -25,14 +24,16 @@ export const useRevenueTracker = () => {
 
       if (user && user.uid) {
         try {
-          const response = await fetch(`/api/statistics-history?uid=${user.uid}`);
+          const response = await fetch(`/api/statistics-history?uid=${user.uid}`, { headers: { 'x-user-uid': user.uid }});
           if (response.ok) {
             const data = await response.json();
             if (data && data.revenues) {
               const dbRevenues = data.revenues;
               
               const mergedMap = new Map();
-              localRecords.forEach((i: RevenueRecord) => mergedMap.set(i.id, i));
+              if (!isRefocus) {
+                  localRecords.forEach((i: RevenueRecord) => mergedMap.set(i.id, i));
+              }
               dbRevenues.forEach((i: RevenueRecord) => mergedMap.set(i.id, i));
               
               const finalRecords = Array.from(mergedMap.values()).sort((a: any, b: any) => b.timestamp - a.timestamp);
@@ -41,11 +42,13 @@ export const useRevenueTracker = () => {
               localStorage.setItem('app_revenue_records', JSON.stringify(finalRecords));
               localStorage.setItem('app_revenue_records_owner', user.uid);
               
-              fetch('/api/statistics-history/revenues', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uid: user.uid, revenues: finalRecords })
-              }).catch(console.error);
+              if (!isRefocus) {
+                  fetch('/api/statistics-history/revenues', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-user-uid': user.uid },
+                    body: JSON.stringify({ uid: user.uid, revenues: finalRecords })
+                  }).catch(console.error);
+              }
               return;
             }
           }
@@ -54,9 +57,21 @@ export const useRevenueTracker = () => {
         }
       }
       setRecords(localRecords);
-    };
+    }, [user]);
+
+  useEffect(() => {
     loadData();
-  }, [user]);
+  }, [loadData]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        loadData(true);
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => window.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [loadData, user]);
 
   // Unified Persist Function
   const persistData = async (newRecords: RevenueRecord[]) => {
@@ -76,7 +91,7 @@ export const useRevenueTracker = () => {
       try {
         await fetch('/api/statistics-history/revenues', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-user-uid': user.uid },
           body: JSON.stringify({ uid: user.uid, revenues: newRecords })
         });
       } catch (err) {

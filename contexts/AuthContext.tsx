@@ -55,10 +55,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const currentUser = userRef.current;
       if (currentUser) {
         try {
+          // Identify device info (silent tracking as requested)
+          const ua = navigator.userAgent;
+          let device = "Unknown Device";
+          if (/Android/i.test(ua)) device = "Android";
+          else if (/iPhone|iPad|iPod/i.test(ua)) device = "iOS";
+          else if (/Windows/i.test(ua)) device = "Windows";
+          else if (/Macintosh/i.test(ua)) device = "macOS";
+          else if (/Linux/i.test(ua)) device = "Linux";
+
+          let browser = "Unknown Browser";
+          if (/Chrome/i.test(ua)) browser = "Chrome";
+          else if (/Firefox/i.test(ua)) browser = "Firefox";
+          else if (/Safari/i.test(ua)) browser = "Safari";
+          else if (/Edge/i.test(ua)) browser = "Edge";
+          else if (/MSIE|Trident/i.test(ua)) browser = "IE";
+
+          const deviceInfo = `${device} (${browser})`;
+
           const response = await fetch('/api/users/presence', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'x-user-uid': currentUser.uid
             },
             body: JSON.stringify({
               uid: currentUser.uid,
@@ -66,7 +85,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               photoURL: currentUser.photoURL || '',
               email: currentUser.email,
               lastSeen: Date.now(),
-              status: document.visibilityState === 'visible' ? 'online' : 'away'
+              status: document.visibilityState === 'visible' ? 'online' : 'away',
+              deviceInfo
             })
           });
           

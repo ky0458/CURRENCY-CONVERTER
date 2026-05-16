@@ -9,6 +9,7 @@ const userSchema = new mongoose.Schema({
   status: { type: String, enum: ['online', 'away', 'offline', 'locked'], default: 'offline' },
   isLocked: { type: Boolean, default: false },
   isAdmin: { type: Boolean, default: false },
+  devices: { type: [String], default: [] },
   appUsageTime: { type: Number, default: 0 },
   currentSessionStart: { type: Number, default: 0 }
 }, {

@@ -532,9 +532,43 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
                 </div>
             </header>
 
-            <div className="flex flex-1 overflow-hidden">
+            {/* Mobile Tab Navigation */}
+            <div className="md:hidden border-b border-slate-200 bg-white px-2 py-3 overflow-x-auto flex items-center gap-2 shrink-0 z-20 shadow-sm whitespace-nowrap scrollbar-hide">
+                <button 
+                    onClick={() => setActiveMenu('account')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all shrink-0 ${activeMenu === 'account' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                >
+                    Tài Khoản
+                </button>
+                <button 
+                    onClick={() => setActiveMenu('tags')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all shrink-0 ${activeMenu === 'tags' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                >
+                    Thẻ Ghi Chú
+                </button>
+                <button 
+                    onClick={() => setActiveMenu('notes')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all shrink-0 ${activeMenu === 'notes' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                >
+                    Ghi Chú
+                </button>
+                <button 
+                    onClick={() => setActiveMenu('chats')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all shrink-0 ${activeMenu === 'chats' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                >
+                    Lịch sử Chat
+                </button>
+                <button 
+                    onClick={() => setActiveMenu('stats')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all shrink-0 ${activeMenu === 'stats' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                >
+                    Thống Kê
+                </button>
+            </div>
+
+            <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
                 {/* Sidebar */}
-                <div className="w-64 bg-white border-r border-slate-200 py-6 px-4 flex flex-col gap-2 shrink-0 hidden md:flex z-20 overflow-y-auto">
+                <div className="w-64 bg-white border-r border-slate-200 py-6 px-4 flex-col gap-2 shrink-0 hidden md:flex z-20 overflow-y-auto">
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest px-2 mb-2 mt-2">Quản Lý</p>
                     
                     <button 
@@ -626,12 +660,13 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
                                                             Người Dùng {renderSortIcon('users', 'displayName')}
                                                         </th>
                                                         <th className="p-4 font-bold border-r border-slate-200">Trạng Thái</th>
-                                                        <th className="p-4 font-bold border-r border-slate-200 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('users', 'appUsageTime')}>
+                                                                              <th className="p-4 font-bold border-r border-slate-200 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('users', 'appUsageTime')}>
                                                             Thời gian sử dụng {renderSortIcon('users', 'appUsageTime')}
                                                         </th>
                                                         <th className="p-4 font-bold border-r border-slate-200 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('users', 'lastSeen')}>
                                                             Lần cuối online {renderSortIcon('users', 'lastSeen')}
                                                         </th>
+                                                        <th className="p-4 font-bold border-r border-slate-200">Các Thiết bị</th>
                                                         <th className="p-4 font-bold text-right">Thao Tác</th>
                                                     </tr>
                                                 </thead>
@@ -672,6 +707,17 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
                                                                 </td>
                                                                 <td className="p-4 border-r border-slate-200">
                                                                     <span className="text-xs text-slate-500">{new Date(u.lastSeen || Date.now()).toLocaleString()}</span>
+                                                                </td>
+                                                                <td className="p-4 border-r border-slate-200">
+                                                                    <div className="flex flex-col gap-1 max-h-[80px] overflow-y-auto pr-1">
+                                                                        {(u.devices && u.devices.length > 0) ? u.devices.map((dev: string, i: number) => (
+                                                                            <span key={i} className="text-[10px] font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-200 inline-block w-fit whitespace-nowrap shadow-sm">
+                                                                                {dev}
+                                                                            </span>
+                                                                        )) : (
+                                                                            <span className="text-xs text-slate-400 italic">Không rõ</span>
+                                                                        )}
+                                                                    </div>
                                                                 </td>
                                                                 <td className="p-4 text-right flex gap-2 justify-end">
                                                                     <button 

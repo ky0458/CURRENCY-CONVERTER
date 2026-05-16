@@ -1395,10 +1395,56 @@ const AppContent: React.FC = () => {
 const App = () => {
     return (
         <AuthProvider>
-            <AppContent />
+            <AuthWrapper />
             <Analytics />
         </AuthProvider>
     );
+};
+
+const AuthWrapper = () => {
+    const { user, loading, loginGoogle } = useAuth();
+    
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+                    <p className="text-slate-500 font-bold animate-pulse uppercase tracking-widest text-[10px]">Đang tải...</p>
+                </div>
+            </div>
+        );
+    }
+    
+    if (!user) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+                <div className="w-full max-w-sm flex flex-col items-center animate-fade-in-up">
+                    <div className="w-24 h-24 mb-6 shadow-xl rounded-[2.5rem] overflow-hidden border-4 border-white">
+                        <img src="/app-icon.svg" className="w-full h-full object-cover" alt="App Icon" />
+                    </div>
+                    
+                    <h1 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">Gia Hân's Workspace</h1>
+                    <p className="text-slate-400 text-center mb-10 text-sm font-medium">
+                        Đăng nhập để sử dụng và có trải nghiệm tốt nhất
+                    </p>
+                    
+                    <button 
+                        onClick={loginGoogle}
+                        className="w-full h-14 bg-slate-900 hover:bg-black text-white rounded-2xl flex items-center justify-center gap-4 transition-all duration-300 group shadow-lg active:scale-95"
+                    >
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6 bg-white p-0.5 rounded-full" alt="Google" />
+                        <span className="font-bold">Tiếp tục bằng Google</span>
+                    </button>
+                    
+                    <div className="mt-12 text-center opacity-30">
+                        <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-[0.3em]">Powered by ZiQi</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    
+    return <AppContent />;
 };
 
 export default App;

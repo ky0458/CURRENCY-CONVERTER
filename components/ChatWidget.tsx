@@ -160,7 +160,12 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
   const [recordingOffset, setRecordingOffset] = useState(0);
 
   useEffect(() => {
-    fetch('/api/models')
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (user?.uid) {
+        headers['x-user-uid'] = user.uid;
+    }
+    
+    fetch('/api/models', { headers })
       .then(res => res.json())
       .then(data => {
         if (data && data.length > 0) {
@@ -422,7 +427,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
           const localOnly = parsedLocal.filter((s: ChatSession) => !s.userId || s.userId === 'local');
           const response = await fetch('/api/chat/sync', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-user-uid': user.uid },
             body: JSON.stringify({ uid: user.uid, localSessions: localOnly })
           });
           if (response.ok) {
@@ -587,7 +592,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({ appStyles, theme }) => {
       try {
         await fetch('/api/chat/sessions', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-user-uid': sessionUserId },
           body: JSON.stringify({ uid: sessionUserId, session: sessionData })
         });
       } catch (err) {
@@ -916,7 +921,7 @@ ${text}`;
           try {
               await fetch('/api/chat/sessions', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 'Content-Type': 'application/json', 'x-user-uid': user.uid },
                   body: JSON.stringify({ uid: user.uid, session: updatedSessions[index] })
               });
           } catch (err) {
@@ -982,7 +987,7 @@ ${text}`;
         try {
             await fetch('/api/chat/sessions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-user-uid': user.uid },
                 body: JSON.stringify({ uid: user.uid, session: updatedSessionToSave })
             });
         } catch (err) {
@@ -1021,7 +1026,7 @@ ${text}`;
         // Delete from DB if authenticated
         if (user && user.uid) {
             deletedIds.forEach(id => {
-                fetch(`/api/chat/sessions/${id}?uid=${user.uid}`, { method: 'DELETE' }).catch(console.error);
+                fetch(`/api/chat/sessions/${id}?uid=${user.uid}`, { method: 'DELETE', headers: { 'x-user-uid': user.uid } }).catch(console.error);
             });
         }
     } else if (sessionToDelete) {
@@ -1035,7 +1040,7 @@ ${text}`;
         
         // Delete from DB if authenticated
         if (user && user.uid) {
-            fetch(`/api/chat/sessions/${sessionToDelete}?uid=${user.uid}`, { method: 'DELETE' }).catch(console.error);
+            fetch(`/api/chat/sessions/${sessionToDelete}?uid=${user.uid}`, { method: 'DELETE', headers: { 'x-user-uid': user.uid } }).catch(console.error);
         }
     }
     setShowDeleteConfirm(false);

@@ -32,6 +32,14 @@ input[type=number] {
 }
 
 /* Custom Animations */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;

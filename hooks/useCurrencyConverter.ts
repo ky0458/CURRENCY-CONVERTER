@@ -22,16 +22,7 @@ export const useCurrencyConverter = () => {
   const { user } = useAuth();
 
   // Load history & Settings
-  useEffect(() => {
-    const loadSettings = () => {
-       const savedRate = localStorage.getItem('cny_custom_rate');
-       const savedMode = localStorage.getItem('cny_use_custom_mode');
-       if (savedRate) setCnyRateState(parseFloat(savedRate));
-       if (savedMode !== null) setUseCustomCnyRateState(savedMode === 'true');
-    };
-    loadSettings();
-
-    const loadHistory = async () => {
+  const loadHistory = useCallback(async (isRefocus = false) => {
       const savedHistory = localStorage.getItem('conversion_history');
       const savedHistoryOwner = localStorage.getItem('conversion_history_owner');
       const currentOwner = user?.uid || 'guest';
@@ -49,14 +40,16 @@ export const useCurrencyConverter = () => {
 
       if (user && user.uid) {
         try {
-          const response = await fetch(`/api/convert-history?uid=${user.uid}`);
+          const response = await fetch(`/api/convert-history?uid=${user.uid}`, { headers: { 'x-user-uid': user.uid }});
           if (response.ok) {
             const data = await response.json();
             if (data && data.conversions) {
               const dbConversions = data.conversions;
               
               const mergedMap = new Map();
-              localHistory.forEach((i: ConversionHistoryItem) => mergedMap.set(i.id, i));
+              if (!isRefocus) {
+                  localHistory.forEach((i: ConversionHistoryItem) => mergedMap.set(i.id, i));
+              }
               dbConversions.forEach((i: ConversionHistoryItem) => mergedMap.set(i.id, i));
               
               const finalHistory = Array.from(mergedMap.values()).sort((a: any, b: any) => b.timestamp - a.timestamp);
@@ -65,11 +58,13 @@ export const useCurrencyConverter = () => {
               localStorage.setItem('conversion_history', JSON.stringify(finalHistory));
               localStorage.setItem('conversion_history_owner', user.uid);
               
-              fetch('/api/convert-history/conversions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uid: user.uid, conversions: finalHistory })
-              }).catch(console.error);
+              if (!isRefocus) {
+                  fetch('/api/convert-history/conversions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-user-uid': user.uid },
+                    body: JSON.stringify({ uid: user.uid, conversions: finalHistory })
+                  }).catch(console.error);
+              }
               return;
             }
           }
@@ -78,9 +73,28 @@ export const useCurrencyConverter = () => {
         }
       }
       setHistory(localHistory);
+    }, [user]);
+
+  useEffect(() => {
+    const loadSettings = () => {
+       const savedRate = localStorage.getItem('cny_custom_rate');
+       const savedMode = localStorage.getItem('cny_use_custom_mode');
+       if (savedRate) setCnyRateState(parseFloat(savedRate));
+       if (savedMode !== null) setUseCustomCnyRateState(savedMode === 'true');
     };
+    loadSettings();
     loadHistory();
-  }, [user]);
+  }, [loadHistory]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        loadHistory(true);
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => window.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [loadHistory, user]);
 
   const setCnyRate = (rate: number) => {
       setCnyRateState(rate);
@@ -105,7 +119,7 @@ export const useCurrencyConverter = () => {
       try {
         await fetch('/api/convert-history/conversions', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-user-uid': user.uid },
           body: JSON.stringify({ uid: user.uid, conversions: newHistory })
         });
       } catch (err) {
