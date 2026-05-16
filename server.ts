@@ -143,8 +143,17 @@ app.post('/api/users/presence', ensureAuth, async (req, res) => {
       }
     };
 
-    if (deviceInfo) {
-      updateQuery.$addToSet = { devices: deviceInfo };
+    const ipStr = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip || '';
+    let currentIP = (Array.isArray(ipStr) ? ipStr[0] : ipStr?.split(',')[0])?.trim() || 'Unknown IP';
+    if (currentIP === '::1' || currentIP === '::ffff:127.0.0.1') currentIP = '127.0.0.1';
+
+    const fullDeviceInfo = deviceInfo ? `${deviceInfo} - IP: ${currentIP}` : `Unknown - IP: ${currentIP}`;
+
+    if (fullDeviceInfo) {
+      // Use $addToSet first, but to prevent unbounded growth we can just let it be since it's a simple app.
+      // Or we can just use $addToSet. MongoDB doesn't have a direct way to bound size with $addToSet, 
+      // but the chances of thousands of IPs per user are low in this context.
+      updateQuery.$addToSet = { devices: fullDeviceInfo };
     }
 
     const user = await User.findOneAndUpdate(
@@ -152,6 +161,11 @@ app.post('/api/users/presence', ensureAuth, async (req, res) => {
       updateQuery,
       { returnDocument: 'after', upsert: true }
     );
+    
+    if (user && user.devices && user.devices.length > 20) {
+        user.devices = user.devices.slice(-20);
+        await user.save();
+    }
     
     res.json({ success: true, user });
   } catch (error) {

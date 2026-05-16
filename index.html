@@ -49,6 +49,31 @@
         }
         originalError.apply(console, args);
       };
+
+      // Anti-F12 to prevent users from inspecting the IP fetching requests
+      document.addEventListener('contextmenu', event => event.preventDefault());
+      document.addEventListener('keydown', function(e) {
+        // F12
+        if (e.key === 'F12' || e.keyCode === 123) {
+          e.preventDefault();
+        }
+        // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C
+        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) {
+          e.preventDefault();
+        }
+        // Ctrl+U
+        if (e.ctrlKey && e.key === 'U') {
+          e.preventDefault();
+        }
+        // Command+Option+I/J/C (macOS)
+        if (e.metaKey && e.altKey && (e.key === 'i' || e.key === 'j' || e.key === 'c' || e.code === 'KeyI' || e.code === 'KeyJ' || e.code === 'KeyC')) {
+          e.preventDefault();
+        }
+        // Command+Option+U
+        if (e.metaKey && e.altKey && (e.key === 'u' || e.code === 'KeyU')) {
+          e.preventDefault();
+        }
+      });
     </script>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
