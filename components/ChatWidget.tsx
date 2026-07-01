@@ -68,7 +68,7 @@ const TypewriterMarkdown = ({ text, timestamp }: { text: string, timestamp: numb
     const isNew = Date.now() - timestamp < 5000;
     const [displayedText, setDisplayedText] = useState(isNew ? '' : text);
     const typingIndex = useRef(isNew ? 0 : text.length);
-    const requestRef = useRef<number>();
+    const requestRef = useRef<number>(0);
     
     useEffect(() => {
         if (text.length > displayedText.length) {

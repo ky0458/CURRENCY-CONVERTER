@@ -282,7 +282,7 @@ export const RevenueStatsSection: React.FC<RevenueStatsSectionProps> = ({
                     </svg>
                 </button>
                 
-                <div className="flex flex-col items-center justify-center cursor-default">
+                <div className="flex flex-col items-center justify-center cursor-pointer">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Thời gian</span>
                     <span className="text-xl font-extrabold text-slate-800">{displayDateLabel}</span>
                 </div>

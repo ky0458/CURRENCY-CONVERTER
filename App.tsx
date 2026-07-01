@@ -14,6 +14,7 @@ import { UserMenu } from './components/UserMenu';
 import { DocumentSection } from './components/DocumentSection';
 import { UpdateNotifications } from './components/UpdateNotifications';
 import { AdminDashboard } from './components/AdminDashboard';
+import { AccountingDashboard } from './components/AccountingDashboard';
 import { useCurrencyConverter } from './hooks/useCurrencyConverter';
 import { useRevenueTracker } from './hooks/useRevenueTracker';
 import { RevenueStatsSection } from './components/RevenueStatsSection';
@@ -125,7 +126,7 @@ const AppContent: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [isClosingHistory, setIsClosingHistory] = useState(false);
   
-  const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'cv' | 'admin'>('cv');
+  const [activeTab, setActiveTab] = useState<'convert' | 'calculate' | 'cv' | 'admin' | 'accounting'>('cv');
   const [salaryAmount, setSalaryAmount] = useState<string>('');
   const [calcType, setCalcType] = useState<'probation' | 'official'>('official');
   
@@ -506,6 +507,15 @@ const AppContent: React.FC = () => {
       );
   }
 
+  if (activeTab === 'accounting') {
+      return (
+          <>
+              <AccountingDashboard onExit={() => setActiveTab('cv')} />
+              <ToastNotification />
+          </>
+      );
+  }
+
   return (
     <div 
         className={`min-h-screen font-sans text-slate-800 selection:bg-primary-200 flex flex-col relative transition-all duration-500`}
@@ -515,25 +525,39 @@ const AppContent: React.FC = () => {
     >
       <ToastNotification />
 
-      {/* Admin Button */}
-      {useAuth().isAdmin && (
-          <div className="absolute top-3 left-3 sm:top-5 sm:left-6 z-[100] flex items-center animate-fade-in-up">
-              <button
-                  onClick={() => setActiveTab('admin')}
-                  className={`
-                      flex items-center gap-2 px-3 h-10 rounded-full backdrop-blur-md transition-all duration-300 font-bold text-sm shadow-md border border-transparent
-                      ${activeTab === 'admin' 
-                          ? 'bg-primary-600 text-white cursor-default'
-                          : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-primary-600 hover:shadow-xl hover:-translate-y-0.5'
-                      }
-                  `}
-                  title="Trang quản lý Admin"
-              >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
-                  </svg>
-                  <span className="hidden sm:inline">Admin</span>
-              </button>
+      {/* Top Left Buttons */}
+      {(useAuth().isAdmin || useAuth().user) && (
+          <div className="absolute top-3 left-3 sm:top-5 sm:left-6 z-[100] flex items-center gap-2 animate-fade-in-up">
+              {useAuth().isAdmin && (
+                  <button
+                      onClick={() => setActiveTab('admin')}
+                      className={`
+                          flex items-center gap-2 px-3 h-10 rounded-full backdrop-blur-md transition-all duration-300 font-bold text-sm shadow-md border border-transparent
+                          bg-white text-slate-600 hover:bg-slate-50 hover:text-primary-600 hover:shadow-xl hover:-translate-y-0.5
+                      `}
+                      title="Trang quản lý Admin"
+                  >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+                      </svg>
+                      <span className="hidden sm:inline">Admin</span>
+                  </button>
+              )}
+              {useAuth().user && (
+                  <button
+                      onClick={() => setActiveTab('accounting')}
+                      className={`
+                          flex items-center gap-2 px-3 h-10 rounded-full backdrop-blur-md transition-all duration-300 font-bold text-sm shadow-md border border-transparent
+                          bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:shadow-xl hover:-translate-y-0.5
+                      `}
+                      title="Kế toán"
+                  >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                      <span className="hidden sm:inline">Kế toán</span>
+                  </button>
+              )}
           </div>
       )}
 
@@ -570,7 +594,7 @@ const AppContent: React.FC = () => {
                 className={`
                     flex items-center gap-2 px-3 h-10 rounded-full backdrop-blur-md transition-all duration-300 font-bold text-sm shadow-md border
                     ${isInstalled
-                        ? `bg-emerald-500 text-white border-transparent cursor-default`
+                        ? `bg-emerald-500 text-white border-transparent cursor-pointer`
                         : `hover:shadow-xl hover:-translate-y-0.5 cursor-pointer bg-primary-500 text-white hover:bg-primary-600 border-transparent`
                     }
                 `}

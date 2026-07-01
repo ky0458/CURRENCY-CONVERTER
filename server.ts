@@ -20,19 +20,7 @@ const app = express();
 const PORT = 3000;
 
 app.use(cors({
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:3000', 
-      'https://giahanconverter.vercel.app'
-    ];
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.run.app')) {
-      callback(null, true);
-    } else {
-      console.warn('Blocked by CORS for origin:', origin);
-      callback(null, false); // Allow it conditionally or return an error depending on strictness. Let's return error so it fails properly if wrong domain
-      // callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // Allow all origins for the preview environment
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -701,6 +689,109 @@ app.delete('/api/admin/releases/:id', ensureAdmin, async (req, res) => {
   }
 });
 
+// Accounting API
+import { AccountingJob } from './models/AccountingJob.js';
+import { AccountingTransaction } from './models/AccountingTransaction.js';
+import { AccountingPayroll } from './models/AccountingPayroll.js';
+
+app.get('/api/accounting/jobs', ensureAuth, async (req, res) => {
+  try {
+    const { uid } = req.query;
+    if (!process.env.MONGODB_URI) return res.json([]);
+    const jobs = await (AccountingJob as any).find({ userId: uid }).sort({ createdAt: -1 }).lean();
+    res.json(jobs);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/accounting/jobs', ensureAuth, async (req, res) => {
+  try {
+    const { uid } = req.body;
+    if (req.body.batch) {
+      await AccountingJob.deleteMany({ userId: uid });
+      const items = (req.body.jobs || []).map((t: any) => {
+        const item = { ...t, userId: uid };
+        delete item._id;
+        return item;
+      });
+      await AccountingJob.insertMany(items);
+      return res.json({ success: true });
+    }
+    const newJob = new AccountingJob({ ...req.body, userId: uid });
+    await newJob.save();
+    res.json(newJob);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/accounting/transactions', ensureAuth, async (req, res) => {
+  try {
+    const { uid } = req.query;
+    if (!process.env.MONGODB_URI) return res.json([]);
+    const tx = await (AccountingTransaction as any).find({ userId: uid }).populate('jobId').sort({ date: -1 }).lean();
+    res.json(tx);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/accounting/transactions', ensureAuth, async (req, res) => {
+  try {
+    const { uid } = req.body;
+    if (req.body.batch) {
+      await AccountingTransaction.deleteMany({ userId: uid });
+      const items = (req.body.transactions || []).map((t: any) => {
+        const item = { ...t, userId: uid };
+        delete item._id;
+        return item;
+      });
+      await AccountingTransaction.insertMany(items);
+      res.json({ success: true });
+    } else {
+      const newTx = new AccountingTransaction({ ...req.body, userId: uid });
+      await newTx.save();
+      res.json(newTx);
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/accounting/payroll', ensureAuth, async (req, res) => {
+  try {
+    const { uid } = req.query;
+    if (!process.env.MONGODB_URI) return res.json([]);
+    const pr = await (AccountingPayroll as any).find({ userId: uid }).sort({ month: -1 }).lean();
+    res.json(pr);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/accounting/payroll', ensureAuth, async (req, res) => {
+  try {
+    const { uid } = req.body;
+    if (req.body.batch) {
+      await AccountingPayroll.deleteMany({ userId: uid });
+      const items = (req.body.payroll || []).map((t: any) => {
+        const item = { ...t, userId: uid };
+        delete item._id;
+        return item;
+      });
+      await AccountingPayroll.insertMany(items);
+      res.json({ success: true });
+    } else {
+      const newPr = new AccountingPayroll({ ...req.body, userId: uid });
+      await newPr.save();
+      res.json(newPr);
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 async function startServer() {
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
@@ -713,7 +804,7 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*all', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
